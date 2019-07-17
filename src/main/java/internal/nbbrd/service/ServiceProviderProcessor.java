@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.nio.file.NoSuchFileException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -30,9 +31,8 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.logging.Level;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.FilerException;
 import javax.annotation.processing.ProcessingEnvironment;
@@ -50,6 +50,10 @@ import javax.tools.Diagnostic;
 import javax.tools.FileObject;
 import javax.tools.StandardLocation;
 import nbbrd.service.ServiceProvider;
+import org.antlr.v4.runtime.CharStreams;
+import org.antlr.v4.runtime.CommonTokenStream;
+import org.antlr.v4.runtime.tree.ParseTree;
+import org.antlr.v4.runtime.tree.ParseTreeWalker;
 
 /**
  *
@@ -277,22 +281,47 @@ public final class ServiceProviderProcessor extends AbstractProcessor {
             }
         }
 
-        static final String CLASS_PATTERN = "[a-z][a-z0-9_]*(?:\\.[a-z0-9_]+)+[0-9a-z_]";
-        static final String PROVIDES_PATTERN = "provides\\s+(" + CLASS_PATTERN + ")\\s+with\\s+(" + CLASS_PATTERN + "(?:\\s*,\\s*" + CLASS_PATTERN + ")*)";
-
         static List<ProviderRef> parseAll(Function<String, Name> nameFactory, CharSequence content) {
-            Pattern p = Pattern.compile(PROVIDES_PATTERN, Pattern.CASE_INSENSITIVE);
+            Java9Lexer lexer = new Java9Lexer(CharStreams.fromString(content.toString()));
+            CommonTokenStream tokens = new CommonTokenStream(lexer);
+            Java9Parser parser = new Java9Parser(tokens);
+            Java9Parser.CompilationUnitContext tree = parser.compilationUnit();
+
+            ModuleListener listener = new ModuleListener();
+            new ParseTreeWalker().walk(listener, tree);
 
             List<ProviderRef> result = new ArrayList<>();
-            Matcher m = p.matcher(content);
-            while (m.find()) {
-                Name service = nameFactory.apply(m.group(1));
-                for (String rawProvider : m.group(2).split(",", -1)) {
-                    Name provider = nameFactory.apply(rawProvider.trim());
-                    result.add(new ProviderRef(service, provider));
+            for (Map.Entry<String, List<String>> entry : listener.refs.entrySet()) {
+                for (String provider : entry.getValue()) {
+                    result.add(new ProviderRef(nameFactory.apply(entry.getKey()), nameFactory.apply(provider)));
                 }
             }
             return result;
+        }
+
+        static final class ModuleListener extends Java9BaseListener {
+
+            public final Map<String, List<String>> refs = new HashMap<>();
+
+            static final int PROVIDES_IDX = 0;
+            static final int SERVICE_IDX = 1;
+            static final int PROVIDER_IDX = 3;
+
+            @Override
+            public void enterModuleDirective(Java9Parser.ModuleDirectiveContext ctx) {
+                switch (ctx.getChild(PROVIDES_IDX).getText()) {
+                    case "provides":
+                        String service = ctx.getChild(SERVICE_IDX).getText();
+                        List<String> providers = IntStream
+                                .range(PROVIDER_IDX, ctx.getChildCount())
+                                .mapToObj(ctx::getChild)
+                                .filter(Java9Parser.TypeNameContext.class::isInstance)
+                                .map(ParseTree::getText)
+                                .collect(Collectors.toList());
+                        refs.put(service, providers);
+                        break;
+                }
+            }
         }
     }
 
