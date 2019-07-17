@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.element.Name;
 import javax.lang.model.element.TypeElement;
@@ -46,15 +47,26 @@ final class AnnotationRegistry implements ProviderRegistry {
                 .map(roundEnv::getElementsAnnotatedWith)
                 .flatMap(Set::stream)
                 .map(TypeElement.class::cast)
-                .map(AnnotationRegistry::newRef)
+                .flatMap(AnnotationRegistry::newRefs)
                 .collect(Collectors.toList());
     }
 
-    static ProviderRef newRef(TypeElement type) {
-        TypeMirror serviceType = extractResultType(type.getAnnotation(ServiceProvider.class)::value);
-        Name serviceName = ((TypeElement) ((DeclaredType) serviceType).asElement()).getQualifiedName();
-        Name providerName = type.getQualifiedName();
-        return new ProviderRef(serviceName, providerName);
+    static Stream<ProviderRef> newRefs(TypeElement type) {
+        return getAnnotations(type)
+                .map(AnnotationRegistry::getServiceName)
+                .map(service -> new ProviderRef(service, type.getQualifiedName()));
+    }
+
+    static Stream<ServiceProvider> getAnnotations(TypeElement type) {
+        ServiceProvider.List list = type.getAnnotation(ServiceProvider.List.class);
+        return list == null
+                ? Stream.of(type.getAnnotation(ServiceProvider.class))
+                : Stream.of(list.value());
+    }
+
+    static Name getServiceName(ServiceProvider annotation) {
+        TypeMirror serviceType = extractResultType(annotation::value);
+        return ((TypeElement) ((DeclaredType) serviceType).asElement()).getQualifiedName();
     }
 
     // see http://hauchee.blogspot.be/2015/12/compile-time-annotation-processing-getting-class-value.html

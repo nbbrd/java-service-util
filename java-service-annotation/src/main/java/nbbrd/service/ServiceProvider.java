@@ -18,6 +18,7 @@ package nbbrd.service;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
+import java.lang.annotation.Repeatable;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
@@ -27,9 +28,10 @@ import java.lang.annotation.Target;
  *
  * @author Philippe Charles
  */
+@Documented
 @Target({ElementType.TYPE})
 @Retention(RetentionPolicy.SOURCE)
-@Documented
+@Repeatable(ServiceProvider.List.class)
 public @interface ServiceProvider {
 
     /**
@@ -38,4 +40,12 @@ public @interface ServiceProvider {
      * @return
      */
     Class<?> value();
+
+    @Documented
+    @Target({ElementType.TYPE})
+    @Retention(RetentionPolicy.SOURCE)
+    @interface List {
+
+        ServiceProvider[] value();
+    }
 }

@@ -63,4 +63,28 @@ public class ServiceProviderProcessorTest {
         content.contains("Provider1");
         content.contains("Provider2");
     }
+
+    @Test
+    public void testWithRepeatedAnnotation() {
+        Compilation compilation = com.google.testing.compile.Compiler.javac()
+                .withProcessors(new ServiceProviderProcessor())
+                .compile(JavaFileObjects.forResource("WithRepeatedAnnotation.java"));
+
+        assertThat(compilation)
+                .succeededWithoutWarnings();
+
+        StringSubject c1
+                = assertThat(compilation)
+                        .generatedFile(StandardLocation.CLASS_OUTPUT, "META-INF/services/HelloService")
+                        .contentsAsUtf8String();
+        c1.contains("Provider1");
+        c1.contains("Provider2");
+
+        StringSubject c2
+                = assertThat(compilation)
+                        .generatedFile(StandardLocation.CLASS_OUTPUT, "META-INF/services/SomeService")
+                        .contentsAsUtf8String();
+        c2.contains("Provider1");
+        c2.doesNotContain("Provider2");
+    }
 }

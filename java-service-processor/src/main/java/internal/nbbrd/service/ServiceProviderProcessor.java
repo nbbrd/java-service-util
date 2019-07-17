@@ -40,7 +40,7 @@ import javax.tools.Diagnostic;
 @lombok.extern.java.Log
 @org.openide.util.lookup.ServiceProvider(service = Processor.class)
 @SupportedSourceVersion(SourceVersion.RELEASE_8)
-@SupportedAnnotationTypes("nbbrd.service.ServiceProvider")
+@SupportedAnnotationTypes({"nbbrd.service.ServiceProvider", "nbbrd.service.ServiceProvider.List"})
 public final class ServiceProviderProcessor extends AbstractProcessor {
 
     @Override
