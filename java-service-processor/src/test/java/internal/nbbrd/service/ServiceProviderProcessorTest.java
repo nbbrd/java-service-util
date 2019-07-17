@@ -16,10 +16,12 @@
  */
 package internal.nbbrd.service;
 
-import internal.nbbrd.service.ServiceProviderProcessor.ClassPathRegistry;
-import internal.nbbrd.service.ServiceProviderProcessor.ModulePathRegistry;
-import javax.lang.model.element.Name;
-import static org.assertj.core.api.Assertions.*;
+import com.google.common.truth.StringSubject;
+import com.google.testing.compile.Compilation;
+import static com.google.testing.compile.CompilationSubject.assertThat;
+import com.google.testing.compile.JavaFileObjects;
+import javax.tools.JavaFileObject;
+import javax.tools.StandardLocation;
 import org.junit.Test;
 
 /**
@@ -29,65 +31,36 @@ import org.junit.Test;
 public class ServiceProviderProcessorTest {
 
     @Test
-    public void testClassPathRegistryParse() {
-        String content;
+    public void testwithoutAnnotation() {
+        JavaFileObject s1 = JavaFileObjects.forSourceString("HelloService", "interface HelloService { }");
+        JavaFileObject p1 = JavaFileObjects.forSourceString("HelloProvider", "class HelloProvider implements HelloService {}");
 
-        content = "internal.pac.legacy.lib.OldHelloService";
-        assertThat(ClassPathRegistry.parse(CustomName::new, new CustomName("pac.legacy.lib.HelloService"), content))
-                .isEqualTo(newRef("pac.legacy.lib.HelloService", "internal.pac.legacy.lib.OldHelloService"));
+        Compilation compilation = com.google.testing.compile.Compiler.javac()
+                .withProcessors(new ServiceProviderProcessor())
+                .compile(s1, p1);
 
-        content = "internal.pac.legacy.lib.OldHelloService # comment";
-        assertThat(ClassPathRegistry.parse(CustomName::new, new CustomName("pac.legacy.lib.HelloService"), content))
-                .isEqualTo(newRef("pac.legacy.lib.HelloService", "internal.pac.legacy.lib.OldHelloService"));
+        assertThat(compilation)
+                .succeeded();
     }
 
     @Test
-    public void testModulePathRegistryParseAll() {
-        String content;
+    public void testWithAnnotation() {
+        JavaFileObject s1 = JavaFileObjects.forSourceString("HelloService", "interface HelloService { }");
+        JavaFileObject p1 = JavaFileObjects.forSourceString("Provider1", "@nbbrd.service.ServiceProvider(HelloService.class) class Provider1 implements HelloService {}");
+        JavaFileObject p2 = JavaFileObjects.forSourceString("Provider2", "@nbbrd.service.ServiceProvider(HelloService.class) class Provider2 implements HelloService {}");
 
-        content = "module mod.legacy.lib {\n"
-                + "    provides pac.legacy.lib.HelloService with internal.pac.legacy.lib.OldHelloService;\n"
-                + "}\n";
-        assertThat(ModulePathRegistry.parseAll(CustomName::new, content))
-                .containsExactly(
-                        newRef("pac.legacy.lib.HelloService", "internal.pac.legacy.lib.OldHelloService")
-                );
+        Compilation compilation = com.google.testing.compile.Compiler.javac()
+                .withProcessors(new ServiceProviderProcessor())
+                .compile(s1, p1, p2);
 
-        content = "module mod.legacy.lib {\n"
-                + "    provides pac.legacy.lib.HelloService\n"
-                + "            with internal.pac.legacy.lib.NewHelloService;\n"
-                + "}\n";
-        assertThat(ModulePathRegistry.parseAll(CustomName::new, content))
-                .containsExactly(
-                        newRef("pac.legacy.lib.HelloService", "internal.pac.legacy.lib.NewHelloService")
-                );
+        assertThat(compilation)
+                .succeeded();
 
-        content = "module mod.legacy.lib {\n"
-                + "    provides pac.legacy.lib.HelloService with\n"
-                + "            internal.pac.legacy.lib.NewHelloService,\n"
-                + "            internal.pac.legacy.lib.OldHelloService, abc.xyz.Ab;\n"
-                + "}\n";
-        assertThat(ModulePathRegistry.parseAll(CustomName::new, content))
-                .containsExactly(
-                        newRef("pac.legacy.lib.HelloService", "internal.pac.legacy.lib.NewHelloService"),
-                        newRef("pac.legacy.lib.HelloService", "internal.pac.legacy.lib.OldHelloService"),
-                        newRef("pac.legacy.lib.HelloService", "abc.xyz.Ab")
-                );
-    }
-
-    private static ServiceProviderProcessor.ProviderRef newRef(String service, String provider) {
-        return new ServiceProviderProcessor.ProviderRef(new CustomName(service), new CustomName(provider));
-    }
-
-    @lombok.Value
-    private static class CustomName implements Name {
-
-        @lombok.experimental.Delegate
-        private final String content;
-
-        @Override
-        public String toString() {
-            return content;
-        }
+        StringSubject content
+                = assertThat(compilation)
+                        .generatedFile(StandardLocation.CLASS_OUTPUT, "META-INF/services/HelloService")
+                        .contentsAsUtf8String();
+        content.contains("Provider1");
+        content.contains("Provider2");
     }
 }
