@@ -18,11 +18,9 @@ package internal.nbbrd.service;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.logging.Level;
 import java.util.stream.Collectors;
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.Processor;
@@ -42,7 +40,6 @@ import javax.tools.Diagnostic;
  *
  * @author Philippe Charles
  */
-@lombok.extern.java.Log
 @org.openide.util.lookup.ServiceProvider(service = Processor.class)
 @SupportedSourceVersion(SourceVersion.RELEASE_8)
 @SupportedAnnotationTypes({"nbbrd.service.ServiceProvider", "nbbrd.service.ServiceProvider.List"})
@@ -117,7 +114,7 @@ public final class ServiceProviderProcessor extends AbstractProcessor {
     }
 
     private void log(String id, List<ProviderRef> refs) {
-        refs.forEach(ref -> log.log(Level.INFO, "{0}: {1}", new Object[]{id, ref}));
+        refs.forEach(ref -> processingEnv.getMessager().printMessage(Diagnostic.Kind.NOTE, String.format("%1$s: %2$s", id, ref)));
     }
 
     private void error(ProviderRef ref, String message) {
