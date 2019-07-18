@@ -18,6 +18,7 @@ package internal.nbbrd.service;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -61,7 +62,7 @@ public final class ServiceProviderProcessor extends AbstractProcessor {
 
         log("Annotation", annotationRefs);
 
-        annotationRefs.forEach(this::checkRef);
+        checkRefs(annotationRefs);
 
         try {
             checkModulePath(annotationRefs, new ModulePathRegistry(processingEnv));
@@ -72,6 +73,13 @@ public final class ServiceProviderProcessor extends AbstractProcessor {
         }
 
         return true;
+    }
+
+    private void checkRefs(List<ProviderRef> refs) {
+        ProviderRef.getDuplicates(refs)
+                .forEach(ref -> error(ref, String.format("Duplicated provider: '%1$s'", ref.getProvider())));
+
+        refs.forEach(this::checkRef);
     }
 
     private void checkRef(ProviderRef ref) {
@@ -142,13 +150,15 @@ public final class ServiceProviderProcessor extends AbstractProcessor {
 
             log("ClassPath", classPath.parseAll(x.getKey(), oldLines));
 
-            classPath.writeLinesByService(concat(oldLines, newLines), x.getKey());
+            classPath.writeLinesByService(merge(oldLines, newLines), x.getKey());
         }
     }
 
-    private static <T> List<T> concat(List<T> first, List<T> second) {
-        List<T> result = new ArrayList<>(first);
-        result.addAll(second);
+    static List<String> merge(List<String> first, List<String> second) {
+        List<String> result = new ArrayList<>(first);
+        second.stream()
+                .filter(element -> !result.contains(element))
+                .forEach(result::add);
         return result;
     }
 

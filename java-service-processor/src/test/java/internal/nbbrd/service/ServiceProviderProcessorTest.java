@@ -20,8 +20,10 @@ import com.google.common.truth.StringSubject;
 import com.google.testing.compile.Compilation;
 import static com.google.testing.compile.CompilationSubject.assertThat;
 import com.google.testing.compile.JavaFileObjects;
+import static java.util.Arrays.asList;
 import javax.tools.JavaFileObject;
 import javax.tools.StandardLocation;
+import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
 /**
@@ -147,5 +149,41 @@ public class ServiceProviderProcessorTest {
                 .hadErrorContaining("must have a public no-argument constructor")
                 .inFile(file)
                 .onLine(14);
+    }
+
+    @Test
+    public void testDuplicatedAnnotation() {
+        JavaFileObject file = JavaFileObjects.forResource("DuplicatedAnnotation.java");
+
+        Compilation compilation = com.google.testing.compile.Compiler.javac()
+                .withProcessors(new ServiceProviderProcessor())
+                .compile(file);
+
+        assertThat(compilation)
+                .failed();
+
+        assertThat(compilation)
+                .hadErrorContaining("Duplicated provider")
+                .inFile(file)
+                .onLine(11);
+    }
+
+    @Test
+    public void testMerge() {
+        Assertions
+                .assertThat(ServiceProviderProcessor.merge(asList("a", "b"), asList("c", "d")))
+                .containsExactly("a", "b", "c", "d");
+
+        Assertions
+                .assertThat(ServiceProviderProcessor.merge(asList("a", "b"), asList("a", "d")))
+                .containsExactly("a", "b", "d");
+
+        Assertions
+                .assertThat(ServiceProviderProcessor.merge(asList("a", "b"), asList("c", "a")))
+                .containsExactly("a", "b", "c");
+
+        Assertions
+                .assertThat(ServiceProviderProcessor.merge(asList("a", "b"), asList("c", "c")))
+                .containsExactly("a", "b", "c");
     }
 }

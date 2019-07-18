@@ -16,6 +16,10 @@
  */
 package internal.nbbrd.service;
 
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Set;
+import java.util.stream.Collectors;
 import javax.lang.model.element.Name;
 
 /**
@@ -33,5 +37,12 @@ final class ProviderRef {
     @Override
     public String toString() {
         return service + "/" + provider;
+    }
+
+    static Set<ProviderRef> getDuplicates(Collection<ProviderRef> refs) {
+        return refs
+                .stream()
+                .filter(ref -> Collections.frequency(refs, ref) > 1)
+                .collect(Collectors.toSet());
     }
 }
