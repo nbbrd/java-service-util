@@ -71,7 +71,7 @@ public class ServiceProviderProcessorTest {
                 .compile(JavaFileObjects.forResource("WithRepeatedAnnotation.java"));
 
         assertThat(compilation)
-                .succeededWithoutWarnings();
+                .succeeded();
 
         StringSubject c1
                 = assertThat(compilation)
