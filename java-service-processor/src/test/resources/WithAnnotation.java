@@ -1,17 +1,13 @@
 
 import nbbrd.service.ServiceProvider;
 
-class WithRepeatedAnnotation {
+class WithAnnotation {
 
     interface HelloService {
     }
 
-    interface SomeService {
-    }
-
     @ServiceProvider(HelloService.class)
-    @ServiceProvider(SomeService.class)
-    public static class Provider1 implements HelloService, SomeService {
+    public static class Provider1 implements HelloService {
     }
 
     @ServiceProvider(HelloService.class)

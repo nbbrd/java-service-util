@@ -31,13 +31,10 @@ import org.junit.Test;
 public class ServiceProviderProcessorTest {
 
     @Test
-    public void testwithoutAnnotation() {
-        JavaFileObject s1 = JavaFileObjects.forSourceString("HelloService", "interface HelloService { }");
-        JavaFileObject p1 = JavaFileObjects.forSourceString("HelloProvider", "class HelloProvider implements HelloService {}");
-
+    public void testWithoutAnnotation() {
         Compilation compilation = com.google.testing.compile.Compiler.javac()
                 .withProcessors(new ServiceProviderProcessor())
-                .compile(s1, p1);
+                .compile(JavaFileObjects.forResource("WithoutAnnotation.java"));
 
         assertThat(compilation)
                 .succeeded();
@@ -45,23 +42,19 @@ public class ServiceProviderProcessorTest {
 
     @Test
     public void testWithAnnotation() {
-        JavaFileObject s1 = JavaFileObjects.forSourceString("HelloService", "interface HelloService { }");
-        JavaFileObject p1 = JavaFileObjects.forSourceString("Provider1", "@nbbrd.service.ServiceProvider(HelloService.class) class Provider1 implements HelloService {}");
-        JavaFileObject p2 = JavaFileObjects.forSourceString("Provider2", "@nbbrd.service.ServiceProvider(HelloService.class) class Provider2 implements HelloService {}");
-
         Compilation compilation = com.google.testing.compile.Compiler.javac()
                 .withProcessors(new ServiceProviderProcessor())
-                .compile(s1, p1, p2);
+                .compile(JavaFileObjects.forResource("WithAnnotation.java"));
 
         assertThat(compilation)
                 .succeeded();
 
         StringSubject content
                 = assertThat(compilation)
-                        .generatedFile(StandardLocation.CLASS_OUTPUT, "META-INF/services/HelloService")
+                        .generatedFile(StandardLocation.CLASS_OUTPUT, "META-INF/services/WithAnnotation.HelloService")
                         .contentsAsUtf8String();
-        content.contains("Provider1");
-        content.contains("Provider2");
+        content.contains("WithAnnotation.Provider1");
+        content.contains("WithAnnotation.Provider2");
     }
 
     @Test
@@ -75,16 +68,84 @@ public class ServiceProviderProcessorTest {
 
         StringSubject c1
                 = assertThat(compilation)
-                        .generatedFile(StandardLocation.CLASS_OUTPUT, "META-INF/services/HelloService")
+                        .generatedFile(StandardLocation.CLASS_OUTPUT, "META-INF/services/WithRepeatedAnnotation.HelloService")
                         .contentsAsUtf8String();
-        c1.contains("Provider1");
-        c1.contains("Provider2");
+        c1.contains("WithRepeatedAnnotation.Provider1");
+        c1.contains("WithRepeatedAnnotation.Provider2");
 
         StringSubject c2
                 = assertThat(compilation)
-                        .generatedFile(StandardLocation.CLASS_OUTPUT, "META-INF/services/SomeService")
+                        .generatedFile(StandardLocation.CLASS_OUTPUT, "META-INF/services/WithRepeatedAnnotation.SomeService")
                         .contentsAsUtf8String();
-        c2.contains("Provider1");
-        c2.doesNotContain("Provider2");
+        c2.contains("WithRepeatedAnnotation.Provider1");
+        c2.doesNotContain("WithRepeatedAnnotation.Provider2");
+    }
+
+    @Test
+    public void testMissingImplementation() {
+        JavaFileObject file = JavaFileObjects.forResource("MissingImplementation.java");
+
+        Compilation compilation = com.google.testing.compile.Compiler.javac()
+                .withProcessors(new ServiceProviderProcessor())
+                .compile(file);
+
+        assertThat(compilation)
+                .failed();
+
+        assertThat(compilation)
+                .hadErrorContaining("doesn't extend nor implement service")
+                .inFile(file)
+                .onLine(14);
+    }
+
+    @Test
+    public void testStaticInnerClass() {
+        JavaFileObject file = JavaFileObjects.forResource("StaticInnerClass.java");
+
+        Compilation compilation = com.google.testing.compile.Compiler.javac()
+                .withProcessors(new ServiceProviderProcessor())
+                .compile(file);
+
+        assertThat(compilation)
+                .failed();
+
+        assertThat(compilation)
+                .hadErrorContaining("must be static inner class")
+                .inFile(file)
+                .onLine(14);
+    }
+
+    @Test
+    public void testAbstractClass() {
+        JavaFileObject file = JavaFileObjects.forResource("AbstractClass.java");
+
+        Compilation compilation = com.google.testing.compile.Compiler.javac()
+                .withProcessors(new ServiceProviderProcessor())
+                .compile(file);
+
+        assertThat(compilation)
+                .failed();
+
+        assertThat(compilation)
+                .hadErrorContaining("must not be abstract")
+                .inFile(file)
+                .onLine(14);
+    }
+
+    @Test
+    public void testPublicNoArgumentConstructor() {
+        JavaFileObject file = JavaFileObjects.forResource("PublicNoArgumentConstructor.java");
+
+        Compilation compilation = com.google.testing.compile.Compiler.javac()
+                .withProcessors(new ServiceProviderProcessor())
+                .compile(file);
+
+        assertThat(compilation)
+                .failed();
+
+        assertThat(compilation)
+                .hadErrorContaining("must have a public no-argument constructor")
+                .inFile(file)
+                .onLine(14);
     }
 }

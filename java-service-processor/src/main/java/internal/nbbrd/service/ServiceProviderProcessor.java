@@ -29,8 +29,12 @@ import javax.annotation.processing.RoundEnvironment;
 import javax.annotation.processing.SupportedAnnotationTypes;
 import javax.annotation.processing.SupportedSourceVersion;
 import javax.lang.model.SourceVersion;
+import javax.lang.model.element.ElementKind;
+import javax.lang.model.element.ExecutableElement;
+import javax.lang.model.element.Modifier;
 import javax.lang.model.element.Name;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.util.ElementFilter;
 import javax.tools.Diagnostic;
 
 /**
@@ -84,7 +88,23 @@ public final class ServiceProviderProcessor extends AbstractProcessor {
         }
 
         if (!processingEnv.getTypeUtils().isSubtype(provider.asType(), service.asType())) {
-            error(ref, "Provider " + ref.getProvider() + " doesn't extend nor implement service " + ref.getService());
+            error(ref, String.format("Provider '%1$s' doesn't extend nor implement service '%2$s'", ref.getProvider(), ref.getService()));
+            return;
+        }
+
+        if (provider.getEnclosingElement().getKind() == ElementKind.CLASS && !provider.getModifiers().contains(Modifier.STATIC)) {
+            error(ref, String.format("Provider '%1$s' must be static inner class", ref.getProvider()));
+            return;
+        }
+
+        if (provider.getModifiers().contains(Modifier.ABSTRACT)) {
+            error(ref, String.format("Provider '%1$s' must not be abstract", ref.getProvider()));
+            return;
+        }
+
+        if (!hasPublicNoArgumentConstructor(provider)) {
+            error(ref, String.format("Provider '%1$s' must have a public no-argument constructor", ref.getProvider()));
+            return;
         }
     }
 
@@ -130,5 +150,16 @@ public final class ServiceProviderProcessor extends AbstractProcessor {
         List<T> result = new ArrayList<>(first);
         result.addAll(second);
         return result;
+    }
+
+    private static boolean hasPublicNoArgumentConstructor(TypeElement type) {
+        return ElementFilter
+                .constructorsIn(type.getEnclosedElements())
+                .stream()
+                .anyMatch(ServiceProviderProcessor::isNoArgPublicMethod);
+    }
+
+    private static boolean isNoArgPublicMethod(ExecutableElement method) {
+        return method.getModifiers().contains(Modifier.PUBLIC) && method.getParameters().isEmpty();
     }
 }
