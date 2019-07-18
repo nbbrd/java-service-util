@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import javax.annotation.processing.AbstractProcessor;
@@ -34,6 +35,7 @@ import javax.lang.model.element.Modifier;
 import javax.lang.model.element.Name;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.util.ElementFilter;
+import javax.lang.model.util.Types;
 import javax.tools.Diagnostic;
 
 /**
@@ -107,7 +109,7 @@ public final class ServiceProviderProcessor extends AbstractProcessor {
             return;
         }
 
-        if (!hasPublicNoArgumentConstructor(provider)) {
+        if (FactoryType.of(processingEnv.getTypeUtils(), service, provider) == FactoryType.NONE) {
             error(ref, String.format("Provider '%1$s' must have a public no-argument constructor", ref.getProvider()));
             return;
         }
@@ -143,12 +145,22 @@ public final class ServiceProviderProcessor extends AbstractProcessor {
 
         for (Map.Entry<Name, List<ProviderRef>> x : refByService.entrySet()) {
             List<String> oldLines = classPath.readLinesByService(x.getKey());
-            List<String> newLines = classPath.formatAll(x.getKey(), x.getValue());
-
             log("ClassPath", classPath.parseAll(x.getKey(), oldLines));
 
+            List<String> newLines = classPath.formatAll(x.getKey(), generateDelegates(x.getValue()));
             classPath.writeLinesByService(merge(oldLines, newLines), x.getKey());
         }
+    }
+
+    private List<ProviderRef> generateDelegates(List<ProviderRef> refs) {
+        for (ProviderRef ref : refs) {
+            TypeElement service = processingEnv.getElementUtils().getTypeElement(ref.getService());
+            TypeElement provider = processingEnv.getElementUtils().getTypeElement(ref.getProvider());
+            if (FactoryType.of(processingEnv.getTypeUtils(), service, provider) == FactoryType.STATIC_METHOD) {
+                error(ref, "Static method support not implemented yet");
+            }
+        }
+        return refs;
     }
 
     static List<String> merge(List<String> first, List<String> second) {
@@ -168,5 +180,29 @@ public final class ServiceProviderProcessor extends AbstractProcessor {
 
     private static boolean isNoArgPublicMethod(ExecutableElement method) {
         return method.getModifiers().contains(Modifier.PUBLIC) && method.getParameters().isEmpty();
+    }
+
+    private static Optional<ExecutableElement> getStaticFactoryMethod(Types types, TypeElement service, TypeElement provider) {
+        return ElementFilter
+                .methodsIn(provider.getEnclosedElements())
+                .stream()
+                .filter(ServiceProviderProcessor::isNoArgPublicMethod)
+                .filter(method -> method.getModifiers().contains(Modifier.STATIC))
+                .filter(method -> types.isSubtype(method.getReturnType(), service.asType()))
+                .findFirst();
+    }
+
+    private enum FactoryType {
+        NONE, CONSTRUCTOR, STATIC_METHOD;
+
+        static FactoryType of(Types types, TypeElement service, TypeElement provider) {
+            if (hasPublicNoArgumentConstructor(provider)) {
+                return CONSTRUCTOR;
+            }
+            if (getStaticFactoryMethod(types, service, provider).isPresent()) {
+                return STATIC_METHOD;
+            }
+            return NONE;
+        }
     }
 }

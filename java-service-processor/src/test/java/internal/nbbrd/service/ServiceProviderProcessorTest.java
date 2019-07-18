@@ -152,6 +152,23 @@ public class ServiceProviderProcessorTest {
     }
 
     @Test
+    public void testStaticMethod() {
+        JavaFileObject file = JavaFileObjects.forResource("StaticMethod.java");
+
+        Compilation compilation = com.google.testing.compile.Compiler.javac()
+                .withProcessors(new ServiceProviderProcessor())
+                .compile(file);
+
+        assertThat(compilation)
+                .failed();
+
+        assertThat(compilation)
+                .hadErrorContaining("not implemented yet")
+                .inFile(file)
+                .onLine(10);
+    }
+
+    @Test
     public void testDuplicatedAnnotation() {
         JavaFileObject file = JavaFileObjects.forResource("DuplicatedAnnotation.java");
 
