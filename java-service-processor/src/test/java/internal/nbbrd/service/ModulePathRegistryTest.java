@@ -17,6 +17,10 @@
 package internal.nbbrd.service;
 
 import static internal.nbbrd.service.CustomName.newRef;
+import static internal.nbbrd.service.ModulePathRegistry.parseAll;
+import java.io.IOException;
+import java.io.InputStream;
+import org.antlr.v4.runtime.CharStreams;
 import static org.assertj.core.api.Assertions.*;
 import org.junit.Test;
 
@@ -27,16 +31,16 @@ import org.junit.Test;
 public class ModulePathRegistryTest {
 
     @Test
-    public void testParseAll() {
+    public void testParseAll() throws IOException {
         String content;
 
-        assertThat(ModulePathRegistry.parseAll(CustomName::new, ""))
+        assertThat(parseAll(CustomName::new, CharStreams.fromString("")))
                 .isEmpty();
 
         content = "module hello {\n"
                 + "    provides lib.HelloService with internal.lib.OldHelloService;\n"
                 + "}\n";
-        assertThat(ModulePathRegistry.parseAll(CustomName::new, content))
+        assertThat(parseAll(CustomName::new, CharStreams.fromString(content)))
                 .containsExactly(
                         newRef("lib.HelloService", "internal.lib.OldHelloService")
                 );
@@ -45,7 +49,7 @@ public class ModulePathRegistryTest {
                 + "    provides lib.HelloService\n"
                 + "            with internal.lib.NewHelloService;\n"
                 + "}\n";
-        assertThat(ModulePathRegistry.parseAll(CustomName::new, content))
+        assertThat(parseAll(CustomName::new, CharStreams.fromString(content)))
                 .containsExactly(
                         newRef("lib.HelloService", "internal.lib.NewHelloService")
                 );
@@ -55,11 +59,19 @@ public class ModulePathRegistryTest {
                 + "            internal.lib.NewHelloService,\n"
                 + "            internal.lib.OldHelloService, abc.xyz.Ab;\n"
                 + "}\n";
-        assertThat(ModulePathRegistry.parseAll(CustomName::new, content))
+        assertThat(parseAll(CustomName::new, CharStreams.fromString(content)))
                 .containsExactly(
                         newRef("lib.HelloService", "internal.lib.NewHelloService"),
                         newRef("lib.HelloService", "internal.lib.OldHelloService"),
                         newRef("lib.HelloService", "abc.xyz.Ab")
                 );
+
+        try (InputStream stream = ModulePathRegistryTest.class.getResourceAsStream("/module-info.java")) {
+            assertThat(parseAll(CustomName::new, CharStreams.fromStream(stream)))
+                    .containsExactly(
+                            newRef("java.util.spi.LocaleServiceProvider", "internal.pac.modern.lib.NewModernService"),
+                            newRef("java.util.spi.LocaleServiceProvider", "internal.pac.modern.lib.OldModernService")
+                    );
+        }
     }
 }
