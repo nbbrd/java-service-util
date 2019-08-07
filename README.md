@@ -1,5 +1,6 @@
 # Java service utilities
-This library provides some utilities for [Java Service Providers](https://www.baeldung.com/java-spi).
+This library provides some utilities for [Java Service Providers](https://www.baeldung.com/java-spi).  
+It is a lightweight library that has no dependency and that does all the work at compile time. 
 
 ## @ServiceProvider
 The `@ServiceProvider` annotation deals with the tedious work of registring service providers.
@@ -13,9 +14,7 @@ Current features:
 Current limitations:
 - detects modulepath static method `provider` but doesn't generate a workaround for classpath
 
-## How to use
-
-Java example:
+Example:
 ```java
 public interface HelloService {}
 
@@ -29,7 +28,8 @@ public class SimpleProvider implements HelloService {}
 public class MultiProvider implements HelloService, SomeService {}
 ```
 
-Maven pom example:
+## Setup
+
 ```xml
 <dependencies>
   <dependency>
@@ -68,3 +68,8 @@ Maven pom example:
   </repository>
 </repositories>
 ```
+
+## Related work
+
+- [NetBeans lookup](https://search.maven.org/search?q=g:org.netbeans.api%20AND%20a:org-openide-util-lookup&core=gav)
+- [Google AutoServive](https://www.baeldung.com/google-autoservice)
