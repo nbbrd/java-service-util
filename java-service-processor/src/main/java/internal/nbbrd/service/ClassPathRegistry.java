@@ -29,6 +29,7 @@ import java.util.stream.Collectors;
 import javax.annotation.processing.FilerException;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.Name;
+import javax.lang.model.util.Elements;
 import javax.tools.FileObject;
 import javax.tools.StandardLocation;
 
@@ -93,7 +94,8 @@ final class ClassPathRegistry implements ProviderRegistry {
         return new ProviderRef(service, nameFactory.apply(rawProvider));
     }
 
-    static String getRelativeName(Name service) {
-        return "META-INF/services/" + service.toString();
+    private String getRelativeName(Name service) {
+        Elements util = env.getElementUtils();
+        return "META-INF/services/" + util.getBinaryName(util.getTypeElement(service));
     }
 }
