@@ -1,18 +1,22 @@
 # Java service utilities
-This library provides some utilities for [Java Service Providers](https://www.baeldung.com/java-spi).  
-It is a lightweight library that has no dependency and that does all the work at compile time. 
+This library provides some utilities for [Java Service Providers](https://www.baeldung.com/java-spi).
+
+Key points:
+- ligthweight library with no dependency
+- Java 8 minimum requirement
+- all the work is done at compile time
+- has an automatic module name that makes it compatible with [JPMS](https://www.baeldung.com/java-9-modularity) 
 
 ## @ServiceProvider
 The `@ServiceProvider` annotation deals with the tedious work of registring service providers.
 
 Current features:
-- generates classpath files in `META-INF` folder
+- generates classpath files in `META-INF/services` folder
 - supports multiple registration of one class
-- plays nice with [Java 9 modularity](https://www.baeldung.com/java-9-modularity)
 - checks coherence between classpath and modulepath if `module-info.java` is available
 
 Current limitations:
-- detects modulepath static method `provider` but doesn't generate a workaround for classpath
+- detects modulepath `public static provider()` method but doesn't generate a workaround for classpath
 
 Example:
 ```java
