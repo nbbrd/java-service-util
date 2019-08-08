@@ -55,8 +55,8 @@ public class ServiceProviderProcessorTest {
                 = assertThat(compilation)
                         .generatedFile(StandardLocation.CLASS_OUTPUT, "META-INF/services/WithAnnotation$HelloService")
                         .contentsAsUtf8String();
-        content.contains("WithAnnotation.Provider1");
-        content.contains("WithAnnotation.Provider2");
+        content.contains("WithAnnotation$Provider1");
+        content.contains("WithAnnotation$Provider2");
     }
 
     @Test
@@ -72,15 +72,15 @@ public class ServiceProviderProcessorTest {
                 = assertThat(compilation)
                         .generatedFile(StandardLocation.CLASS_OUTPUT, "META-INF/services/WithRepeatedAnnotation$HelloService")
                         .contentsAsUtf8String();
-        c1.contains("WithRepeatedAnnotation.Provider1");
-        c1.contains("WithRepeatedAnnotation.Provider2");
+        c1.contains("WithRepeatedAnnotation$Provider1");
+        c1.contains("WithRepeatedAnnotation$Provider2");
 
         StringSubject c2
                 = assertThat(compilation)
                         .generatedFile(StandardLocation.CLASS_OUTPUT, "META-INF/services/WithRepeatedAnnotation$SomeService")
                         .contentsAsUtf8String();
-        c2.contains("WithRepeatedAnnotation.Provider1");
-        c2.doesNotContain("WithRepeatedAnnotation.Provider2");
+        c2.contains("WithRepeatedAnnotation$Provider1");
+        c2.doesNotContain("WithRepeatedAnnotation$Provider2");
     }
 
     @Test

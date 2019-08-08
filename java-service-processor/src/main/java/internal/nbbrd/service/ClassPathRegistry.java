@@ -77,10 +77,12 @@ final class ClassPathRegistry implements ProviderRegistry {
     }
 
     public List<String> formatAll(Name service, List<ProviderRef> refs) {
+        Elements util = env.getElementUtils();
         return refs
                 .stream()
                 .filter(ref -> ref.getService().equals(service))
                 .map(ProviderRef::getProvider)
+                .map(provider -> util.getBinaryName(util.getTypeElement(provider)))
                 .map(Object::toString)
                 .collect(Collectors.toList());
     }
