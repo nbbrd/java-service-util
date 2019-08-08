@@ -1,4 +1,7 @@
 # Java service utilities
+
+[![Download](https://img.shields.io/github/release/nbbrd/java-service-util.svg)](https://github.com/nbbrd/java-service-util/releases/latest)
+
 This library provides some utilities for [Java Service Providers](https://www.baeldung.com/java-spi).
 
 Key points:
