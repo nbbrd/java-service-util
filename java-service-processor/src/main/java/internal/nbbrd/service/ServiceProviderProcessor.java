@@ -35,6 +35,7 @@ import javax.lang.model.element.Modifier;
 import javax.lang.model.element.Name;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.util.ElementFilter;
+import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
 import javax.tools.Diagnostic;
 
@@ -82,19 +83,22 @@ public final class ServiceProviderProcessor extends AbstractProcessor {
     }
 
     private void checkRef(ProviderRef ref) {
-        TypeElement service = processingEnv.getElementUtils().getTypeElement(ref.getService());
+        Elements elements = processingEnv.getElementUtils();
+        Types types = processingEnv.getTypeUtils();
+
+        TypeElement service = elements.getTypeElement(ref.getService());
         if (service == null) {
             error(ref, "Cannot find service " + ref.getService());
             return;
         }
 
-        TypeElement provider = processingEnv.getElementUtils().getTypeElement(ref.getProvider());
+        TypeElement provider = elements.getTypeElement(ref.getProvider());
         if (provider == null) {
             error(ref, "Cannot find provider " + ref.getProvider());
             return;
         }
 
-        if (!processingEnv.getTypeUtils().isSubtype(provider.asType(), service.asType())) {
+        if (!types.isAssignable(provider.asType(), types.erasure(service.asType()))) {
             error(ref, String.format("Provider '%1$s' doesn't extend nor implement service '%2$s'", ref.getProvider(), ref.getService()));
             return;
         }
@@ -109,7 +113,7 @@ public final class ServiceProviderProcessor extends AbstractProcessor {
             return;
         }
 
-        if (FactoryType.of(processingEnv.getTypeUtils(), service, provider) == FactoryType.NONE) {
+        if (FactoryType.of(types, service, provider) == FactoryType.NONE) {
             error(ref, String.format("Provider '%1$s' must have a public no-argument constructor", ref.getProvider()));
             return;
         }
