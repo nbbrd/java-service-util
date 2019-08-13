@@ -186,6 +186,25 @@ public class ServiceProviderProcessorTest {
     }
 
     @Test
+    public void testWithGenerics() {
+        JavaFileObject file = JavaFileObjects.forResource("WithGenerics.java");
+
+        Compilation compilation = com.google.testing.compile.Compiler.javac()
+                .withProcessors(new ServiceProviderProcessor())
+                .compile(file);
+
+        assertThat(compilation)
+                .succeeded();
+
+        StringSubject content
+                = assertThat(compilation)
+                        .generatedFile(StandardLocation.CLASS_OUTPUT, "META-INF/services/WithGenerics$HelloService")
+                        .contentsAsUtf8String();
+        content.contains("WithGenerics$Provider1");
+        content.contains("WithGenerics$Provider2");
+    }
+
+    @Test
     public void testMerge() {
         Assertions
                 .assertThat(ServiceProviderProcessor.merge(asList("a", "b"), asList("c", "d")))
