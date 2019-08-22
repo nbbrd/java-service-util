@@ -26,7 +26,6 @@ import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.Processor;
 import javax.annotation.processing.RoundEnvironment;
 import javax.annotation.processing.SupportedAnnotationTypes;
-import javax.annotation.processing.SupportedSourceVersion;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
@@ -37,9 +36,13 @@ import nbbrd.service.ServiceDefinition;
  * @author Philippe Charles
  */
 @org.openide.util.lookup.ServiceProvider(service = Processor.class)
-@SupportedSourceVersion(SourceVersion.RELEASE_8)
 @SupportedAnnotationTypes({"nbbrd.service.ServiceDefinition"})
 public final class ServiceDefinitionProcessor extends AbstractProcessor {
+
+    @Override
+    public SourceVersion getSupportedSourceVersion() {
+        return SourceVersion.latestSupported();
+    }
 
     @Override
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
