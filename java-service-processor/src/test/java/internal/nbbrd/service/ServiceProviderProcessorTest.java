@@ -152,8 +152,42 @@ public class ServiceProviderProcessorTest {
     }
 
     @Test
-    public void testStaticMethod() {
-        JavaFileObject file = JavaFileObjects.forResource("StaticMethod.java");
+    public void testStaticProviderMethod() {
+        JavaFileObject file = JavaFileObjects.forResource("StaticProviderMethod.java");
+
+        Compilation compilation = com.google.testing.compile.Compiler.javac()
+                .withProcessors(new ServiceProviderProcessor())
+                .compile(file);
+
+        assertThat(compilation)
+                .failed();
+
+        assertThat(compilation)
+                .hadErrorContaining("not implemented yet")
+                .inFile(file)
+                .onLine(10);
+    }
+
+    @Test
+    public void testStaticNoProviderMethod() {
+        JavaFileObject file = JavaFileObjects.forResource("StaticNoProviderMethod.java");
+
+        Compilation compilation = com.google.testing.compile.Compiler.javac()
+                .withProcessors(new ServiceProviderProcessor())
+                .compile(file);
+
+        assertThat(compilation)
+                .failed();
+
+        assertThat(compilation)
+                .hadErrorContaining("must have a public no-argument constructor")
+                .inFile(file)
+                .onLine(10);
+    }
+
+    @Test
+    public void testStaticMultiProviderMethod() {
+        JavaFileObject file = JavaFileObjects.forResource("StaticMultiProviderMethod.java");
 
         Compilation compilation = com.google.testing.compile.Compiler.javac()
                 .withProcessors(new ServiceProviderProcessor())
