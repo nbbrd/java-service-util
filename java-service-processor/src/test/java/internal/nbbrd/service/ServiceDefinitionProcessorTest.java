@@ -21,6 +21,7 @@ import static com.google.testing.compile.CompilationSubject.assertThat;
 import com.google.testing.compile.JavaFileObjects;
 import com.squareup.javapoet.ClassName;
 import static internal.nbbrd.service.ServiceDefinitionProcessor.resolveLoaderName;
+import javax.tools.JavaFileObject;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
@@ -184,7 +185,7 @@ public class ServiceDefinitionProcessorTest {
                 .contentsAsUtf8String()
                 .contains("private static final AtomicReference<List<MultipleDef.ThreadSafeSingleton>> RESOURCE = new AtomicReference<>(load());");
     }
-    
+
     @Test
     public void testAlternateFactories() {
         Compilation compilation = com.google.testing.compile.Compiler.javac()
@@ -193,5 +194,39 @@ public class ServiceDefinitionProcessorTest {
 
         assertThat(compilation)
                 .succeeded();
+    }
+
+    @Test
+    public void testNonAssignableFallback() {
+        JavaFileObject file = JavaFileObjects.forResource("definition/NonAssignableFallback.java");
+
+        Compilation compilation = com.google.testing.compile.Compiler.javac()
+                .withProcessors(new ServiceDefinitionProcessor())
+                .compile(file);
+
+        assertThat(compilation)
+                .failed();
+
+        assertThat(compilation)
+                .hadErrorContaining("doesn't extend nor implement service")
+                .inFile(file)
+                .onLine(8);
+    }
+
+    @Test
+    public void testNonAssignableLookup() {
+        JavaFileObject file = JavaFileObjects.forResource("definition/NonAssignableLookup.java");
+
+        Compilation compilation = com.google.testing.compile.Compiler.javac()
+                .withProcessors(new ServiceDefinitionProcessor())
+                .compile(file);
+
+        assertThat(compilation)
+                .failed();
+
+        assertThat(compilation)
+                .hadErrorContaining("doesn't extend nor implement")
+                .inFile(file)
+                .onLine(10);
     }
 }

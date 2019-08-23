@@ -34,6 +34,7 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 import javax.lang.model.element.Modifier;
+import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.TypeMirror;
 import nbbrd.service.Mutability;
 import nbbrd.service.Quantifier;
@@ -46,6 +47,10 @@ import nbbrd.service.ServiceDefinition;
 @lombok.Value
 @lombok.Builder
 class ServiceLoaderGenerator {
+
+    static ServiceLoaderGenerator of(TypeElement serviceType) {
+        return of(serviceType.getAnnotation(ServiceDefinition.class), ClassName.get(serviceType));
+    }
 
     static ServiceLoaderGenerator of(ServiceDefinition definition, ClassName serviceType) {
         return ServiceLoaderGenerator

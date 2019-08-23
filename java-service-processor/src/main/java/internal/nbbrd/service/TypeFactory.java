@@ -95,4 +95,15 @@ final class TypeFactory {
                         .filter(field -> util.isSubtype(field.asType(), service.asType()))
                 : Stream.empty();
     }
+
+    public static boolean canSelect(List<TypeFactory> factories) {
+        return factories.size() == 1
+                || factories.stream().anyMatch(o -> o.getKind() == TypeFactory.Kind.CONSTRUCTOR);
+    }
+
+    public static TypeFactory select(List<TypeFactory> factories) {
+        return factories.size() == 1
+                ? factories.get(0)
+                : factories.stream().filter(o -> o.getKind() == TypeFactory.Kind.CONSTRUCTOR).findFirst().orElseThrow(RuntimeException::new);
+    }
 }
