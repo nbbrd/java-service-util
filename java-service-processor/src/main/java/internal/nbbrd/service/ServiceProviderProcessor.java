@@ -87,6 +87,11 @@ public final class ServiceProviderProcessor extends AbstractProcessor {
         Elements elements = processingEnv.getElementUtils();
         Types types = processingEnv.getTypeUtils();
 
+        if (ref.getService().contentEquals(Void.class.getName())) {
+            error(ref, "Cannot infer service from provider " + ref.getProvider());
+            return;
+        }
+
         TypeElement service = elements.getTypeElement(ref.getService());
         if (service == null) {
             error(ref, "Cannot find service " + ref.getService());

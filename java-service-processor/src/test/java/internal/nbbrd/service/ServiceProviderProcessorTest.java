@@ -72,15 +72,15 @@ public class ServiceProviderProcessorTest {
                 = assertThat(compilation)
                         .generatedFile(StandardLocation.CLASS_OUTPUT, "META-INF/services/WithRepeatedAnnotation$HelloService")
                         .contentsAsUtf8String();
-        c1.contains("WithRepeatedAnnotation$Provider1");
-        c1.contains("WithRepeatedAnnotation$Provider2");
+        c1.contains("WithRepeatedAnnotation$SimpleProvider");
+        c1.contains("WithRepeatedAnnotation$MultiProvider");
 
         StringSubject c2
                 = assertThat(compilation)
                         .generatedFile(StandardLocation.CLASS_OUTPUT, "META-INF/services/WithRepeatedAnnotation$SomeService")
                         .contentsAsUtf8String();
-        c2.contains("WithRepeatedAnnotation$Provider1");
-        c2.doesNotContain("WithRepeatedAnnotation$Provider2");
+        c2.contains("WithRepeatedAnnotation$MultiProvider");
+        c2.doesNotContain("WithRepeatedAnnotation$SimpleProvider");
     }
 
     @Test
@@ -236,6 +236,41 @@ public class ServiceProviderProcessorTest {
                         .contentsAsUtf8String();
         content.contains("WithGenerics$Provider1");
         content.contains("WithGenerics$Provider2");
+    }
+
+    @Test
+    public void testInferredService() {
+        JavaFileObject file = JavaFileObjects.forResource("InferredService.java");
+
+        Compilation compilation = com.google.testing.compile.Compiler.javac()
+                .withProcessors(new ServiceProviderProcessor())
+                .compile(file);
+
+        assertThat(compilation)
+                .succeeded();
+
+        StringSubject content
+                = assertThat(compilation)
+                        .generatedFile(StandardLocation.CLASS_OUTPUT, "META-INF/services/InferredService$HelloService")
+                        .contentsAsUtf8String();
+        content.contains("InferredService$Provider1");
+    }
+
+    @Test
+    public void testVoidService() {
+        JavaFileObject file = JavaFileObjects.forResource("VoidService.java");
+
+        Compilation compilation = com.google.testing.compile.Compiler.javac()
+                .withProcessors(new ServiceProviderProcessor())
+                .compile(file);
+
+        assertThat(compilation)
+                .failed();
+
+        assertThat(compilation)
+                .hadErrorContaining("Cannot infer service")
+                .inFile(file)
+                .onLine(11);
     }
 
     @Test

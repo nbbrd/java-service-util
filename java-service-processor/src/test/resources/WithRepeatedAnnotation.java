@@ -9,12 +9,12 @@ class WithRepeatedAnnotation {
     interface SomeService {
     }
 
-    @ServiceProvider(HelloService.class)
-    @ServiceProvider(SomeService.class)
-    public static class Provider1 implements HelloService, SomeService {
+    @ServiceProvider
+    public static class SimpleProvider implements HelloService {
     }
 
     @ServiceProvider(HelloService.class)
-    public static class Provider2 extends Provider1 {
+    @ServiceProvider(SomeService.class)
+    public static class MultiProvider implements HelloService, SomeService {
     }
 }
