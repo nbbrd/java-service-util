@@ -17,12 +17,15 @@
 package internal.nbbrd.service;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Stream;
 import javax.lang.model.element.Element;
+import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.element.VariableElement;
 import javax.lang.model.util.ElementFilter;
 import javax.lang.model.util.Types;
 
@@ -34,16 +37,22 @@ import javax.lang.model.util.Types;
 final class TypeFactory {
 
     enum Kind {
-        CONSTRUCTOR, STATIC_METHOD;
+        CONSTRUCTOR, STATIC_METHOD, ENUM_FIELD, STATIC_FIELD;
     }
 
     private Kind kind;
     private Element element;
 
+    static List<TypeFactory> of(Types util, TypeElement type) {
+        return of(util, type, type);
+    }
+
     static List<TypeFactory> of(Types util, TypeElement service, TypeElement provider) {
         List<TypeFactory> result = new ArrayList<>();
         getPublicNoArgumentConstructor(provider).map(o -> new TypeFactory(Kind.CONSTRUCTOR, o)).forEach(result::add);
         getStaticFactoryMethods(util, service, provider).map(o -> new TypeFactory(Kind.STATIC_METHOD, o)).forEach(result::add);
+        getEnumFields(util, provider).map(o -> new TypeFactory(Kind.ENUM_FIELD, o)).forEach(result::add);;
+        getStaticFields(util, service, provider).map(o -> new TypeFactory(Kind.STATIC_FIELD, o)).forEach(result::add);;
         return result;
     }
 
@@ -67,4 +76,23 @@ final class TypeFactory {
                 .filter(method -> util.isSubtype(method.getReturnType(), service.asType()));
     }
 
+    static Stream<VariableElement> getEnumFields(Types util, TypeElement provider) {
+        return provider.getKind() == ElementKind.ENUM
+                ? ElementFilter
+                        .fieldsIn(provider.getEnclosedElements())
+                        .stream()
+                        .filter(field -> field.getKind().equals(ElementKind.ENUM_CONSTANT))
+                : Stream.empty();
+    }
+
+    static Stream<VariableElement> getStaticFields(Types util, TypeElement service, TypeElement provider) {
+        return provider.getKind() != ElementKind.ENUM
+                ? ElementFilter
+                        .fieldsIn(provider.getEnclosedElements())
+                        .stream()
+                        .filter(field -> field.getKind().equals(ElementKind.FIELD))
+                        .filter(field -> field.getModifiers().containsAll(Arrays.asList(Modifier.PUBLIC, Modifier.STATIC, Modifier.FINAL)))
+                        .filter(field -> util.isSubtype(field.asType(), service.asType()))
+                : Stream.empty();
+    }
 }

@@ -184,4 +184,14 @@ public class ServiceDefinitionProcessorTest {
                 .contentsAsUtf8String()
                 .contains("private static final AtomicReference<List<MultipleDef.ThreadSafeSingleton>> RESOURCE = new AtomicReference<>(load());");
     }
+    
+    @Test
+    public void testAlternateFactories() {
+        Compilation compilation = com.google.testing.compile.Compiler.javac()
+                .withProcessors(new ServiceDefinitionProcessor())
+                .compile(JavaFileObjects.forResource("definition/AlternateFactories.java"));
+
+        assertThat(compilation)
+                .succeeded();
+    }
 }

@@ -21,14 +21,17 @@ import com.squareup.javapoet.JavaFile;
 import com.squareup.javapoet.TypeSpec;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.Processor;
 import javax.annotation.processing.RoundEnvironment;
 import javax.annotation.processing.SupportedAnnotationTypes;
 import javax.lang.model.SourceVersion;
+import javax.lang.model.element.Element;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.type.TypeMirror;
 import nbbrd.service.ServiceDefinition;
 
 /**
@@ -67,16 +70,21 @@ public final class ServiceDefinitionProcessor extends AbstractProcessor {
     }
 
     private void process(ClassName top, List<ServiceLoaderGenerator> generators) {
+        Function<TypeMirror, TypeFactory> toFactory = typeMirror -> {
+            Element e = processingEnv.getTypeUtils().asElement(typeMirror);
+            return TypeFactory.of(processingEnv.getTypeUtils(), (TypeElement) e).get(0);
+        };
+
         JavaFile file;
         if (generators.size() == 1 && top.equals(resolveLoaderName(generators.get(0)))) {
             ServiceLoaderGenerator generator = generators.get(0);
-            file = JavaFile.builder(top.packageName(), generator.generate(top.simpleName())).build();
+            file = JavaFile.builder(top.packageName(), generator.generate(top.simpleName(), toFactory)).build();
         } else {
             TypeSpec.Builder nestedTypes = TypeSpec.classBuilder(top)
                     .addModifiers(Modifier.PUBLIC, Modifier.FINAL);
             generators
                     .stream()
-                    .map(generator -> generator.generate(resolveLoaderName(generator).simpleName()))
+                    .map(generator -> generator.generate(resolveLoaderName(generator).simpleName(), toFactory))
                     .map(o -> o.toBuilder().addModifiers(Modifier.STATIC).build())
                     .forEach(nestedTypes::addType);
             file = JavaFile.builder(top.packageName(), nestedTypes.build()).build();

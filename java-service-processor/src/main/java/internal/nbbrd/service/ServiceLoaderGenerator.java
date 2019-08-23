@@ -29,6 +29,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.ServiceLoader;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
@@ -67,11 +68,11 @@ class ServiceLoaderGenerator {
     private Optional<TypeMirror> lookupType;
     private String loaderName;
 
-    public TypeSpec generate(String className) {
+    public TypeSpec generate(String className, Function<TypeMirror, TypeFactory> toFactory) {
         TypeName quantifierType = getQuantifierType();
 
         FieldSpec sourceField = newSourceField();
-        MethodSpec loadMethod = newLoadMethod(sourceField, quantifierType);
+        MethodSpec loadMethod = newLoadMethod(sourceField, quantifierType, toFactory);
         FieldSpec resourceField = newResourceField(loadMethod, quantifierType);
 
         TypeSpec.Builder result = TypeSpec.classBuilder(className)
@@ -109,7 +110,7 @@ class ServiceLoaderGenerator {
                 .build();
     }
 
-    private MethodSpec newLoadMethod(FieldSpec sourceField, TypeName quantifierType) {
+    private MethodSpec newLoadMethod(FieldSpec sourceField, TypeName quantifierType, Function<TypeMirror, TypeFactory> toFactory) {
         return MethodSpec.methodBuilder("load")
                 .addModifiers(Modifier.PRIVATE)
                 .addModifiers(getSingletonModifiers())
@@ -118,28 +119,43 @@ class ServiceLoaderGenerator {
                 .addStatement(CodeBlock
                         .builder()
                         .add("return ")
-                        .add(getLookupCode(sourceField))
-                        .add(getQuantifierCode())
+                        .add(getLookupCode(sourceField, toFactory))
+                        .add(getQuantifierCode(toFactory))
                         .build())
                 .build();
     }
 
-    private CodeBlock getLookupCode(FieldSpec sourceField) {
+    private CodeBlock getLookupCode(FieldSpec sourceField, Function<TypeMirror, TypeFactory> toFactory) {
         return lookupType.isPresent()
-                ? CodeBlock.of("new $T()\n.apply($T.stream($N.spliterator(), false))", lookupType.get(), StreamSupport.class, sourceField)
+                ? CodeBlock.of("$L\n.apply($T.stream($N.spliterator(), false))", getFactoryCode(lookupType.get(), toFactory), StreamSupport.class, sourceField)
                 : CodeBlock.of("$T.stream($N.spliterator(), false)", StreamSupport.class, sourceField);
     }
 
-    private CodeBlock getQuantifierCode() {
+    private CodeBlock getQuantifierCode(Function<TypeMirror, TypeFactory> toFactory) {
         switch (quantifier) {
             case OPTIONAL:
                 return CodeBlock.of("\n.findFirst()");
             case SINGLE:
                 return fallbackType.isPresent()
-                        ? CodeBlock.of("\n.findFirst()\n.orElseGet($T::new)", fallbackType.get())
+                        ? CodeBlock.of("\n.findFirst()\n.orElseGet(() -> $L)", getFactoryCode(fallbackType.get(), toFactory))
                         : CodeBlock.of("\n.findFirst()\n.orElseThrow(() -> new $T(\"Missing mandatory provider of $T\"))", IllegalStateException.class, serviceType);
             case MULTIPLE:
                 return CodeBlock.of("\n.collect($T.collectingAndThen($T.toList(), $T::unmodifiableList))", Collectors.class, Collectors.class, Collections.class);
+            default:
+                throw new RuntimeException();
+        }
+    }
+
+    private CodeBlock getFactoryCode(TypeMirror type, Function<TypeMirror, TypeFactory> toFactory) {
+        TypeFactory factory = toFactory.apply(type);
+        switch (factory.getKind()) {
+            case CONSTRUCTOR:
+                return CodeBlock.of("new $T()", type);
+            case STATIC_METHOD:
+                return CodeBlock.of("$T.$L()", type, factory.getElement().getSimpleName());
+            case ENUM_FIELD:
+            case STATIC_FIELD:
+                return CodeBlock.of("$T.$L", type, factory.getElement().getSimpleName());
             default:
                 throw new RuntimeException();
         }
