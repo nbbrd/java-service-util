@@ -66,7 +66,7 @@ public class ModulePathRegistryTest {
                         newRef("lib.HelloService", "abc.xyz.Ab")
                 );
 
-        try (InputStream stream = ModulePathRegistryTest.class.getResourceAsStream("/module-info.java")) {
+        try (InputStream stream = ModulePathRegistryTest.class.getResourceAsStream("/provider/somemodule-info.java")) {
             assertThat(parseAll(CustomName::new, CharStreams.fromStream(stream)))
                     .containsExactly(
                             newRef("java.util.spi.LocaleServiceProvider", "internal.pac.modern.lib.NewModernService"),

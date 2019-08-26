@@ -4,13 +4,13 @@ import java.util.function.UnaryOperator;
 import java.util.stream.Stream;
 import nbbrd.service.ServiceDefinition;
 
-class NonAssignableLookup {
+class NonAssignablePreprocessor {
 
-    @ServiceDefinition(lookup = HelloLookup.class)
+    @ServiceDefinition(preprocessor = HelloProc.class)
     interface HelloService {
     }
 
-    public static class HelloLookup implements UnaryOperator<Stream> {
+    public static class HelloProc implements UnaryOperator<Stream> {
 
         @Override
         public Stream apply(Stream t) {

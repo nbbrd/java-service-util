@@ -7,7 +7,7 @@ import nbbrd.service.ServiceDefinition;
 
 class AlternateFactories {
 
-    @ServiceDefinition(quantifier = Quantifier.SINGLE, fallback = ConstructorFallback.class, lookup = ConstructorLookup.class)
+    @ServiceDefinition(quantifier = Quantifier.SINGLE, fallback = ConstructorFallback.class, preprocessor = ConstructorProc.class)
     interface ConstructorService {
     }
 
@@ -17,9 +17,9 @@ class AlternateFactories {
         }
     }
 
-    static class ConstructorLookup implements UnaryOperator<Stream<ConstructorService>> {
+    static class ConstructorProc implements UnaryOperator<Stream<ConstructorService>> {
 
-        public ConstructorLookup() {
+        public ConstructorProc() {
         }
 
         @Override
@@ -28,7 +28,7 @@ class AlternateFactories {
         }
     }
 
-    @ServiceDefinition(quantifier = Quantifier.SINGLE, fallback = StaticMethodFallback.class, lookup = StaticMethodLookup.class)
+    @ServiceDefinition(quantifier = Quantifier.SINGLE, fallback = StaticMethodFallback.class, preprocessor = StaticMethodProc.class)
     interface StaticMethodService {
     }
 
@@ -42,13 +42,13 @@ class AlternateFactories {
         }
     }
 
-    static class StaticMethodLookup implements UnaryOperator<Stream<StaticMethodService>> {
+    static class StaticMethodProc implements UnaryOperator<Stream<StaticMethodService>> {
 
-        public static StaticMethodLookup getInstance() {
-            return new StaticMethodLookup();
+        public static StaticMethodProc getInstance() {
+            return new StaticMethodProc();
         }
 
-        private StaticMethodLookup() {
+        private StaticMethodProc() {
         }
 
         @Override
@@ -57,7 +57,7 @@ class AlternateFactories {
         }
     }
 
-    @ServiceDefinition(quantifier = Quantifier.SINGLE, fallback = EnumFieldFallback.class, lookup = EnumFieldLookup.class)
+    @ServiceDefinition(quantifier = Quantifier.SINGLE, fallback = EnumFieldFallback.class, preprocessor = EnumFieldProc.class)
     interface EnumFieldService {
     }
 
@@ -65,7 +65,7 @@ class AlternateFactories {
         INSTANCE;
     }
 
-    static enum EnumFieldLookup implements UnaryOperator<Stream<EnumFieldService>> {
+    static enum EnumFieldProc implements UnaryOperator<Stream<EnumFieldService>> {
         INSTANCE;
 
         @Override
@@ -74,7 +74,7 @@ class AlternateFactories {
         }
     }
 
-    @ServiceDefinition(quantifier = Quantifier.SINGLE, fallback = StaticFieldFallback.class, lookup = StaticFieldLookup.class)
+    @ServiceDefinition(quantifier = Quantifier.SINGLE, fallback = StaticFieldFallback.class, preprocessor = StaticFieldProc.class)
     interface StaticFieldService {
     }
 
@@ -86,11 +86,11 @@ class AlternateFactories {
         }
     }
 
-    static class StaticFieldLookup implements UnaryOperator<Stream<StaticFieldService>> {
+    static class StaticFieldProc implements UnaryOperator<Stream<StaticFieldService>> {
 
-        public static final StaticFieldLookup STUFF = new StaticFieldLookup();
+        public static final StaticFieldProc STUFF = new StaticFieldProc();
 
-        private StaticFieldLookup() {
+        private StaticFieldProc() {
         }
 
         @Override

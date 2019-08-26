@@ -17,9 +17,21 @@
 package nbbrd.service;
 
 /**
+ * Specifies how many class instances are expected.
  *
  * @author Philippe Charles
  */
 public enum Quantifier {
-    OPTIONAL, SINGLE, MULTIPLE
+    /**
+     * Match zero or one instance
+     */
+    OPTIONAL,
+    /**
+     * Match exactly on instance
+     */
+    SINGLE,
+    /**
+     * Match zero or more instances
+     */
+    MULTIPLE;
 }

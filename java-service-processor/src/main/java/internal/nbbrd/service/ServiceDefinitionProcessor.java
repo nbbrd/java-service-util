@@ -21,7 +21,6 @@ import com.squareup.javapoet.JavaFile;
 import com.squareup.javapoet.TypeSpec;
 import java.util.List;
 import java.util.Set;
-import java.util.function.Function;
 import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -30,7 +29,6 @@ import javax.annotation.processing.Processor;
 import javax.annotation.processing.RoundEnvironment;
 import javax.annotation.processing.SupportedAnnotationTypes;
 import javax.lang.model.SourceVersion;
-import javax.lang.model.element.Element;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.DeclaredType;
@@ -106,17 +104,17 @@ public final class ServiceDefinitionProcessor extends AbstractProcessor {
             checkFactories(service, fallback);
         }
 
-        if (generator.getLookupType().isPresent()) {
-            TypeMirror lookup = generator.getLookupType().get();
+        if (generator.getPreprocessorType().isPresent()) {
+            TypeMirror preprocessor = generator.getPreprocessorType().get();
 
             DeclaredType streamOf = types.getDeclaredType(asTypeElement(Stream.class), service.asType());
             DeclaredType unaryOperatorOf = types.getDeclaredType(asTypeElement(UnaryOperator.class), streamOf);
-            if (!types.isAssignable(lookup, unaryOperatorOf)) {
-                error(service, String.format("Lookup '%1$s' doesn't extend nor implement 'UnaryOperator<Stream<%2$s>>'", lookup, service));
+            if (!types.isAssignable(preprocessor, unaryOperatorOf)) {
+                error(service, String.format("Preprocessor '%1$s' doesn't extend nor implement 'UnaryOperator<Stream<%2$s>>'", preprocessor, service));
                 return;
             }
 
-            checkFactories(service, lookup);
+            checkFactories(service, preprocessor);
         }
     }
 

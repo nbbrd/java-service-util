@@ -25,7 +25,33 @@ import java.util.function.UnaryOperator;
 import java.util.stream.Stream;
 
 /**
- * Declarative definition of a service.
+ * Declarative definition of a service that generates a specialized service
+ * loader that takes care of the loading and enforces a specific usage.
+ *
+ * <p>
+ * Internal storage summary:
+ * <pre>
+ * optional none                  :        final           Optional&lt;T&gt;
+ * optional basic                 :                        Optional&lt;T&gt;
+ * optional concurrent            :        final AtomicRef&lt;Optional&lt;T&gt;&gt;
+ * optional none       +singleton : static final           Optional&lt;T&gt;
+ * optional basic      +singleton : static                 Optional&lt;T&gt;
+ * optional concurrent +singleton : static final AtomicRef&lt;Optional&lt;T&gt;&gt;
+ *
+ * single   none                  :        final           T
+ * single   basic                 :                        T
+ * single   concurrent            :        final AtomicRef&lt;T&gt;
+ * single   none       +singleton : static final           T
+ * single   basic      +singleton : static                 T
+ * single   concurrent +singleton : static final AtomicRef&lt;T&gt;
+ *
+ * multiple none                  :        final           UmodifiableList&lt;T&gt;
+ * multiple basic                 :                        UmodifiableList&lt;T&gt;
+ * multiple concurrent            :        final AtomicRef&lt;UmodifiableList&lt;T&gt;&gt;
+ * multiple none       +singleton : static final           UmodifiableList&lt;T&gt;
+ * multiple basic      +singleton : static                 UmodifiableList&lt;T&gt;
+ * multiple concurrent +singleton : static final AtomicRef&lt;UmodifiableList&lt;T&gt;&gt;
+ * </pre>
  *
  * @author Philippe Charles
  */
@@ -34,49 +60,71 @@ import java.util.stream.Stream;
 @Retention(RetentionPolicy.SOURCE)
 public @interface ServiceDefinition {
 
-    // Cardinality: optional, single or multi
-    // Mutability: immutable, mutable, threadsafe
-    // Modifiers: singleton
-    //
-    // optional immutable             :        final           Optional<T>
-    // optional mutable               :                        Optional<T>
-    // optional threadsafe            :        final AtomicRef<Optional<T>>
-    // optional immutable  +singleton : static final           Optional<T>
-    // optional mutable    +singleton : static                 Optional<T>
-    // optional threadsafe +singleton : static final AtomicRef<Optional<T>>
-    //
-    // single   immutable             :        final           T
-    // single   mutable               :                        T
-    // single   threadsafe            :        final AtomicRef<T>
-    // single   immutable  +singleton : static final           T
-    // single   mutable    +singleton : static                 T
-    // single   threadsafe +singleton : static final AtomicRef<T>
-    //
-    // multi    immutable             :        final           UmodifiableList<T>
-    // multi    mutable               :                        UmodifiableList<T>
-    // multi    threadsafe            :        final AtomicRef<UmodifiableList<T>>
-    // multi    immutable  +singleton : static final           UmodifiableList<T>
-    // multi    mutable    +singleton : static                 UmodifiableList<T>
-    // multi    threadsafe +singleton : static final AtomicRef<UmodifiableList<T>>
-    //
-    //
+    /**
+     * Specifies how many instances are returned by the loader.
+     *
+     * @return
+     */
     Quantifier quantifier() default Quantifier.OPTIONAL;
 
+    /**
+     * Specifies the mutability of the loader.
+     *
+     * @return
+     */
     Mutability mutability() default Mutability.NONE;
 
+    /**
+     * Specifies if the loader must be a singleton.
+     *
+     * @return true if the loader is a singleton, false otherwise
+     */
     boolean singleton() default false;
 
-    Class<?> fallback() default NullValue.class;
+    /**
+     * Specifies the fallback class to use if no service is available.<br>This
+     * option is only used in conjunction with {@link Quantifier.SINGLE}.
+     * <p>
+     * Requirements:
+     * <ul>
+     * <li>must be assignable to the service type
+     * <li>must be instantiable either by constructor, static method, enum field
+     * or static final field
+     * </ul>
+     *
+     * @return the fallback service type if required, {@link Void} otherwise
+     */
+    Class<?> fallback() default Void.class;
 
-    Class<? extends UnaryOperator<? extends Stream>> lookup() default NullValue.class;
+    /**
+     * Specifies the class that preprocess the service implementations.<br>This
+     * operation happens between loading and storage.<br>It may include
+     * filtering, sorting and mapping.
+     * <p>
+     * Requirements:
+     * <ul>
+     * <li>must be assignable to {@code UnaryOperator<? extends Stream<T>>}
+     * <li>must be instantiable either by constructor, static method, enum field
+     * or static final field
+     * </ul>
+     *
+     * @return the preprocessor type if required, {@link NoProcessing} otherwise
+     */
+    Class<? extends UnaryOperator<? extends Stream>> preprocessor() default NoProcessing.class;
 
+    /**
+     * Specifies the fully qualified name of the loader. An empty value
+     * generates an automatic name.
+     *
+     * @return a fully qualified name
+     */
     String loaderName() default "";
 
-    static final class NullValue implements UnaryOperator<Stream> {
+    static final class NoProcessing implements UnaryOperator<Stream> {
 
         @Override
         public Stream apply(Stream t) {
-            throw new UnsupportedOperationException();
+            return t;
         }
     }
 }

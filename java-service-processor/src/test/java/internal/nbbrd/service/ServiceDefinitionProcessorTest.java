@@ -214,8 +214,8 @@ public class ServiceDefinitionProcessorTest {
     }
 
     @Test
-    public void testNonAssignableLookup() {
-        JavaFileObject file = JavaFileObjects.forResource("definition/NonAssignableLookup.java");
+    public void testNonAssignablePreprocessor() {
+        JavaFileObject file = JavaFileObjects.forResource("definition/NonAssignablePreprocessor.java");
 
         Compilation compilation = com.google.testing.compile.Compiler.javac()
                 .withProcessors(new ServiceDefinitionProcessor())

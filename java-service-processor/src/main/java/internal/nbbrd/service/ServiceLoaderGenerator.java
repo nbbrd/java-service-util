@@ -60,7 +60,7 @@ class ServiceLoaderGenerator {
                 .singleton(definition.singleton())
                 .serviceType(serviceType)
                 .fallbackType(nonNull(definition::fallback))
-                .lookupType(nonNull(definition::lookup))
+                .preprocessorType(nonNull(definition::preprocessor))
                 .loaderName(definition.loaderName())
                 .build();
     }
@@ -70,7 +70,7 @@ class ServiceLoaderGenerator {
     private boolean singleton;
     private ClassName serviceType;
     private Optional<TypeMirror> fallbackType;
-    private Optional<TypeMirror> lookupType;
+    private Optional<TypeMirror> preprocessorType;
     private String loaderName;
 
     public TypeSpec generate(String className, Function<TypeMirror, TypeFactory> toFactory) {
@@ -110,7 +110,7 @@ class ServiceLoaderGenerator {
                 .add("<li>Mutability: $L\n", mutability)
                 .add("<li>Singleton: $L\n", singleton)
                 .add("<li>Fallback: $L\n", toJavadocLink(fallbackType))
-                .add("<li>Lookup: $L\n", toJavadocLink(lookupType))
+                .add("<li>Preprocessor: $L\n", toJavadocLink(preprocessorType))
                 .add("<li>Name: $L\n", loaderName.isEmpty() ? "null" : loaderName)
                 .build();
     }
@@ -124,15 +124,15 @@ class ServiceLoaderGenerator {
                 .addStatement(CodeBlock
                         .builder()
                         .add("return ")
-                        .add(getLookupCode(sourceField, toFactory))
+                        .add(getPreprocessorCode(sourceField, toFactory))
                         .add(getQuantifierCode(toFactory))
                         .build())
                 .build();
     }
 
-    private CodeBlock getLookupCode(FieldSpec sourceField, Function<TypeMirror, TypeFactory> toFactory) {
-        return lookupType.isPresent()
-                ? CodeBlock.of("$L\n.apply($T.stream($N.spliterator(), false))", getFactoryCode(lookupType.get(), toFactory), StreamSupport.class, sourceField)
+    private CodeBlock getPreprocessorCode(FieldSpec sourceField, Function<TypeMirror, TypeFactory> toFactory) {
+        return preprocessorType.isPresent()
+                ? CodeBlock.of("$L\n.apply($T.stream($N.spliterator(), false))", getFactoryCode(preprocessorType.get(), toFactory), StreamSupport.class, sourceField)
                 : CodeBlock.of("$T.stream($N.spliterator(), false)", StreamSupport.class, sourceField);
     }
 
@@ -336,7 +336,13 @@ class ServiceLoaderGenerator {
     }
 
     private static boolean isNonNullValue(TypeMirror type) {
-        return !type.toString().equals("nbbrd.service.ServiceDefinition.NullValue");
+        switch (type.toString()) {
+            case "nbbrd.service.ServiceDefinition.NoProcessing":
+            case "java.lang.Void":
+                return false;
+            default:
+                return true;
+        }
     }
 
     private static ParameterizedTypeName typeOf(Class<?> rawType, TypeName typeArgument) {

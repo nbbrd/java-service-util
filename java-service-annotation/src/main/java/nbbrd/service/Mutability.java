@@ -17,11 +17,23 @@
 package nbbrd.service;
 
 /**
+ * Specifies the type of mutability of a class.
  *
  * @author Philippe Charles
  */
 public enum Mutability {
-    NONE, BASIC, CONCURRENT;
+    /**
+     * Not mutable
+     */
+    NONE,
+    /**
+     * Mutable but not thread-safe
+     */
+    BASIC,
+    /**
+     * Mutable and thread-safe
+     */
+    CONCURRENT;
 
     public boolean isThreadSafe() {
         return this != BASIC;

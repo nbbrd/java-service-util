@@ -36,7 +36,7 @@ public class ServiceProviderProcessorTest {
     public void testWithoutAnnotation() {
         Compilation compilation = com.google.testing.compile.Compiler.javac()
                 .withProcessors(new ServiceProviderProcessor())
-                .compile(JavaFileObjects.forResource("WithoutAnnotation.java"));
+                .compile(JavaFileObjects.forResource("provider/WithoutAnnotation.java"));
 
         assertThat(compilation)
                 .succeeded();
@@ -46,7 +46,7 @@ public class ServiceProviderProcessorTest {
     public void testWithAnnotation() {
         Compilation compilation = com.google.testing.compile.Compiler.javac()
                 .withProcessors(new ServiceProviderProcessor())
-                .compile(JavaFileObjects.forResource("WithAnnotation.java"));
+                .compile(JavaFileObjects.forResource("provider/WithAnnotation.java"));
 
         assertThat(compilation)
                 .succeeded();
@@ -63,7 +63,7 @@ public class ServiceProviderProcessorTest {
     public void testWithRepeatedAnnotation() {
         Compilation compilation = com.google.testing.compile.Compiler.javac()
                 .withProcessors(new ServiceProviderProcessor())
-                .compile(JavaFileObjects.forResource("WithRepeatedAnnotation.java"));
+                .compile(JavaFileObjects.forResource("provider/WithRepeatedAnnotation.java"));
 
         assertThat(compilation)
                 .succeeded();
@@ -85,7 +85,7 @@ public class ServiceProviderProcessorTest {
 
     @Test
     public void testMissingImplementation() {
-        JavaFileObject file = JavaFileObjects.forResource("MissingImplementation.java");
+        JavaFileObject file = JavaFileObjects.forResource("provider/MissingImplementation.java");
 
         Compilation compilation = com.google.testing.compile.Compiler.javac()
                 .withProcessors(new ServiceProviderProcessor())
@@ -102,7 +102,7 @@ public class ServiceProviderProcessorTest {
 
     @Test
     public void testStaticInnerClass() {
-        JavaFileObject file = JavaFileObjects.forResource("StaticInnerClass.java");
+        JavaFileObject file = JavaFileObjects.forResource("provider/StaticInnerClass.java");
 
         Compilation compilation = com.google.testing.compile.Compiler.javac()
                 .withProcessors(new ServiceProviderProcessor())
@@ -119,7 +119,7 @@ public class ServiceProviderProcessorTest {
 
     @Test
     public void testAbstractClass() {
-        JavaFileObject file = JavaFileObjects.forResource("AbstractClass.java");
+        JavaFileObject file = JavaFileObjects.forResource("provider/AbstractClass.java");
 
         Compilation compilation = com.google.testing.compile.Compiler.javac()
                 .withProcessors(new ServiceProviderProcessor())
@@ -136,7 +136,7 @@ public class ServiceProviderProcessorTest {
 
     @Test
     public void testPublicNoArgumentConstructor() {
-        JavaFileObject file = JavaFileObjects.forResource("PublicNoArgumentConstructor.java");
+        JavaFileObject file = JavaFileObjects.forResource("provider/PublicNoArgumentConstructor.java");
 
         Compilation compilation = com.google.testing.compile.Compiler.javac()
                 .withProcessors(new ServiceProviderProcessor())
@@ -153,7 +153,7 @@ public class ServiceProviderProcessorTest {
 
     @Test
     public void testStaticProviderMethod() {
-        JavaFileObject file = JavaFileObjects.forResource("StaticProviderMethod.java");
+        JavaFileObject file = JavaFileObjects.forResource("provider/StaticProviderMethod.java");
 
         Compilation compilation = com.google.testing.compile.Compiler.javac()
                 .withProcessors(new ServiceProviderProcessor())
@@ -170,7 +170,7 @@ public class ServiceProviderProcessorTest {
 
     @Test
     public void testStaticNoProviderMethod() {
-        JavaFileObject file = JavaFileObjects.forResource("StaticNoProviderMethod.java");
+        JavaFileObject file = JavaFileObjects.forResource("provider/StaticNoProviderMethod.java");
 
         Compilation compilation = com.google.testing.compile.Compiler.javac()
                 .withProcessors(new ServiceProviderProcessor())
@@ -187,7 +187,7 @@ public class ServiceProviderProcessorTest {
 
     @Test
     public void testStaticMultiProviderMethod() {
-        JavaFileObject file = JavaFileObjects.forResource("StaticMultiProviderMethod.java");
+        JavaFileObject file = JavaFileObjects.forResource("provider/StaticMultiProviderMethod.java");
 
         Compilation compilation = com.google.testing.compile.Compiler.javac()
                 .withProcessors(new ServiceProviderProcessor())
@@ -204,7 +204,7 @@ public class ServiceProviderProcessorTest {
 
     @Test
     public void testDuplicatedAnnotation() {
-        JavaFileObject file = JavaFileObjects.forResource("DuplicatedAnnotation.java");
+        JavaFileObject file = JavaFileObjects.forResource("provider/DuplicatedAnnotation.java");
 
         Compilation compilation = com.google.testing.compile.Compiler.javac()
                 .withProcessors(new ServiceProviderProcessor())
@@ -221,7 +221,7 @@ public class ServiceProviderProcessorTest {
 
     @Test
     public void testWithGenerics() {
-        JavaFileObject file = JavaFileObjects.forResource("WithGenerics.java");
+        JavaFileObject file = JavaFileObjects.forResource("provider/WithGenerics.java");
 
         Compilation compilation = com.google.testing.compile.Compiler.javac()
                 .withProcessors(new ServiceProviderProcessor())
@@ -240,7 +240,7 @@ public class ServiceProviderProcessorTest {
 
     @Test
     public void testInferredService() {
-        JavaFileObject file = JavaFileObjects.forResource("InferredService.java");
+        JavaFileObject file = JavaFileObjects.forResource("provider/InferredService.java");
 
         Compilation compilation = com.google.testing.compile.Compiler.javac()
                 .withProcessors(new ServiceProviderProcessor())
@@ -258,7 +258,7 @@ public class ServiceProviderProcessorTest {
 
     @Test
     public void testVoidService() {
-        JavaFileObject file = JavaFileObjects.forResource("VoidService.java");
+        JavaFileObject file = JavaFileObjects.forResource("provider/VoidService.java");
 
         Compilation compilation = com.google.testing.compile.Compiler.javac()
                 .withProcessors(new ServiceProviderProcessor())
