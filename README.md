@@ -60,28 +60,10 @@ public final class LoggerFactory {
 @ServiceDefinition(
     singleton = true,
     quantifier = Quantifier.SINGLE,
-    fallback = LoggerSpi.NoOpLoggerSpi.class
+    fallback = NoOpLoggerSpi.class
 )
 public interface LoggerSpi {
-
     Logger makeNewLoggerInstance(String name);
-
-    enum NoOpLoggerSpi implements LoggerSpi {
-        INSTANCE;
-
-        @Override
-        public Logger makeNewLoggerInstance(String name) {
-            return NoOpLogger.INSTANCE;
-        }
-    }
-
-    enum NoOpLogger implements Logger {
-        INSTANCE;
-
-        @Override
-        public void info(String message) {
-        }
-    }
 }
 ```
 
