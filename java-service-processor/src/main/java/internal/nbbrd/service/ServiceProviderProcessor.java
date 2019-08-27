@@ -152,7 +152,7 @@ public final class ServiceProviderProcessor extends AbstractProcessor {
             annotationRefs
                     .stream()
                     .filter(ref -> (!modulePathRefs.contains(ref)))
-                    .forEachOrdered(ref -> error(ref, "Missing module-info.java entry for '" + ref + "'"));
+                    .forEachOrdered(ref -> error(ref, "Missing module-info.java 'provides' directive for '" + ref + "'"));
 
             modulePathRefs
                     .stream()

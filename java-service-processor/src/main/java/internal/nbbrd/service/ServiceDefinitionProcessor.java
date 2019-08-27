@@ -19,7 +19,9 @@ package internal.nbbrd.service;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.JavaFile;
 import com.squareup.javapoet.TypeSpec;
+import java.io.IOException;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
@@ -56,8 +58,11 @@ public final class ServiceDefinitionProcessor extends AbstractProcessor {
 //        }
 
         List<ServiceLoaderGenerator> generators = collect(annotations, roundEnv);
-        check(generators);
-        process(generators);
+
+        if (!generators.isEmpty()) {
+            check(generators);
+            process(generators);
+        }
 
         return true;
     }
@@ -73,6 +78,7 @@ public final class ServiceDefinitionProcessor extends AbstractProcessor {
 
     private void check(List<ServiceLoaderGenerator> generators) {
         generators.forEach(this::check);
+        checkModuleInfo(generators);
     }
 
     private void check(ServiceLoaderGenerator generator) {
@@ -126,6 +132,34 @@ public final class ServiceDefinitionProcessor extends AbstractProcessor {
         }
     }
 
+    private void checkModuleInfo(List<ServiceLoaderGenerator> generators) {
+        List<String> serviceTypes = generators.stream()
+                .map(generator -> generator.getServiceType().toString())
+                .collect(Collectors.toList());
+
+        try {
+            Optional<ModuleInfoEntries> entries = ModuleInfoEntries.parse(processingEnv.getFiler());
+
+            entries.map(ModuleInfoEntries::getUsages).ifPresent(usages -> {
+                serviceTypes
+                        .stream()
+                        .filter(serviceType -> (!usages.contains(serviceType)))
+                        .map(this::asTypeElement)
+                        .forEachOrdered(ref -> error(ref, "Missing module-info.java 'uses' directive for '" + ref + "'"));
+
+//                uses
+//                        .stream()
+//                        .filter(use -> (!serviceTypes.contains(use)))
+//                        .map(this::asTypeElement)
+//                        .forEachOrdered(ref -> error(ref, "Missing annotation for '" + ref + "'"));
+            });
+
+        } catch (IOException ex) {
+            String msg = ex.getClass().getSimpleName() + ": " + ex.getMessage();
+            processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR, msg);
+        }
+    }
+
     private void process(List<ServiceLoaderGenerator> generators) {
         generators
                 .stream()
@@ -153,6 +187,10 @@ public final class ServiceDefinitionProcessor extends AbstractProcessor {
 
     private TypeFactory selectTypeFactory(TypeMirror typeMirror) {
         return TypeFactory.select(TypeFactory.of(processingEnv.getTypeUtils(), asTypeElement(typeMirror)));
+    }
+
+    private TypeElement asTypeElement(String o) {
+        return processingEnv.getElementUtils().getTypeElement(o);
     }
 
     private TypeElement asTypeElement(Class o) {
