@@ -20,21 +20,18 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.Processor;
 import javax.annotation.processing.RoundEnvironment;
 import javax.annotation.processing.SupportedAnnotationTypes;
-import javax.annotation.processing.SupportedSourceVersion;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.Name;
 import javax.lang.model.element.TypeElement;
-import javax.lang.model.util.ElementFilter;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
 import javax.tools.Diagnostic;
@@ -44,9 +41,13 @@ import javax.tools.Diagnostic;
  * @author Philippe Charles
  */
 @org.openide.util.lookup.ServiceProvider(service = Processor.class)
-@SupportedSourceVersion(SourceVersion.RELEASE_8)
 @SupportedAnnotationTypes({"nbbrd.service.ServiceProvider", "nbbrd.service.ServiceProvider.List"})
 public final class ServiceProviderProcessor extends AbstractProcessor {
+
+    @Override
+    public SourceVersion getSupportedSourceVersion() {
+        return SourceVersion.latestSupported();
+    }
 
     @Override
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
@@ -86,6 +87,11 @@ public final class ServiceProviderProcessor extends AbstractProcessor {
         Elements elements = processingEnv.getElementUtils();
         Types types = processingEnv.getTypeUtils();
 
+        if (ref.getService().contentEquals(Void.class.getName())) {
+            error(ref, "Cannot infer service from provider " + ref.getProvider());
+            return;
+        }
+
         TypeElement service = elements.getTypeElement(ref.getService());
         if (service == null) {
             error(ref, "Cannot find service " + ref.getService());
@@ -113,9 +119,20 @@ public final class ServiceProviderProcessor extends AbstractProcessor {
             return;
         }
 
-        if (FactoryType.of(types, service, provider) == FactoryType.NONE) {
+        if (TypeFactory.of(types, service, provider).stream().noneMatch(this::isValidFactory)) {
             error(ref, String.format("Provider '%1$s' must have a public no-argument constructor", ref.getProvider()));
             return;
+        }
+    }
+
+    private boolean isValidFactory(TypeFactory factory) {
+        switch (factory.getKind()) {
+            case CONSTRUCTOR:
+                return true;
+            case STATIC_METHOD:
+                return ((ExecutableElement) factory.getElement()).getSimpleName().contentEquals("provider");
+            default:
+                return false;
         }
     }
 
@@ -135,7 +152,7 @@ public final class ServiceProviderProcessor extends AbstractProcessor {
             annotationRefs
                     .stream()
                     .filter(ref -> (!modulePathRefs.contains(ref)))
-                    .forEachOrdered(ref -> error(ref, "Missing module-info.java entry for '" + ref + "'"));
+                    .forEachOrdered(ref -> error(ref, "Missing module-info.java 'provides' directive for '" + ref + "'"));
 
             modulePathRefs
                     .stream()
@@ -160,7 +177,7 @@ public final class ServiceProviderProcessor extends AbstractProcessor {
         for (ProviderRef ref : refs) {
             TypeElement service = processingEnv.getElementUtils().getTypeElement(ref.getService());
             TypeElement provider = processingEnv.getElementUtils().getTypeElement(ref.getProvider());
-            if (FactoryType.of(processingEnv.getTypeUtils(), service, provider) == FactoryType.STATIC_METHOD) {
+            if (TypeFactory.of(processingEnv.getTypeUtils(), service, provider).stream().anyMatch(o -> o.getKind() == TypeFactory.Kind.STATIC_METHOD)) {
                 error(ref, "Static method support not implemented yet");
             }
         }
@@ -173,40 +190,5 @@ public final class ServiceProviderProcessor extends AbstractProcessor {
                 .filter(element -> !result.contains(element))
                 .forEach(result::add);
         return result;
-    }
-
-    private static boolean hasPublicNoArgumentConstructor(TypeElement type) {
-        return ElementFilter
-                .constructorsIn(type.getEnclosedElements())
-                .stream()
-                .anyMatch(ServiceProviderProcessor::isNoArgPublicMethod);
-    }
-
-    private static boolean isNoArgPublicMethod(ExecutableElement method) {
-        return method.getModifiers().contains(Modifier.PUBLIC) && method.getParameters().isEmpty();
-    }
-
-    private static Optional<ExecutableElement> getStaticFactoryMethod(Types types, TypeElement service, TypeElement provider) {
-        return ElementFilter
-                .methodsIn(provider.getEnclosedElements())
-                .stream()
-                .filter(ServiceProviderProcessor::isNoArgPublicMethod)
-                .filter(method -> method.getModifiers().contains(Modifier.STATIC))
-                .filter(method -> types.isSubtype(method.getReturnType(), service.asType()))
-                .findFirst();
-    }
-
-    private enum FactoryType {
-        NONE, CONSTRUCTOR, STATIC_METHOD;
-
-        static FactoryType of(Types types, TypeElement service, TypeElement provider) {
-            if (hasPublicNoArgumentConstructor(provider)) {
-                return CONSTRUCTOR;
-            }
-            if (getStaticFactoryMethod(types, service, provider).isPresent()) {
-                return STATIC_METHOD;
-            }
-            return NONE;
-        }
     }
 }

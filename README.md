@@ -16,6 +16,7 @@ The `@ServiceProvider` annotation deals with the tedious work of registring serv
 Current features:
 - generates classpath files in `META-INF/services` folder
 - supports multiple registration of one class
+- can infer the service if the provider implements/extends exactly one interface/class
 - checks coherence between classpath and modulepath if `module-info.java` is available
 
 Current limitations:
@@ -27,12 +28,61 @@ public interface HelloService {}
 
 public interface SomeService {}
 
-@ServiceProvider(HelloService.class)
+@ServiceProvider
 public class SimpleProvider implements HelloService {}
 
 @ServiceProvider(HelloService.class)
 @ServiceProvider(SomeService.class)
 public class MultiProvider implements HelloService, SomeService {}
+```
+
+## @ServiceDefinition
+The `@ServiceDefinition` annotation generates a specialized service loader that takes care of the loading and enforces a specific usage.
+
+Current features:
+- generates a specialized service loader
+- checks coherence of service use in modules if `module-info.java` is available
+
+Example:
+```java
+public interface Logger {
+    void info(String message);
+}
+
+public final class LoggerFactory {
+    private LoggerFactory() {}
+  
+    public static Logger getLogger(Class<?> type) {
+      return LoggerSpiLoader.get().makeNewLoggerInstance(type.getName());
+    }
+}
+
+@ServiceDefinition(
+    singleton = true,
+    quantifier = Quantifier.SINGLE,
+    fallback = LoggerSpi.NoOpLoggerSpi.class
+)
+public interface LoggerSpi {
+
+    Logger makeNewLoggerInstance(String name);
+
+    enum NoOpLoggerSpi implements LoggerSpi {
+        INSTANCE;
+
+        @Override
+        public Logger makeNewLoggerInstance(String name) {
+            return NoOpLogger.INSTANCE;
+        }
+    }
+
+    enum NoOpLogger implements Logger {
+        INSTANCE;
+
+        @Override
+        public void info(String message) {
+        }
+    }
+}
 ```
 
 ## Setup
@@ -74,6 +124,17 @@ public class MultiProvider implements HelloService, SomeService {}
     </snapshots>
   </repository>
 </repositories>
+```
+Alternate setup if the IDE doesn't detect the processor:
+```xml
+<dependencies>
+  <dependency>
+    <groupId>be.nbb.rd</groupId>
+    <artifactId>java-service-processor</artifactId>
+    <version>LATEST_VERSION</version>
+    <scope>provided</scope>
+  </dependency>
+</dependencies>
 ```
 
 ## Related work

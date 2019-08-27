@@ -5,7 +5,7 @@
     <parent>
         <groupId>be.nbb.rd</groupId>
         <artifactId>java-service-parent</artifactId>
-        <version>1.0.2</version>
+        <version>1.1.0</version>
     </parent>
 
     <artifactId>java-service-processor</artifactId>
@@ -39,6 +39,11 @@
             <artifactId>antlr4-runtime</artifactId>
             <version>${antlr4-runtime.version}</version>
         </dependency>
+        <dependency>
+            <groupId>com.squareup</groupId>
+            <artifactId>javapoet</artifactId>
+            <version>1.11.1</version>
+        </dependency>
 
         <!-- test only -->
         <dependency>
@@ -61,6 +66,18 @@
 
     <build>
         <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <configuration>
+                    <archive>
+                        <manifestEntries>
+                            <Automatic-Module-Name>nbbrd.service.processor</Automatic-Module-Name>
+                        </manifestEntries>
+                    </archive>
+                </configuration>
+            </plugin>
+            
             <plugin>
                 <groupId>org.antlr</groupId>
                 <artifactId>antlr4-maven-plugin</artifactId>
@@ -91,6 +108,42 @@
                     </execution>
                 </executions>
             </plugin>
+            
+            <!-- Generates a shaded jar -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>3.2.1</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <transformers>
+                        <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+                    </transformers>
+                    <dependencyReducedPomLocation>${project.build.directory}/dependency-reduced-pom.xml</dependencyReducedPomLocation>
+                    <artifactSet>
+                        <excludes>
+                            <exclude>be.nbb.rd:java-service-annotation</exclude>
+                        </excludes>
+                    </artifactSet>
+                    <relocations>
+                        <relocation>
+                            <pattern>org.antlr</pattern>
+                            <shadedPattern>internal.org.antlr</shadedPattern>
+                        </relocation>
+                        <relocation>
+                            <pattern>com.squareup.javapoet</pattern>
+                            <shadedPattern>internal.com.squareup.javapoet</shadedPattern>
+                        </relocation>
+                    </relocations>
+                </configuration>
+            </plugin>        
         </plugins>
     </build>
 </project>

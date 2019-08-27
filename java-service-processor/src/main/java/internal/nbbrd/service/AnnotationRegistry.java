@@ -17,15 +17,14 @@
 package internal.nbbrd.service;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.element.Name;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.DeclaredType;
-import javax.lang.model.type.MirroredTypeException;
 import javax.lang.model.type.TypeMirror;
 import nbbrd.service.ServiceProvider;
 
@@ -53,7 +52,7 @@ final class AnnotationRegistry implements ProviderRegistry {
 
     static Stream<ProviderRef> newRefs(TypeElement type) {
         return getAnnotations(type)
-                .map(AnnotationRegistry::getServiceName)
+                .map(annotation -> getServiceName(annotation, type))
                 .map(service -> new ProviderRef(service, type.getQualifiedName()));
     }
 
@@ -64,18 +63,23 @@ final class AnnotationRegistry implements ProviderRegistry {
                 : Stream.of(list.value());
     }
 
-    static Name getServiceName(ServiceProvider annotation) {
-        TypeMirror serviceType = extractResultType(annotation::value);
-        return ((TypeElement) ((DeclaredType) serviceType).asElement()).getQualifiedName();
+    static Name getServiceName(ServiceProvider annotation, TypeElement type) {
+        return ((TypeElement) ((DeclaredType) getServiceType(annotation, type)).asElement()).getQualifiedName();
     }
 
-    // see http://hauchee.blogspot.be/2015/12/compile-time-annotation-processing-getting-class-value.html
-    static TypeMirror extractResultType(Supplier<Class<?>> type) {
-        try {
-            type.get();
-            throw new RuntimeException("Expecting exeption to be raised");
-        } catch (MirroredTypeException ex) {
-            return ex.getTypeMirror();
-        }
+    static TypeMirror getServiceType(ServiceProvider annotation, TypeElement type) {
+        TypeMirror serviceType = ProcessorUtil.extractResultType(annotation::value);
+        return isNullValue(serviceType)
+                ? inferServiceType(type).orElse(serviceType)
+                : serviceType;
+    }
+
+    static boolean isNullValue(TypeMirror serviceType) {
+        return serviceType.toString().equals(Void.class.getName());
+    }
+
+    static Optional<TypeMirror> inferServiceType(TypeElement type) {
+        List<? extends TypeMirror> parents = type.getInterfaces();
+        return parents.size() == 1 ? Optional.of(parents.get(0)) : Optional.empty();
     }
 }

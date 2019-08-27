@@ -1,7 +1,7 @@
 
 import nbbrd.service.ServiceProvider;
 
-class StaticMethod {
+class StaticMultiProviderMethod {
 
     interface HelloService {
     }
@@ -15,15 +15,8 @@ class StaticMethod {
         public static Provider1 provider() {
             return new Provider1();
         }
-    }
 
-    @ServiceProvider(HelloService.class)
-    public static class Provider2 implements HelloService {
-
-        private Provider2() {
-        }
-
-        public static HelloService provider() {
+        public static Provider1 stuff() {
             return new Provider1();
         }
     }

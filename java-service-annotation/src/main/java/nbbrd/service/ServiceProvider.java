@@ -25,6 +25,22 @@ import java.lang.annotation.Target;
 
 /**
  * Declarative registration of a service provider.
+ * <p>
+ * Current features:
+ * <ul>
+ * <li>generates classpath files in {@code META-INF/services} folder
+ * <li>supports multiple registration of one class
+ * <li>can infer the service if the provider implements/extends exactly one
+ * interface/class
+ * <li>checks coherence between classpath and modulepath if
+ * {@code module-info.java} is available
+ * </ul>
+ * <p>
+ * Current limitations:
+ * <ul>
+ * <li>detects modulepath {@code public static provider()} method but doesn't
+ * generate a workaround for classpath
+ * </ul>
  *
  * @author Philippe Charles
  */
@@ -35,11 +51,13 @@ import java.lang.annotation.Target;
 public @interface ServiceProvider {
 
     /**
-     * The interface (or abstract class) to register this implementation under.
+     * The interface (or class) to register this implementation under.<br>This
+     * value is optional if the provider implements/extends exactly one
+     * interface/class.
      *
      * @return
      */
-    Class<?> value();
+    Class<?> value() default Void.class;
 
     @Documented
     @Target({ElementType.TYPE})
