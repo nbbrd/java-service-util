@@ -56,9 +56,9 @@ class ModuleInfoEntries {
         public Builder provision(String key, String value) {
             if (!provisions$set) {
                 provisions$set = true;
-                provisions = new HashMap<>();
+                provisions$value = new HashMap<>();
             }
-            provisions.computeIfAbsent(key, o -> new ArrayList<>()).add(value);
+            provisions$value.computeIfAbsent(key, o -> new ArrayList<>()).add(value);
             return this;
         }
     }
