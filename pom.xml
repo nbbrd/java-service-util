@@ -26,6 +26,7 @@
     <modules>
         <module>java-service-annotation</module>
         <module>java-service-processor</module>
+        <module>java-service-examples</module>
     </modules>
 
     <dependencyManagement>
