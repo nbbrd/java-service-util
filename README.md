@@ -43,28 +43,14 @@ Current features:
 - generates a specialized service loader
 - checks coherence of service use in modules if `module-info.java` is available
 
-Example:
+Example 1: singleton loader + single provider
 ```java
-public interface Logger {
-    void info(String message);
-}
+public interface Logger { void info(String message); }
 
-public final class LoggerFactory {
-    private LoggerFactory() {}
-  
-    public static Logger getLogger(Class<?> type) {
-      return LoggerSpiLoader.get().makeNewLoggerInstance(type.getName());
-    }
-}
+@ServiceDefinition(singleton = true, quantifier = Quantifier.SINGLE)
+public interface LoggerFinder { Logger getLogger(String name); }
 
-@ServiceDefinition(
-    singleton = true,
-    quantifier = Quantifier.SINGLE,
-    fallback = NoOpLoggerSpi.class
-)
-public interface LoggerSpi {
-    Logger makeNewLoggerInstance(String name);
-}
+LoggerFinderLoader.get().getLogger("MyClass").info("some message");
 ```
 
 ## Setup
