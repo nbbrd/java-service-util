@@ -45,12 +45,26 @@ Current features:
 
 Example 1: singleton loader + single provider
 ```java
-public interface Logger { void info(String message); }
-
 @ServiceDefinition(singleton = true, quantifier = Quantifier.SINGLE)
 public interface LoggerFinder { Logger getLogger(String name); }
 
 LoggerFinderLoader.get().getLogger("MyClass").info("some message");
+```
+
+Example 2: singleton loader + optional provider
+```java
+@ServiceDefinition(singleton = true, quantifier = Quantifier.OPTIONAL)
+public interface WinRegistry { String readString(int hkey, String key, String valueName); }
+
+WinRegistryLoader.get().ifPresent(reg -> System.out.println(reg.readString(HKEY_LOCAL_MACHINE, "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion", "ProductName")));
+```
+
+Example 3: singleton loader + multiple providers
+```java
+@ServiceDefinition(singleton = true, quantifier = Quantifier.MULTIPLE)
+public interface Translator { String translate(String text); }
+
+TranslatorLoader.get().forEach(translator -> System.out.println(translator.translate("hello")));
 ```
 
 ## Setup
