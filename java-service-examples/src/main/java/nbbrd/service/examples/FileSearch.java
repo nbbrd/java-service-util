@@ -42,7 +42,7 @@ public interface FileSearch {
         public Stream<FileSearch> apply(Stream<FileSearch> stream) {
             return stream
                     .filter(FileSearch::isAvailable)
-                    .sorted(Comparator.comparing(FileSearch::getCost));
+                    .sorted(Comparator.comparingInt(FileSearch::getCost));
         }
     }
 
