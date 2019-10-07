@@ -23,12 +23,12 @@ import nbbrd.service.ServiceDefinition;
  *
  * @author Philippe Charles
  */
-@ServiceDefinition(quantifier = Quantifier.MULTIPLE, singleton = true)
+@ServiceDefinition(quantifier = Quantifier.MULTIPLE)
 public interface Translator {
 
     String translate(String text);
 
     public static void main(String[] args) {
-        TranslatorLoader.get().forEach(translator -> System.out.println(translator.translate("hello")));
+        new TranslatorLoader().get().forEach(translator -> System.out.println(translator.translate("hello")));
     }
 }

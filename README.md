@@ -29,7 +29,7 @@ public interface HelloService {}
 public interface SomeService {}
 
 @ServiceProvider
-public class SimpleProvider implements HelloService {}
+public class InferredProvider implements HelloService {}
 
 @ServiceProvider(HelloService.class)
 @ServiceProvider(SomeService.class)
@@ -42,8 +42,8 @@ The `@ServiceDefinition` annotation generates a specialized service loader that 
 Current features:
 - generates a **specialized service loader** with the following parameters:
   - `quantifier`: optional, single or multiple service instances
-  - `mutability`: none, basic or concurrent access
   - `preprocessor`: filter/map/sort operations 
+  - `mutability`: none, basic or concurrent access
   - `singleton`: global or local scope
 - **checks coherence** of service use **in modules** if `module-info.java` is available
 
@@ -53,39 +53,63 @@ Examples can be found in the [examples project](https://github.com/nbbrd/java-se
 
 OPTIONAL example:
 ```java
-@ServiceDefinition(quantifier = Quantifier.OPTIONAL, singleton = true)
+@ServiceDefinition(quantifier = Quantifier.OPTIONAL)
 public interface WinRegistry { 
   String readString(int hkey, String key, String valueName);
   static int HKEY_LOCAL_MACHINE = 0;
 }
 
-WinRegistryLoader.get().ifPresent(reg -> System.out.println(reg.readString(HKEY_LOCAL_MACHINE, "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion", "ProductName")));
+new WinRegistryLoader().get().ifPresent(reg -> System.out.println(reg.readString(HKEY_LOCAL_MACHINE, "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion", "ProductName")));
 ```
 
 SINGLE example:
 ```java
-@ServiceDefinition(quantifier = Quantifier.SINGLE, fallback = FallbackLogger.class, singleton = true)
+@ServiceDefinition(quantifier = Quantifier.SINGLE, fallback = FallbackLogger.class)
 public interface LoggerFinder {
   Consumer<String> getLogger(String name);
 }
 
 public class FallbackLogger implements LoggerFinder {
+  @Override
   public Consumer<String> getLogger(String name) {
     return message -> System.out.println(String.format("[%s] %s", name, message));
   }
 }
 
-LoggerFinderLoader.get().getLogger("MyClass").accept("some message");
+new LoggerFinderLoader().get().getLogger("MyClass").accept("some message");
 ```
 
 MULTIPLE example:
 ```java
-@ServiceDefinition(quantifier = Quantifier.MULTIPLE, singleton = true)
+@ServiceDefinition(quantifier = Quantifier.MULTIPLE)
 public interface Translator {
   String translate(String text);
 }
 
-TranslatorLoader.get().forEach(translator -> System.out.println(translator.translate("hello")));
+new TranslatorLoader().get().forEach(translator -> System.out.println(translator.translate("hello")));
+```
+
+### Preprocessor
+
+Filter/sort example:
+```java
+@ServiceDefinition(preprocessor = ByAvailabilityAndCost.class)
+public interface FileSearch {
+  List<File> searchByName(String name);
+  boolean isAvailable();
+  int getCost();
+}
+
+public class ByAvailabilityAndCost implements UnaryOperator<Stream<FileSearch>> {
+  @Override
+  public Stream<FileSearch> apply(Stream<FileSearch> stream) {
+    return stream
+            .filter(FileSearch::isAvailable)
+            .sorted(Comparator.comparing(FileSearch::getCost));
+  }
+}
+
+new FileSearchLoader().get().ifPresent(search -> search.searchByName(".xlsx").forEach(System.out::println));
 ```
 
 ### Mutability
@@ -110,32 +134,11 @@ loader.reload();
 loader.get().ifPresent(o -> o.send("Fourth"));
 ```
 
-### Preprocessor
-
-Filter/sort example:
-```java
-@ServiceDefinition(preprocessor = ByAvailabilityAndCost.class, singleton = true)
-public interface FileSearch {
-  List<File> searchByName(String name);
-  boolean isAvailable();
-  int getCost();
-}
-
-public class ByAvailabilityAndCost implements UnaryOperator<Stream<FileSearch>> {
-  public Stream<FileSearch> apply(Stream<FileSearch> stream) {
-    return stream
-      .filter(FileSearch::isAvailable)
-      .sorted(Comparator.comparing(FileSearch::getCost));
-  }
-}
-
-FileSearchLoader.get().ifPresent(search -> search.searchByName(".xlsx").forEach(System.out::println));
-```
-
 ### Singleton
 
+Local example:
 ```java
-@ServiceDefinition
+@ServiceDefinition(singleton = false)
 public interface StatefulAlgorithm {
   double compute(double... values);
 }
@@ -146,6 +149,16 @@ StatefulAlgorithm algo2 = new StatefulAlgorithmLoader().get().orElseThrow(Runtim
 Stream.of(algo1, algo2)
       .parallel()
       .forEach(algo -> System.out.println(algo.compute(1, 2, 3)));
+```
+
+Global example:
+```java
+@ServiceDefinition(singleton = true)
+public interface SystemSettings {
+  String getDeviceName();
+}
+
+SystemSettingsLoader.get().ifPresent(sys -> System.out.println(sys.getDeviceName()));
 ```
 
 ## Setup

@@ -23,7 +23,7 @@ import nbbrd.service.ServiceDefinition;
  *
  * @author Philippe Charles
  */
-@ServiceDefinition(quantifier = Quantifier.OPTIONAL, singleton = true)
+@ServiceDefinition(quantifier = Quantifier.OPTIONAL)
 public interface WinRegistry {
 
     String readString(int hkey, String key, String valueName);
@@ -31,6 +31,6 @@ public interface WinRegistry {
     static int HKEY_LOCAL_MACHINE = 0;
 
     public static void main(String[] args) {
-        WinRegistryLoader.get().ifPresent(reg -> System.out.println(reg.readString(HKEY_LOCAL_MACHINE, "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion", "ProductName")));
+        new WinRegistryLoader().get().ifPresent(reg -> System.out.println(reg.readString(HKEY_LOCAL_MACHINE, "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion", "ProductName")));
     }
 }

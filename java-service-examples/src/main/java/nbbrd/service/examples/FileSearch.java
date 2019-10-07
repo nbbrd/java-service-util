@@ -27,7 +27,7 @@ import nbbrd.service.ServiceDefinition;
  *
  * @author Philippe Charles
  */
-@ServiceDefinition(preprocessor = FileSearch.ByAvailabilityAndCost.class, singleton = true)
+@ServiceDefinition(preprocessor = FileSearch.ByAvailabilityAndCost.class)
 public interface FileSearch {
 
     List<File> searchByName(String name);
@@ -47,6 +47,6 @@ public interface FileSearch {
     }
 
     public static void main(String[] args) {
-        FileSearchLoader.get().ifPresent(search -> search.searchByName(".xlsx").forEach(System.out::println));
+        new FileSearchLoader().get().ifPresent(search -> search.searchByName(".xlsx").forEach(System.out::println));
     }
 }

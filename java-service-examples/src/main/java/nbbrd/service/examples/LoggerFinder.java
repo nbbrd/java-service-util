@@ -24,7 +24,7 @@ import nbbrd.service.ServiceDefinition;
  *
  * @author Philippe Charles
  */
-@ServiceDefinition(quantifier = Quantifier.SINGLE, fallback = LoggerFinder.FallbackLogger.class, singleton = true)
+@ServiceDefinition(quantifier = Quantifier.SINGLE, fallback = LoggerFinder.FallbackLogger.class)
 public interface LoggerFinder {
 
     Consumer<String> getLogger(String name);
@@ -38,6 +38,6 @@ public interface LoggerFinder {
     }
 
     public static void main(String[] args) {
-        LoggerFinderLoader.get().getLogger("MyClass").accept("some message");
+        new LoggerFinderLoader().get().getLogger("MyClass").accept("some message");
     }
 }
