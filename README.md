@@ -47,7 +47,7 @@ Current features:
   - `singleton`: global or local scope
 - **checks coherence** of service use **in modules** if `module-info.java` is available
 
-Examples can be found in the [examples project](java-service-examples\src\main\java\nbbrd\service\examples).
+Examples can be found in the [examples project](https://github.com/nbbrd/java-service-util/tree/develop/java-service-examples/src/main/java/nbbrd/service/examples).
 
 ### Quantifier
 
@@ -64,7 +64,7 @@ WinRegistryLoader.get().ifPresent(reg -> System.out.println(reg.readString(HKEY_
 
 SINGLE example:
 ```java
-@ServiceDefinition(quantifier = Quantifier.SINGLE, fallback = FallbackLogger.class,singleton = true)
+@ServiceDefinition(quantifier = Quantifier.SINGLE, fallback = FallbackLogger.class, singleton = true)
 public interface LoggerFinder {
   Consumer<String> getLogger(String name);
 }
