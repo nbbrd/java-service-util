@@ -29,8 +29,8 @@ public interface StatefulAlgorithm {
     double compute(double... values);
 
     public static void main(String[] args) {
-        StatefulAlgorithm algo1 = new StatefulAlgorithmLoader().get().orElseThrow(RuntimeException::new);
-        StatefulAlgorithm algo2 = new StatefulAlgorithmLoader().get().orElseThrow(RuntimeException::new);
+        StatefulAlgorithm algo1 = StatefulAlgorithmLoader.load().orElseThrow(RuntimeException::new);
+        StatefulAlgorithm algo2 = StatefulAlgorithmLoader.load().orElseThrow(RuntimeException::new);
 
         Stream.of(algo1, algo2)
                 .parallel()

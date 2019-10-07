@@ -32,7 +32,7 @@ public interface WinRegistry {
     static int HKEY_LOCAL_MACHINE = 0;
 
     public static void main(String[] args) {
-        Optional<WinRegistry> optional = new WinRegistryLoader().get();
+        Optional<WinRegistry> optional = WinRegistryLoader.load();
         optional.ifPresent(reg -> System.out.println(reg.readString(HKEY_LOCAL_MACHINE, "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion", "ProductName")));
     }
 }

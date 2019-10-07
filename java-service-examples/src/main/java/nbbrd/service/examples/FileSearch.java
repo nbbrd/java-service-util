@@ -47,6 +47,6 @@ public interface FileSearch {
     }
 
     public static void main(String[] args) {
-        new FileSearchLoader().get().ifPresent(search -> search.searchByName(".xlsx").forEach(System.out::println));
+        FileSearchLoader.load().ifPresent(search -> search.searchByName(".xlsx").forEach(System.out::println));
     }
 }

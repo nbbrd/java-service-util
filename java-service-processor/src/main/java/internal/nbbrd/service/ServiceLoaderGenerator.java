@@ -77,16 +77,17 @@ class ServiceLoaderGenerator {
         TypeName quantifierType = getQuantifierType();
 
         FieldSpec sourceField = newSourceField();
-        MethodSpec loadMethod = newLoadMethod(sourceField, quantifierType, toFactory);
-        FieldSpec resourceField = newResourceField(loadMethod, quantifierType);
+        MethodSpec doLoadMethod = newDoLoadMethod(sourceField, quantifierType, toFactory);
+        FieldSpec resourceField = newResourceField(doLoadMethod, quantifierType);
+        MethodSpec getMethod = newGetMethod(resourceField, quantifierType);
 
         TypeSpec.Builder result = TypeSpec.classBuilder(className)
                 .addJavadoc(getMainJavadoc())
                 .addModifiers(Modifier.PUBLIC, Modifier.FINAL)
                 .addField(sourceField)
-                .addMethod(loadMethod)
+                .addMethod(doLoadMethod)
                 .addField(resourceField)
-                .addMethod(newGetMethod(resourceField, quantifierType));
+                .addMethod(getMethod);
 
         if (singleton) {
             result.addMethod(MethodSpec.constructorBuilder().addModifiers(Modifier.PRIVATE).build());
@@ -94,7 +95,11 @@ class ServiceLoaderGenerator {
 
         if (!mutability.equals(Mutability.NONE)) {
             result.addMethod(newSetMethod(resourceField, quantifierType));
-            result.addMethod(newReloadMethod(sourceField, loadMethod));
+            result.addMethod(newReloadMethod(sourceField, doLoadMethod));
+        }
+
+        if (!singleton && mutability.equals(Mutability.NONE)) {
+            result.addMethod(newLoadMethod(className, quantifierType, getMethod));
         }
 
         return result.build();
@@ -115,8 +120,8 @@ class ServiceLoaderGenerator {
                 .build();
     }
 
-    private MethodSpec newLoadMethod(FieldSpec sourceField, TypeName quantifierType, Function<TypeMirror, TypeFactory> toFactory) {
-        return MethodSpec.methodBuilder("load")
+    private MethodSpec newDoLoadMethod(FieldSpec sourceField, TypeName quantifierType, Function<TypeMirror, TypeFactory> toFactory) {
+        return MethodSpec.methodBuilder("doLoad")
                 .addModifiers(Modifier.PRIVATE)
                 .addModifiers(getSingletonModifiers())
                 .returns(quantifierType)
@@ -309,6 +314,27 @@ class ServiceLoaderGenerator {
         if (isAtomicRef()) {
             result.endControlFlow();
         }
+
+        return result.build();
+    }
+
+    private MethodSpec newLoadMethod(String className, TypeName quantifierType, MethodSpec getter) {
+        CodeBlock mainStatement = CodeBlock.of("new $L().$N()", className, getter);
+
+        MethodSpec.Builder result = MethodSpec.methodBuilder("load")
+                .addJavadoc(CodeBlock
+                        .builder()
+                        .add(getGetDescription())
+                        .add("<br>This is equivalent to the following code: <code>$L</code>\n", mainStatement)
+                        .add("<br>Therefore, the returned value might be different at each call.\n")
+                        .add(getThreadSafetyComment())
+                        .add("@return a non-null value\n")
+                        .build())
+                .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
+                .returns(quantifierType)
+                .addExceptions(getQuantifierException());
+
+        result.addStatement("return $L", mainStatement);
 
         return result.build();
     }

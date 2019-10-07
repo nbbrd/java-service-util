@@ -78,32 +78,37 @@ public class ServiceDefinitionProcessorTest {
         assertThat(compilation)
                 .generatedSourceFile("definition.SingleDefLoader")
                 .contentsAsUtf8String()
-                .contains("private final SingleDef.Immutable resource = load();");
+                .contains("private final SingleDef.Immutable resource = doLoad();");
 
         assertThat(compilation)
                 .generatedSourceFile("definition.SingleDefLoader")
                 .contentsAsUtf8String()
-                .contains("private SingleDef.Mutable resource = load();");
+                .contains("public static SingleDef.Immutable load()");
 
         assertThat(compilation)
                 .generatedSourceFile("definition.SingleDefLoader")
                 .contentsAsUtf8String()
-                .contains("private final AtomicReference<SingleDef.ThreadSafe> resource = new AtomicReference<>(load());");
+                .contains("private SingleDef.Mutable resource = doLoad();");
 
         assertThat(compilation)
                 .generatedSourceFile("definition.SingleDefLoader")
                 .contentsAsUtf8String()
-                .contains("private static final SingleDef.ImmutableSingleton RESOURCE = load();");
+                .contains("private final AtomicReference<SingleDef.ThreadSafe> resource = new AtomicReference<>(doLoad());");
 
         assertThat(compilation)
                 .generatedSourceFile("definition.SingleDefLoader")
                 .contentsAsUtf8String()
-                .contains("private static SingleDef.MutableSingleton RESOURCE = load();");
+                .contains("private static final SingleDef.ImmutableSingleton RESOURCE = doLoad();");
 
         assertThat(compilation)
                 .generatedSourceFile("definition.SingleDefLoader")
                 .contentsAsUtf8String()
-                .contains("private static final AtomicReference<SingleDef.ThreadSafeSingleton> RESOURCE = new AtomicReference<>(load());");
+                .contains("private static SingleDef.MutableSingleton RESOURCE = doLoad();");
+
+        assertThat(compilation)
+                .generatedSourceFile("definition.SingleDefLoader")
+                .contentsAsUtf8String()
+                .contains("private static final AtomicReference<SingleDef.ThreadSafeSingleton> RESOURCE = new AtomicReference<>(doLoad());");
     }
 
     @Test
@@ -118,32 +123,37 @@ public class ServiceDefinitionProcessorTest {
         assertThat(compilation)
                 .generatedSourceFile("definition.OptionalDefLoader")
                 .contentsAsUtf8String()
-                .contains("private final Optional<OptionalDef.Immutable> resource = load();");
+                .contains("private final Optional<OptionalDef.Immutable> resource = doLoad();");
 
         assertThat(compilation)
                 .generatedSourceFile("definition.OptionalDefLoader")
                 .contentsAsUtf8String()
-                .contains("private Optional<OptionalDef.Mutable> resource = load();");
+                .contains("public static Optional<OptionalDef.Immutable> load()");
 
         assertThat(compilation)
                 .generatedSourceFile("definition.OptionalDefLoader")
                 .contentsAsUtf8String()
-                .contains("private final AtomicReference<Optional<OptionalDef.ThreadSafe>> resource = new AtomicReference<>(load());");
+                .contains("private Optional<OptionalDef.Mutable> resource = doLoad();");
 
         assertThat(compilation)
                 .generatedSourceFile("definition.OptionalDefLoader")
                 .contentsAsUtf8String()
-                .contains("private static final Optional<OptionalDef.ImmutableSingleton> RESOURCE = load();");
+                .contains("private final AtomicReference<Optional<OptionalDef.ThreadSafe>> resource = new AtomicReference<>(doLoad());");
 
         assertThat(compilation)
                 .generatedSourceFile("definition.OptionalDefLoader")
                 .contentsAsUtf8String()
-                .contains("private static Optional<OptionalDef.MutableSingleton> RESOURCE = load();");
+                .contains("private static final Optional<OptionalDef.ImmutableSingleton> RESOURCE = doLoad();");
 
         assertThat(compilation)
                 .generatedSourceFile("definition.OptionalDefLoader")
                 .contentsAsUtf8String()
-                .contains("private static final AtomicReference<Optional<OptionalDef.ThreadSafeSingleton>> RESOURCE = new AtomicReference<>(load());");
+                .contains("private static Optional<OptionalDef.MutableSingleton> RESOURCE = doLoad();");
+
+        assertThat(compilation)
+                .generatedSourceFile("definition.OptionalDefLoader")
+                .contentsAsUtf8String()
+                .contains("private static final AtomicReference<Optional<OptionalDef.ThreadSafeSingleton>> RESOURCE = new AtomicReference<>(doLoad());");
     }
 
     @Test
@@ -158,32 +168,37 @@ public class ServiceDefinitionProcessorTest {
         assertThat(compilation)
                 .generatedSourceFile("definition.MultipleDefLoader")
                 .contentsAsUtf8String()
-                .contains("private final List<MultipleDef.Immutable> resource = load();");
+                .contains("private final List<MultipleDef.Immutable> resource = doLoad();");
 
         assertThat(compilation)
                 .generatedSourceFile("definition.MultipleDefLoader")
                 .contentsAsUtf8String()
-                .contains("private List<MultipleDef.Mutable> resource = load();");
+                .contains("public static List<MultipleDef.Immutable> load()");
 
         assertThat(compilation)
                 .generatedSourceFile("definition.MultipleDefLoader")
                 .contentsAsUtf8String()
-                .contains("private final AtomicReference<List<MultipleDef.ThreadSafe>> resource = new AtomicReference<>(load());");
+                .contains("private List<MultipleDef.Mutable> resource = doLoad();");
 
         assertThat(compilation)
                 .generatedSourceFile("definition.MultipleDefLoader")
                 .contentsAsUtf8String()
-                .contains("private static final List<MultipleDef.ImmutableSingleton> RESOURCE = load();");
+                .contains("private final AtomicReference<List<MultipleDef.ThreadSafe>> resource = new AtomicReference<>(doLoad());");
 
         assertThat(compilation)
                 .generatedSourceFile("definition.MultipleDefLoader")
                 .contentsAsUtf8String()
-                .contains("private static List<MultipleDef.MutableSingleton> RESOURCE = load();");
+                .contains("private static final List<MultipleDef.ImmutableSingleton> RESOURCE = doLoad();");
 
         assertThat(compilation)
                 .generatedSourceFile("definition.MultipleDefLoader")
                 .contentsAsUtf8String()
-                .contains("private static final AtomicReference<List<MultipleDef.ThreadSafeSingleton>> RESOURCE = new AtomicReference<>(load());");
+                .contains("private static List<MultipleDef.MutableSingleton> RESOURCE = doLoad();");
+
+        assertThat(compilation)
+                .generatedSourceFile("definition.MultipleDefLoader")
+                .contentsAsUtf8String()
+                .contains("private static final AtomicReference<List<MultipleDef.ThreadSafeSingleton>> RESOURCE = new AtomicReference<>(doLoad());");
     }
 
     @Test
