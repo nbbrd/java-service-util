@@ -40,31 +40,112 @@ public class MultiProvider implements HelloService, SomeService {}
 The `@ServiceDefinition` annotation generates a specialized service loader that takes care of the loading and enforces a specific usage.
 
 Current features:
-- generates a specialized service loader
-- checks coherence of service use in modules if `module-info.java` is available
+- generates a **specialized service loader** with the following parameters:
+  - `quantifier`: optional, single or multiple service instances
+  - `mutability`: none, basic or concurrent access
+  - `preprocessor`: filter/map/sort operations 
+  - `singleton`: global or local scope
+- **checks coherence** of service use **in modules** if `module-info.java` is available
 
-Example 1: singleton loader + single provider
+Examples can be found in the [examples project](java-service-examples\src\main\java\nbbrd\service\examples).
+
+### Quantifier
+
+OPTIONAL example:
 ```java
-@ServiceDefinition(singleton = true, quantifier = Quantifier.SINGLE)
-public interface LoggerFinder { Logger getLogger(String name); }
-
-LoggerFinderLoader.get().getLogger("MyClass").info("some message");
-```
-
-Example 2: singleton loader + optional provider
-```java
-@ServiceDefinition(singleton = true, quantifier = Quantifier.OPTIONAL)
-public interface WinRegistry { String readString(int hkey, String key, String valueName); }
+@ServiceDefinition(quantifier = Quantifier.OPTIONAL, singleton = true)
+public interface WinRegistry { 
+  String readString(int hkey, String key, String valueName);
+  static int HKEY_LOCAL_MACHINE = 0;
+}
 
 WinRegistryLoader.get().ifPresent(reg -> System.out.println(reg.readString(HKEY_LOCAL_MACHINE, "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion", "ProductName")));
 ```
 
-Example 3: singleton loader + multiple providers
+SINGLE example:
 ```java
-@ServiceDefinition(singleton = true, quantifier = Quantifier.MULTIPLE)
-public interface Translator { String translate(String text); }
+@ServiceDefinition(quantifier = Quantifier.SINGLE, fallback = FallbackLogger.class,singleton = true)
+public interface LoggerFinder {
+  Consumer<String> getLogger(String name);
+}
+
+public class FallbackLogger implements LoggerFinder {
+  public Consumer<String> getLogger(String name) {
+    return message -> System.out.println(String.format("[%s] %s", name, message));
+  }
+}
+
+LoggerFinderLoader.get().getLogger("MyClass").accept("some message");
+```
+
+MULTIPLE example:
+```java
+@ServiceDefinition(quantifier = Quantifier.MULTIPLE, singleton = true)
+public interface Translator {
+  String translate(String text);
+}
 
 TranslatorLoader.get().forEach(translator -> System.out.println(translator.translate("hello")));
+```
+
+### Mutability
+
+BASIC example:
+```java
+@ServiceDefinition(mutability = Mutability.BASIC)
+public interface Messenger {
+  void send(String message);
+}
+
+MessengerLoader loader = new MessengerLoader();
+loader.get().ifPresent(o -> o.send("First"));
+
+loader.set(Optional.of(msg -> System.out.println(msg)));
+loader.get().ifPresent(o -> o.send("Second"));
+
+loader.set(Optional.of(msg -> JOptionPane.showMessageDialog(null, msg)));
+loader.get().ifPresent(o -> o.send("Third"));
+
+loader.reload();
+loader.get().ifPresent(o -> o.send("Fourth"));
+```
+
+### Preprocessor
+
+Filter/sort example:
+```java
+@ServiceDefinition(preprocessor = ByAvailabilityAndCost.class, singleton = true)
+public interface FileSearch {
+  List<File> searchByName(String name);
+  boolean isAvailable();
+  int getCost();
+}
+
+public class ByAvailabilityAndCost implements UnaryOperator<Stream<FileSearch>> {
+  public Stream<FileSearch> apply(Stream<FileSearch> stream) {
+    return stream
+      .filter(FileSearch::isAvailable)
+      .sorted(Comparator.comparing(FileSearch::getCost));
+  }
+}
+
+FileSearchLoader.get().ifPresent(search -> search.searchByName(".xlsx").forEach(System.out::println));
+```
+
+### Singleton
+
+```java
+@ServiceDefinition
+public interface StatefulAlgorithm {
+  double compute(double... values);
+}
+
+StatefulAlgorithm algo1 = new StatefulAlgorithmLoader().get().orElseThrow(RuntimeException::new);
+StatefulAlgorithm algo2 = new StatefulAlgorithmLoader().get().orElseThrow(RuntimeException::new);
+
+Stream.of(algo1, algo2)
+      .parallel()
+      .forEach(algo -> System.out.println(algo.compute(1, 2, 3)));
 ```
 
 ## Setup
