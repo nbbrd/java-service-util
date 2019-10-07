@@ -38,6 +38,7 @@ public interface LoggerFinder {
     }
 
     public static void main(String[] args) {
-        new LoggerFinderLoader().get().getLogger("MyClass").accept("some message");
+        LoggerFinder single = new LoggerFinderLoader().get();
+        single.getLogger("MyClass").accept("some message");
     }
 }

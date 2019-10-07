@@ -16,6 +16,7 @@
  */
 package nbbrd.service.examples;
 
+import java.util.Optional;
 import nbbrd.service.Quantifier;
 import nbbrd.service.ServiceDefinition;
 
@@ -31,6 +32,7 @@ public interface WinRegistry {
     static int HKEY_LOCAL_MACHINE = 0;
 
     public static void main(String[] args) {
-        new WinRegistryLoader().get().ifPresent(reg -> System.out.println(reg.readString(HKEY_LOCAL_MACHINE, "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion", "ProductName")));
+        Optional<WinRegistry> optional = new WinRegistryLoader().get();
+        optional.ifPresent(reg -> System.out.println(reg.readString(HKEY_LOCAL_MACHINE, "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion", "ProductName")));
     }
 }

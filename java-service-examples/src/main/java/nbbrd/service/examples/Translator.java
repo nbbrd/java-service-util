@@ -16,6 +16,7 @@
  */
 package nbbrd.service.examples;
 
+import java.util.List;
 import nbbrd.service.Quantifier;
 import nbbrd.service.ServiceDefinition;
 
@@ -29,6 +30,7 @@ public interface Translator {
     String translate(String text);
 
     public static void main(String[] args) {
-        new TranslatorLoader().get().forEach(translator -> System.out.println(translator.translate("hello")));
+        List<Translator> multiple = new TranslatorLoader().get();
+        multiple.forEach(translator -> System.out.println(translator.translate("hello")));
     }
 }

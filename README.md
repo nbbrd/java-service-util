@@ -59,7 +59,8 @@ public interface WinRegistry {
   static int HKEY_LOCAL_MACHINE = 0;
 }
 
-new WinRegistryLoader().get().ifPresent(reg -> System.out.println(reg.readString(HKEY_LOCAL_MACHINE, "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion", "ProductName")));
+Optional<WinRegistry> optional = new WinRegistryLoader().get();
+optional.ifPresent(reg -> System.out.println(reg.readString(HKEY_LOCAL_MACHINE, "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion", "ProductName")));
 ```
 
 SINGLE example:
@@ -76,7 +77,8 @@ public class FallbackLogger implements LoggerFinder {
   }
 }
 
-new LoggerFinderLoader().get().getLogger("MyClass").accept("some message");
+LoggerFinder single = new LoggerFinderLoader().get();
+single.getLogger("MyClass").accept("some message");
 ```
 
 MULTIPLE example:
@@ -86,7 +88,8 @@ public interface Translator {
   String translate(String text);
 }
 
-new TranslatorLoader().get().forEach(translator -> System.out.println(translator.translate("hello")));
+List<Translator> multiple = new TranslatorLoader().get();
+multiple.forEach(translator -> System.out.println(translator.translate("hello")));
 ```
 
 ### Preprocessor
