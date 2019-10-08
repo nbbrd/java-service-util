@@ -14,7 +14,7 @@
  * See the Licence for the specific language governing permissions and 
  * limitations under the Licence.
  */
-package internal.nbbrd.service;
+package internal.nbbrd.service.definition;
 
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.CodeBlock;
@@ -23,6 +23,8 @@ import com.squareup.javapoet.MethodSpec;
 import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
+import internal.nbbrd.service.ProcessorUtil;
+import internal.nbbrd.service.TypeFactory;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;

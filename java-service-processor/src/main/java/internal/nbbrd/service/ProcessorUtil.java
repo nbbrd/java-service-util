@@ -30,9 +30,9 @@ import javax.tools.Diagnostic;
  * @author Philippe Charles
  */
 @lombok.experimental.UtilityClass
-class ProcessorUtil {
+public class ProcessorUtil {
 
-    void write(ProcessingEnvironment env, JavaFile jFile) {
+    public void write(ProcessingEnvironment env, JavaFile jFile) {
         try (Writer w = env.getFiler().createSourceFile(jFile.packageName + "." + jFile.typeSpec.name).openWriter()) {
             jFile.writeTo(w);
         } catch (IOException ex) {
@@ -41,7 +41,7 @@ class ProcessorUtil {
     }
 
     // see http://hauchee.blogspot.be/2015/12/compile-time-annotation-processing-getting-class-value.html
-    static TypeMirror extractResultType(Supplier<Class<?>> type) {
+    public static TypeMirror extractResultType(Supplier<Class<?>> type) {
         try {
             type.get();
             throw new RuntimeException("Expecting exeption to be raised");

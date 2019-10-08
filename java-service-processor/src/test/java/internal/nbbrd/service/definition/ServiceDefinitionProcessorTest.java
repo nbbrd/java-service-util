@@ -14,13 +14,13 @@
  * See the Licence for the specific language governing permissions and 
  * limitations under the Licence.
  */
-package internal.nbbrd.service;
+package internal.nbbrd.service.definition;
 
 import com.google.testing.compile.Compilation;
 import static com.google.testing.compile.CompilationSubject.assertThat;
 import com.google.testing.compile.JavaFileObjects;
 import com.squareup.javapoet.ClassName;
-import static internal.nbbrd.service.ServiceDefinitionProcessor.resolveLoaderName;
+import static internal.nbbrd.service.definition.ServiceDefinitionProcessor.resolveLoaderName;
 import javax.tools.JavaFileObject;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;

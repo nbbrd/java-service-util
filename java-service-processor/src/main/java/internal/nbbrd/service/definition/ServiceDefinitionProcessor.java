@@ -14,11 +14,14 @@
  * See the Licence for the specific language governing permissions and 
  * limitations under the Licence.
  */
-package internal.nbbrd.service;
+package internal.nbbrd.service.definition;
 
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.JavaFile;
 import com.squareup.javapoet.TypeSpec;
+import internal.nbbrd.service.ModuleInfoEntries;
+import internal.nbbrd.service.ProcessorUtil;
+import internal.nbbrd.service.TypeFactory;
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;

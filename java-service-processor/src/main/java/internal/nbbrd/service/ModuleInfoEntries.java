@@ -43,7 +43,7 @@ import org.antlr.v4.runtime.tree.ParseTreeWalker;
  */
 @lombok.Value
 @lombok.Builder(builderClassName = "Builder")
-class ModuleInfoEntries {
+public class ModuleInfoEntries {
 
     @lombok.Singular
     private List<String> usages;
@@ -51,7 +51,7 @@ class ModuleInfoEntries {
     @lombok.Builder.Default
     private Map<String, List<String>> provisions = Collections.emptyMap();
 
-    static class Builder {
+    public static class Builder {
 
         public Builder provision(String key, String value) {
             if (!provisions$set) {
@@ -63,7 +63,7 @@ class ModuleInfoEntries {
         }
     }
 
-    static Optional<ModuleInfoEntries> parse(Filer filer) throws IOException {
+    public static Optional<ModuleInfoEntries> parse(Filer filer) throws IOException {
         try {
             FileObject src = filer.getResource(StandardLocation.SOURCE_PATH, "", "module-info.java");
             return Optional.of(parse(src.getCharContent(false)));

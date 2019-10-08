@@ -14,35 +14,12 @@
  * See the Licence for the specific language governing permissions and 
  * limitations under the Licence.
  */
-package internal.nbbrd.service;
-
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Set;
-import java.util.stream.Collectors;
-import javax.lang.model.element.Name;
+package internal.nbbrd.service.provider;
 
 /**
  *
  * @author Philippe Charles
  */
-@lombok.Value
-final class ProviderRef {
+interface ProviderRegistry {
 
-    @lombok.NonNull
-    private final Name service;
-    @lombok.NonNull
-    private final Name provider;
-
-    @Override
-    public String toString() {
-        return service + "/" + provider;
-    }
-
-    static Set<ProviderRef> getDuplicates(Collection<ProviderRef> refs) {
-        return refs
-                .stream()
-                .filter(ref -> Collections.frequency(refs, ref) > 1)
-                .collect(Collectors.toSet());
-    }
 }

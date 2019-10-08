@@ -14,8 +14,9 @@
  * See the Licence for the specific language governing permissions and 
  * limitations under the Licence.
  */
-package internal.nbbrd.service;
+package internal.nbbrd.service.provider;
 
+import internal.nbbrd.service.ModuleInfoEntries;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;

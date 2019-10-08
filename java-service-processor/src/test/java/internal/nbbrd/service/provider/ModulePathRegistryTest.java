@@ -14,10 +14,11 @@
  * See the Licence for the specific language governing permissions and 
  * limitations under the Licence.
  */
-package internal.nbbrd.service;
+package internal.nbbrd.service.provider;
 
-import static internal.nbbrd.service.CustomName.newRef;
-import static internal.nbbrd.service.ModulePathRegistry.parseAll;
+import internal.nbbrd.service.ModuleInfoEntries;
+import static internal.nbbrd.service.provider.CustomName.newRef;
+import static internal.nbbrd.service.provider.ModulePathRegistry.parseAll;
 import java.io.IOException;
 import static org.assertj.core.api.Assertions.*;
 import org.junit.Test;
