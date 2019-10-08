@@ -106,6 +106,9 @@ public class ServiceDefinitionProcessorTest {
                 .contains("private static SingleDef.MutableSingleton RESOURCE = doLoad();");
 
         assertThat(compilation)
+                .hadWarningContaining("Thread-unsafe singleton for 'definition.SingleDef.MutableSingleton'");
+
+        assertThat(compilation)
                 .generatedSourceFile("definition.SingleDefLoader")
                 .contentsAsUtf8String()
                 .contains("private static final AtomicReference<SingleDef.ThreadSafeSingleton> RESOURCE = new AtomicReference<>(doLoad());");
@@ -149,6 +152,9 @@ public class ServiceDefinitionProcessorTest {
                 .generatedSourceFile("definition.OptionalDefLoader")
                 .contentsAsUtf8String()
                 .contains("private static Optional<OptionalDef.MutableSingleton> RESOURCE = doLoad();");
+
+        assertThat(compilation)
+                .hadWarningContaining("Thread-unsafe singleton for 'definition.OptionalDef.MutableSingleton'");
 
         assertThat(compilation)
                 .generatedSourceFile("definition.OptionalDefLoader")
@@ -196,6 +202,9 @@ public class ServiceDefinitionProcessorTest {
                 .contains("private static List<MultipleDef.MutableSingleton> RESOURCE = doLoad();");
 
         assertThat(compilation)
+                .hadWarningContaining("Thread-unsafe singleton for 'definition.MultipleDef.MutableSingleton'");
+
+        assertThat(compilation)
                 .generatedSourceFile("definition.MultipleDefLoader")
                 .contentsAsUtf8String()
                 .contains("private static final AtomicReference<List<MultipleDef.ThreadSafeSingleton>> RESOURCE = new AtomicReference<>(doLoad());");
@@ -209,6 +218,19 @@ public class ServiceDefinitionProcessorTest {
 
         assertThat(compilation)
                 .succeeded();
+    }
+
+    @Test
+    public void testUnknownFactory() {
+        Compilation compilation = com.google.testing.compile.Compiler.javac()
+                .withProcessors(new ServiceDefinitionProcessor())
+                .compile(JavaFileObjects.forResource("definition/UnknownFactory.java"));
+
+        assertThat(compilation)
+                .failed();
+
+        assertThat(compilation)
+                .hadErrorContaining("Don't know how to create");
     }
 
     @Test

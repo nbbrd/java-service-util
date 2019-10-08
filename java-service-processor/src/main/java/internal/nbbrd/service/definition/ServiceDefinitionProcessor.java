@@ -60,11 +60,17 @@ public final class ServiceDefinitionProcessor extends AbstractProcessor {
 //            return false;
 //        }
 
-        List<ServiceLoaderGenerator> generators = collect(annotations, roundEnv);
+        List<ServiceLoaderGenerator> allGenerators = collect(annotations, roundEnv);
 
-        if (!generators.isEmpty()) {
-            check(generators);
-            process(generators);
+        if (!allGenerators.isEmpty()) {
+            checkModuleInfo(allGenerators);
+
+            List<ServiceLoaderGenerator> validGenerators = allGenerators
+                    .stream()
+                    .filter(this::check)
+                    .collect(Collectors.toList());
+
+            process(validGenerators);
         }
 
         return true;
@@ -79,15 +85,23 @@ public final class ServiceDefinitionProcessor extends AbstractProcessor {
                 .collect(Collectors.toList());
     }
 
-    private void check(List<ServiceLoaderGenerator> generators) {
-        generators.forEach(this::check);
-        checkModuleInfo(generators);
-    }
-
-    private void check(ServiceLoaderGenerator generator) {
+    private boolean check(ServiceLoaderGenerator generator) {
         Types types = processingEnv.getTypeUtils();
         TypeElement service = asTypeElement(generator.getServiceType());
 
+        if (!checkFallback(generator, service, types)) {
+            return false;
+        }
+        if (!checkPreprocessor(generator, service, types)) {
+            return false;
+        }
+        if (!checkMutability(generator, service, types)) {
+            return false;
+        }
+        return true;
+    }
+
+    private boolean checkFallback(ServiceLoaderGenerator generator, TypeElement service, Types types) {
         switch (generator.getQuantifier()) {
             case SINGLE:
                 if (!generator.getFallbackType().isPresent()) {
@@ -107,12 +121,18 @@ public final class ServiceDefinitionProcessor extends AbstractProcessor {
 
             if (!types.isAssignable(fallback, types.erasure(service.asType()))) {
                 error(service, String.format("Fallback '%1$s' doesn't extend nor implement service '%2$s'", fallback, service));
-                return;
+                return false;
             }
 
-            checkFactories(service, fallback);
+            if (!checkFactories(service, fallback)) {
+                return false;
+            }
         }
 
+        return true;
+    }
+
+    private boolean checkPreprocessor(ServiceLoaderGenerator generator, TypeElement service, Types types) {
         if (generator.getPreprocessorType().isPresent()) {
             TypeMirror preprocessor = generator.getPreprocessorType().get();
 
@@ -120,19 +140,30 @@ public final class ServiceDefinitionProcessor extends AbstractProcessor {
             DeclaredType unaryOperatorOf = types.getDeclaredType(asTypeElement(UnaryOperator.class), streamOf);
             if (!types.isAssignable(preprocessor, unaryOperatorOf)) {
                 error(service, String.format("Preprocessor '%1$s' doesn't extend nor implement 'UnaryOperator<Stream<%2$s>>'", preprocessor, service));
-                return;
+                return false;
             }
 
-            checkFactories(service, preprocessor);
+            if (!checkFactories(service, preprocessor)) {
+                return false;
+            }
         }
+        return true;
     }
 
-    private void checkFactories(TypeElement annotatedElement, TypeMirror type) {
-        TypeElement fallback = (TypeElement) processingEnv.getTypeUtils().asElement(type);
-        List<TypeFactory> factories = TypeFactory.of(processingEnv.getTypeUtils(), fallback);
+    private boolean checkMutability(ServiceLoaderGenerator generator, TypeElement service, Types types) {
+        if (generator.getLoaderKind() == LoaderKind.UNSAFE_MUTABLE) {
+            warn(service, String.format("Thread-unsafe singleton for '%1$s'", service));
+        }
+        return true;
+    }
+
+    private boolean checkFactories(TypeElement annotatedElement, TypeMirror type) {
+        List<TypeFactory> factories = TypeFactory.of(processingEnv.getTypeUtils(), asTypeElement(type));
         if (!TypeFactory.canSelect(factories)) {
             error(annotatedElement, String.format("Don't know how to create '%1$s'", type));
+            return false;
         }
+        return true;
     }
 
     private void checkModuleInfo(List<ServiceLoaderGenerator> generators) {

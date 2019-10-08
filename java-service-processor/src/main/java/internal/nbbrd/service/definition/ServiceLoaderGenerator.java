@@ -38,7 +38,6 @@ import java.util.stream.StreamSupport;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.TypeMirror;
-import nbbrd.service.Mutability;
 import nbbrd.service.Quantifier;
 import nbbrd.service.ServiceDefinition;
 
@@ -58,8 +57,7 @@ class ServiceLoaderGenerator {
         return ServiceLoaderGenerator
                 .builder()
                 .quantifier(definition.quantifier())
-                .mutability(definition.mutability())
-                .singleton(definition.singleton())
+                .loaderKind(LoaderKind.of(definition.mutability(), definition.singleton()))
                 .serviceType(serviceType)
                 .fallbackType(nonNull(definition::fallback))
                 .preprocessorType(nonNull(definition::preprocessor))
@@ -68,8 +66,7 @@ class ServiceLoaderGenerator {
     }
 
     private Quantifier quantifier;
-    private Mutability mutability;
-    private boolean singleton;
+    private LoaderKind loaderKind;
     private ClassName serviceType;
     private Optional<TypeMirror> fallbackType;
     private Optional<TypeMirror> preprocessorType;
@@ -91,16 +88,16 @@ class ServiceLoaderGenerator {
                 .addField(resourceField)
                 .addMethod(getMethod);
 
-        if (singleton) {
+        if (loaderKind.isSingleton()) {
             result.addMethod(MethodSpec.constructorBuilder().addModifiers(Modifier.PRIVATE).build());
         }
 
-        if (!mutability.equals(Mutability.NONE)) {
+        if (loaderKind.isModifiable()) {
             result.addMethod(newSetMethod(resourceField, quantifierType));
             result.addMethod(newReloadMethod(sourceField, doLoadMethod));
         }
 
-        if (!singleton && mutability.equals(Mutability.NONE)) {
+        if (loaderKind == LoaderKind.IMMUTABLE) {
             result.addMethod(newLoadMethod(className, quantifierType, getMethod));
         }
 
@@ -111,13 +108,13 @@ class ServiceLoaderGenerator {
         return CodeBlock
                 .builder()
                 .add("Custom service loader for $L.\n", toJavadocLink(serviceType))
-                .add("<br>This class $L thread-safe.\n", mutability.isThreadSafe() ? "is" : "is not")
+                .add("<br>This class $L thread-safe.\n", loaderKind.isThreadSafe() ? "is" : "is not")
                 .add("<p>Properties:\n")
                 .add("<li>Quantifier: $L\n", quantifier)
-                .add("<li>Mutability: $L\n", mutability)
-                .add("<li>Singleton: $L\n", singleton)
                 .add("<li>Fallback: $L\n", toJavadocLink(fallbackType))
                 .add("<li>Preprocessor: $L\n", toJavadocLink(preprocessorType))
+                .add("<li>Mutability: $L\n", loaderKind.toMutability())
+                .add("<li>Singleton: $L\n", loaderKind.isSingleton())
                 .add("<li>Name: $L\n", loaderName.isEmpty() ? "null" : loaderName)
                 .build();
     }
@@ -209,12 +206,15 @@ class ServiceLoaderGenerator {
 
     private FieldSpec.Builder getResourceFieldBuilder(TypeName quantifierType) {
         String name = fieldName("resource");
-        switch (mutability) {
-            case NONE:
+        switch (loaderKind) {
+            case IMMUTABLE:
+            case CONSTANT:
                 return FieldSpec.builder(quantifierType, name, Modifier.PRIVATE, Modifier.FINAL);
-            case BASIC:
+            case MUTABLE:
+            case UNSAFE_MUTABLE:
                 return FieldSpec.builder(quantifierType, name, Modifier.PRIVATE);
             case CONCURRENT:
+            case ATOMIC:
                 return FieldSpec.builder(typeOf(AtomicReference.class, quantifierType), name, Modifier.PRIVATE, Modifier.FINAL);
             default:
                 throw new RuntimeException();
@@ -222,7 +222,7 @@ class ServiceLoaderGenerator {
     }
 
     private CodeBlock getResourceInitializer(MethodSpec loader) {
-        return isAtomicRef()
+        return loaderKind.isAtomicReference()
                 ? CodeBlock.of("new $T<>($N())", ClassName.get(AtomicReference.class), loader)
                 : CodeBlock.of("$N()", loader);
     }
@@ -256,7 +256,7 @@ class ServiceLoaderGenerator {
     }
 
     private CodeBlock getGetterStatement(FieldSpec resourceField) {
-        return isAtomicRef()
+        return loaderKind.isAtomicReference()
                 ? CodeBlock.of("return $N.get()", resourceField)
                 : CodeBlock.of("return $N", resourceField);
     }
@@ -290,7 +290,7 @@ class ServiceLoaderGenerator {
     }
 
     private CodeBlock getSetterStatement(FieldSpec resourceField) {
-        return isAtomicRef()
+        return loaderKind.isAtomicReference()
                 ? CodeBlock.of("$N.set($T.requireNonNull(newValue))", resourceField, Objects.class)
                 : CodeBlock.of("$N = $T.requireNonNull(newValue)", resourceField, Objects.class);
     }
@@ -306,14 +306,14 @@ class ServiceLoaderGenerator {
                 .addModifiers(getSingletonModifiers())
                 .addExceptions(getQuantifierException());
 
-        if (isAtomicRef()) {
+        if (loaderKind.isAtomicReference()) {
             result.beginControlFlow("synchronized($N)", sourceField);
         }
 
         result.addStatement("$N.reload()", sourceField);
         result.addStatement("set($N())", loader);
 
-        if (isAtomicRef()) {
+        if (loaderKind.isAtomicReference()) {
             result.endControlFlow();
         }
 
@@ -341,20 +341,16 @@ class ServiceLoaderGenerator {
         return result.build();
     }
 
-    private boolean isAtomicRef() {
-        return mutability == Mutability.CONCURRENT;
-    }
-
     private Modifier[] getSingletonModifiers() {
-        return singleton ? SINGLETON_MODIFIER : NO_MODIFIER;
+        return loaderKind.isSingleton() ? SINGLETON_MODIFIER : NO_MODIFIER;
     }
 
     private String fieldName(String name) {
-        return singleton ? name.toUpperCase() : name;
+        return loaderKind.isSingleton() ? name.toUpperCase() : name;
     }
 
     private CodeBlock getThreadSafetyComment() {
-        return mutability.isThreadSafe()
+        return loaderKind.isThreadSafe()
                 ? CodeBlock.of("<br>This method is thread-safe.\n")
                 : CodeBlock.of("<br>This method is not thread-safe.\n");
     }
