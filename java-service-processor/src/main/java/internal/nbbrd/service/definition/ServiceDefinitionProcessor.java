@@ -21,7 +21,7 @@ import com.squareup.javapoet.JavaFile;
 import com.squareup.javapoet.TypeSpec;
 import internal.nbbrd.service.ModuleInfoEntries;
 import internal.nbbrd.service.ProcessorUtil;
-import internal.nbbrd.service.TypeFactory;
+import internal.nbbrd.service.InstanceFactory;
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
@@ -124,7 +124,7 @@ public final class ServiceDefinitionProcessor extends AbstractProcessor {
                 return false;
             }
 
-            if (!checkFactories(service, fallback)) {
+            if (!checkInstanceFactories(service, fallback)) {
                 return false;
             }
         }
@@ -143,7 +143,7 @@ public final class ServiceDefinitionProcessor extends AbstractProcessor {
                 return false;
             }
 
-            if (!checkFactories(service, preprocessor)) {
+            if (!checkInstanceFactories(service, preprocessor)) {
                 return false;
             }
         }
@@ -157,9 +157,9 @@ public final class ServiceDefinitionProcessor extends AbstractProcessor {
         return true;
     }
 
-    private boolean checkFactories(TypeElement annotatedElement, TypeMirror type) {
-        List<TypeFactory> factories = TypeFactory.of(processingEnv.getTypeUtils(), asTypeElement(type));
-        if (!TypeFactory.canSelect(factories)) {
+    private boolean checkInstanceFactories(TypeElement annotatedElement, TypeMirror type) {
+        List<InstanceFactory> factories = InstanceFactory.allOf(processingEnv.getTypeUtils(), asTypeElement(type));
+        if (!InstanceFactory.canSelect(factories)) {
             error(annotatedElement, String.format("Don't know how to create '%1$s'", type));
             return false;
         }
@@ -202,25 +202,33 @@ public final class ServiceDefinitionProcessor extends AbstractProcessor {
     }
 
     private void process(ClassName top, List<ServiceLoaderGenerator> generators) {
-        JavaFile file;
-        if (generators.size() == 1 && top.equals(resolveLoaderName(generators.get(0)))) {
-            ServiceLoaderGenerator generator = generators.get(0);
-            file = JavaFile.builder(top.packageName(), generator.generate(top.simpleName(), this::selectTypeFactory)).build();
-        } else {
-            TypeSpec.Builder nestedTypes = TypeSpec.classBuilder(top)
-                    .addModifiers(Modifier.PUBLIC, Modifier.FINAL);
-            generators
-                    .stream()
-                    .map(generator -> generator.generate(resolveLoaderName(generator).simpleName(), this::selectTypeFactory))
-                    .map(o -> o.toBuilder().addModifiers(Modifier.STATIC).build())
-                    .forEach(nestedTypes::addType);
-            file = JavaFile.builder(top.packageName(), nestedTypes.build()).build();
-        }
+        JavaFile file = isNotNested(top, generators)
+                ? generate(top, generators.get(0))
+                : generateNested(top, generators);
         ProcessorUtil.write(processingEnv, file);
     }
 
-    private TypeFactory selectTypeFactory(TypeMirror typeMirror) {
-        return TypeFactory.select(TypeFactory.of(processingEnv.getTypeUtils(), asTypeElement(typeMirror)));
+    private boolean isNotNested(ClassName top, List<ServiceLoaderGenerator> generators) {
+        return generators.size() == 1 && top.equals(resolveLoaderName(generators.get(0)));
+    }
+
+    private JavaFile generate(ClassName top, ServiceLoaderGenerator generator) {
+        return JavaFile.builder(top.packageName(), generator.generate(top.simpleName(), this::selectInstanceFactory)).build();
+    }
+
+    private JavaFile generateNested(ClassName top, List<ServiceLoaderGenerator> generators) {
+        TypeSpec.Builder nestedTypes = TypeSpec.classBuilder(top)
+                .addModifiers(Modifier.PUBLIC, Modifier.FINAL);
+        generators
+                .stream()
+                .map(generator -> generator.generate(resolveLoaderName(generator).simpleName(), this::selectInstanceFactory))
+                .map(o -> o.toBuilder().addModifiers(Modifier.STATIC).build())
+                .forEach(nestedTypes::addType);
+        return JavaFile.builder(top.packageName(), nestedTypes.build()).build();
+    }
+
+    private InstanceFactory selectInstanceFactory(TypeMirror typeMirror) {
+        return InstanceFactory.select(InstanceFactory.allOf(processingEnv.getTypeUtils(), asTypeElement(typeMirror)));
     }
 
     private TypeElement asTypeElement(String o) {

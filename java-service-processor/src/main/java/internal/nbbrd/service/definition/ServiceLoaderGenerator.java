@@ -24,7 +24,7 @@ import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
 import internal.nbbrd.service.ProcessorUtil;
-import internal.nbbrd.service.TypeFactory;
+import internal.nbbrd.service.InstanceFactory;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
@@ -72,7 +72,7 @@ class ServiceLoaderGenerator {
     private Optional<TypeMirror> preprocessorType;
     private String loaderName;
 
-    public TypeSpec generate(String className, Function<TypeMirror, TypeFactory> toFactory) {
+    public TypeSpec generate(String className, Function<TypeMirror, InstanceFactory> toFactory) {
         TypeName quantifierType = getQuantifierType();
 
         FieldSpec sourceField = newSourceField();
@@ -119,7 +119,7 @@ class ServiceLoaderGenerator {
                 .build();
     }
 
-    private MethodSpec newDoLoadMethod(FieldSpec sourceField, TypeName quantifierType, Function<TypeMirror, TypeFactory> toFactory) {
+    private MethodSpec newDoLoadMethod(FieldSpec sourceField, TypeName quantifierType, Function<TypeMirror, InstanceFactory> toFactory) {
         return MethodSpec.methodBuilder("doLoad")
                 .addModifiers(Modifier.PRIVATE)
                 .addModifiers(getSingletonModifiers())
@@ -134,13 +134,13 @@ class ServiceLoaderGenerator {
                 .build();
     }
 
-    private CodeBlock getPreprocessorCode(FieldSpec sourceField, Function<TypeMirror, TypeFactory> toFactory) {
+    private CodeBlock getPreprocessorCode(FieldSpec sourceField, Function<TypeMirror, InstanceFactory> toFactory) {
         return preprocessorType.isPresent()
                 ? CodeBlock.of("$L\n.apply($T.stream($N.spliterator(), false))", getFactoryCode(preprocessorType.get(), toFactory), StreamSupport.class, sourceField)
                 : CodeBlock.of("$T.stream($N.spliterator(), false)", StreamSupport.class, sourceField);
     }
 
-    private CodeBlock getQuantifierCode(Function<TypeMirror, TypeFactory> toFactory) {
+    private CodeBlock getQuantifierCode(Function<TypeMirror, InstanceFactory> toFactory) {
         switch (quantifier) {
             case OPTIONAL:
                 return CodeBlock.of("\n.findFirst()");
@@ -155,8 +155,8 @@ class ServiceLoaderGenerator {
         }
     }
 
-    private CodeBlock getFactoryCode(TypeMirror type, Function<TypeMirror, TypeFactory> toFactory) {
-        TypeFactory factory = toFactory.apply(type);
+    private CodeBlock getFactoryCode(TypeMirror type, Function<TypeMirror, InstanceFactory> toFactory) {
+        InstanceFactory factory = toFactory.apply(type);
         switch (factory.getKind()) {
             case CONSTRUCTOR:
                 return CodeBlock.of("new $T()", type);

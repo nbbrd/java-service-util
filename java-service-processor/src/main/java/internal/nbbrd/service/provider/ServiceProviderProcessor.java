@@ -16,7 +16,7 @@
  */
 package internal.nbbrd.service.provider;
 
-import internal.nbbrd.service.TypeFactory;
+import internal.nbbrd.service.InstanceFactory;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -120,13 +120,13 @@ public final class ServiceProviderProcessor extends AbstractProcessor {
             return;
         }
 
-        if (TypeFactory.of(types, service, provider).stream().noneMatch(this::isValidFactory)) {
+        if (InstanceFactory.allOf(types, service, provider).stream().noneMatch(this::isValidFactory)) {
             error(ref, String.format("Provider '%1$s' must have a public no-argument constructor", ref.getProvider()));
             return;
         }
     }
 
-    private boolean isValidFactory(TypeFactory factory) {
+    private boolean isValidFactory(InstanceFactory factory) {
         switch (factory.getKind()) {
             case CONSTRUCTOR:
                 return true;
@@ -178,7 +178,7 @@ public final class ServiceProviderProcessor extends AbstractProcessor {
         for (ProviderRef ref : refs) {
             TypeElement service = processingEnv.getElementUtils().getTypeElement(ref.getService());
             TypeElement provider = processingEnv.getElementUtils().getTypeElement(ref.getProvider());
-            if (TypeFactory.of(processingEnv.getTypeUtils(), service, provider).stream().anyMatch(o -> o.getKind() == TypeFactory.Kind.STATIC_METHOD)) {
+            if (InstanceFactory.allOf(processingEnv.getTypeUtils(), service, provider).stream().anyMatch(o -> o.getKind() == InstanceFactory.Kind.STATIC_METHOD)) {
                 error(ref, "Static method support not implemented yet");
             }
         }
