@@ -20,7 +20,7 @@ Current features:
 - checks coherence between classpath and modulepath if `module-info.java` is available
 
 Current limitations:
-- detects modulepath `public static provider()` method but doesn't generate a workaround for classpath
+- detects modulepath `public static provider()` method but doesn't generate a [workaround for classpath](https://github.com/nbbrd/java-service-util/issues/12)
 
 Example:
 ```java
@@ -49,8 +49,8 @@ Current features:
 - checks coherence of service use in modules if `module-info.java` is available
 
 Current limitations:
-- does not support service type inspection before instantiation
-- does not support lazy instantiation
+- does not support [type inspection before instantiation](https://github.com/nbbrd/java-service-util/issues/13)
+- does not support [lazy instantiation](https://github.com/nbbrd/java-service-util/issues/6)
 
 Examples can be found in the [examples project](https://github.com/nbbrd/java-service-util/tree/develop/java-service-examples/src/main/java/nbbrd/service/examples).
 
