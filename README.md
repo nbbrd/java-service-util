@@ -11,7 +11,7 @@ Key points:
 - has an automatic module name that makes it compatible with [JPMS](https://www.baeldung.com/java-9-modularity) 
 
 ## @ServiceProvider
-The `@ServiceProvider` annotation deals with the tedious work of registring service providers.
+The `@ServiceProvider` annotation **registers service providers** on classpath and modulepath.
 
 Current features:
 - generates classpath files in `META-INF/services` folder
@@ -37,19 +37,24 @@ public class MultiProvider implements HelloService, SomeService {}
 ```
 
 ## @ServiceDefinition
-The `@ServiceDefinition` annotation generates a specialized service loader that takes care of the loading and enforces a specific usage.
+The `@ServiceDefinition` annotation **generates a specialized service loader** that enforces a specific usage.  
+It generates boilerplate code, thus reducing bugs and improving code coherence.
 
 Current features:
-- generates a **specialized service loader** with the following parameters:
+- generates a specialized service loader with the following properties:
   - `quantifier`: optional, single or multiple service instances
   - `preprocessor`: filter/map/sort operations 
   - `mutability`: none, basic or concurrent access
   - `singleton`: global or local scope
-- **checks coherence** of service use **in modules** if `module-info.java` is available
+- checks coherence of service use in modules if `module-info.java` is available
+
+Current limitations:
+- does not support service type inspection before instantiation
+- does not support lazy instantiation
 
 Examples can be found in the [examples project](https://github.com/nbbrd/java-service-util/tree/develop/java-service-examples/src/main/java/nbbrd/service/examples).
 
-### Quantifier
+### Quantifier property
 
 OPTIONAL example:
 ```java
@@ -92,7 +97,7 @@ List<Translator> multiple = new TranslatorLoader().get();
 multiple.forEach(translator -> System.out.println(translator.translate("hello")));
 ```
 
-### Preprocessor
+### Preprocessor property
 
 Filter/sort example:
 ```java
@@ -115,7 +120,7 @@ public class ByAvailabilityAndCost implements UnaryOperator<Stream<FileSearch>> 
 new FileSearchLoader().get().ifPresent(search -> search.searchByName(".xlsx").forEach(System.out::println));
 ```
 
-### Mutability
+### Mutability property
 
 BASIC example:
 ```java
@@ -137,17 +142,21 @@ loader.reload();
 loader.get().ifPresent(o -> o.send("Fourth"));
 ```
 
-### Singleton
+### Singleton property
 
 Local example:
 ```java
 @ServiceDefinition(singleton = false)
 public interface StatefulAlgorithm {
+  void init(SecureRandom random);
   double compute(double... values);
 }
 
 StatefulAlgorithm algo1 = new StatefulAlgorithmLoader().get().orElseThrow(RuntimeException::new);
+algo1.init(SecureRandom.getInstance("NativePRNG"));
+
 StatefulAlgorithm algo2 = new StatefulAlgorithmLoader().get().orElseThrow(RuntimeException::new);
+algo2.init(SecureRandom.getInstance("PKCS11"));
 
 Stream.of(algo1, algo2)
       .parallel()
@@ -162,6 +171,55 @@ public interface SystemSettings {
 }
 
 SystemSettingsLoader.get().ifPresent(sys -> System.out.println(sys.getDeviceName()));
+```
+
+### SPI pattern
+
+In some cases, it is better to clearly separate API from SPI. Here is an example on how to do it:
+
+```java
+public final class FileType {
+
+  private FileType() {
+  }
+
+  private static final List<FileTypeSpi> PROBES = new internal.FileTypeSpiLoader().get();
+
+  public static Optional<String> probeContentType(Path file) throws IOException {
+    for (FileTypeSpi probe : PROBES) {
+      String result;
+      if ((result = probe.getContentTypeOrNull(file)) != null) {
+        return Optional.of(result);
+      }
+    }
+    return Optional.empty();
+  }
+}
+
+@ServiceDefinition(
+  quantifier = Quantifier.MULTIPLE,
+  preprocessor = FileTypeSpi.ProbePreprocessor.class,
+  loaderName = "internal.FileTypeSpiLoader")
+public interface FileTypeSpi {
+
+  enum Accuracy { HIGH, LOW }
+
+  String getContentTypeOrNull(Path file) throws IOException;
+
+  Accuracy getAccuracy();
+
+  static final class ProbePreprocessor implements UnaryOperator<Stream<FileTypeSpi>> {
+    @Override
+    public Stream<FileTypeSpi> apply(Stream<FileTypeSpi> probes) {
+        return probes.sorted(Comparator.comparing(FileTypeSpi::getAccuracy));
+    }
+  }
+}
+
+String[] files = {"hello.csv", "stuff.txt"};
+for (String file : files) {
+  System.out.println(file + ": " + FileType.probeContentType(Paths.get(file)).orElse("?"));
+}
 ```
 
 ## Setup
