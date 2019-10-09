@@ -21,7 +21,6 @@ import com.squareup.javapoet.JavaFile;
 import com.squareup.javapoet.TypeSpec;
 import internal.nbbrd.service.ModuleInfoEntries;
 import internal.nbbrd.service.ProcessorUtil;
-import internal.nbbrd.service.InstanceFactory;
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
@@ -40,6 +39,7 @@ import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Types;
 import javax.tools.Diagnostic;
+import nbbrd.service.Quantifier;
 
 /**
  *
@@ -81,7 +81,7 @@ public final class ServiceDefinitionProcessor extends AbstractProcessor {
                 .map(roundEnv::getElementsAnnotatedWith)
                 .flatMap(Set::stream)
                 .map(TypeElement.class::cast)
-                .map(ServiceLoaderGenerator::of)
+                .map(definitionType -> ServiceLoaderGenerator.of(definitionType, processingEnv.getTypeUtils()))
                 .collect(Collectors.toList());
     }
 
@@ -89,10 +89,10 @@ public final class ServiceDefinitionProcessor extends AbstractProcessor {
         Types types = processingEnv.getTypeUtils();
         TypeElement service = asTypeElement(generator.getServiceType());
 
-        if (!checkFallback(generator, service, types)) {
+        if (!checkFallback(generator.getQuantifier(), generator.getFallback(), service, types)) {
             return false;
         }
-        if (!checkPreprocessor(generator, service, types)) {
+        if (!checkPreprocessor(generator.getPreprocessor(), service, types)) {
             return false;
         }
         if (!checkMutability(generator, service, types)) {
@@ -101,30 +101,23 @@ public final class ServiceDefinitionProcessor extends AbstractProcessor {
         return true;
     }
 
-    private boolean checkFallback(ServiceLoaderGenerator generator, TypeElement service, Types types) {
-        switch (generator.getQuantifier()) {
+    private boolean checkFallback(Quantifier quantifier, Fallback fallback, TypeElement service, Types types) {
+        switch (quantifier) {
             case SINGLE:
-                if (!generator.getFallbackType().isPresent()) {
+                if (!fallback.getTypeHandler().isPresent()) {
                     warn(service, String.format("Missing fallback for service '%1$s'", service));
                 }
                 break;
             case MULTIPLE:
             case OPTIONAL:
-                if (generator.getFallbackType().isPresent()) {
+                if (fallback.getTypeHandler().isPresent()) {
                     warn(service, String.format("Useless fallback for service '%1$s'", service));
                 }
                 break;
         }
 
-        if (generator.getFallbackType().isPresent()) {
-            TypeMirror fallback = generator.getFallbackType().get();
-
-            if (!types.isAssignable(fallback, types.erasure(service.asType()))) {
-                error(service, String.format("Fallback '%1$s' doesn't extend nor implement service '%2$s'", fallback, service));
-                return false;
-            }
-
-            if (!checkInstanceFactories(service, fallback)) {
+        if (fallback.getTypeHandler().isPresent()) {
+            if (!checkFallbackTypeHandler(fallback.getTypeHandler().get(), service, types)) {
                 return false;
             }
         }
@@ -132,34 +125,50 @@ public final class ServiceDefinitionProcessor extends AbstractProcessor {
         return true;
     }
 
-    private boolean checkPreprocessor(ServiceLoaderGenerator generator, TypeElement service, Types types) {
-        if (generator.getPreprocessorType().isPresent()) {
-            TypeMirror preprocessor = generator.getPreprocessorType().get();
+    private boolean checkFallbackTypeHandler(TypeHandler handler, TypeElement service, Types types) {
+        if (!types.isAssignable(handler.getType(), types.erasure(service.asType()))) {
+            error(service, String.format("Fallback '%1$s' doesn't extend nor implement service '%2$s'", handler.getType(), service));
+            return false;
+        }
 
-            DeclaredType streamOf = types.getDeclaredType(asTypeElement(Stream.class), service.asType());
-            DeclaredType unaryOperatorOf = types.getDeclaredType(asTypeElement(UnaryOperator.class), streamOf);
-            if (!types.isAssignable(preprocessor, unaryOperatorOf)) {
-                error(service, String.format("Preprocessor '%1$s' doesn't extend nor implement 'UnaryOperator<Stream<%2$s>>'", preprocessor, service));
+        if (!checkInstanceFactories(service, handler.getType(), handler)) {
+            return false;
+        }
+        return true;
+    }
+
+    private boolean checkPreprocessor(Preprocessor preprocessor, TypeElement service, Types types) {
+        if (preprocessor.getTypeHandler().isPresent()) {
+            if (!checkPreprocessorTypeHandler(preprocessor.getTypeHandler().get(), service, types)) {
                 return false;
             }
+        }
+        return true;
+    }
 
-            if (!checkInstanceFactories(service, preprocessor)) {
-                return false;
-            }
+    private boolean checkPreprocessorTypeHandler(TypeHandler handler, TypeElement service, Types types) {
+        DeclaredType streamOf = types.getDeclaredType(asTypeElement(Stream.class), service.asType());
+        DeclaredType unaryOperatorOf = types.getDeclaredType(asTypeElement(UnaryOperator.class), streamOf);
+        if (!types.isAssignable(handler.getType(), unaryOperatorOf)) {
+            error(service, String.format("Preprocessor '%1$s' doesn't extend nor implement 'UnaryOperator<Stream<%2$s>>'", handler.getType(), service));
+            return false;
+        }
+
+        if (!checkInstanceFactories(service, handler.getType(), handler)) {
+            return false;
         }
         return true;
     }
 
     private boolean checkMutability(ServiceLoaderGenerator generator, TypeElement service, Types types) {
-        if (generator.getLoaderKind() == LoaderKind.UNSAFE_MUTABLE) {
+        if (generator.getLifecycle() == Lifecycle.UNSAFE_MUTABLE) {
             warn(service, String.format("Thread-unsafe singleton for '%1$s'", service));
         }
         return true;
     }
 
-    private boolean checkInstanceFactories(TypeElement annotatedElement, TypeMirror type) {
-        List<InstanceFactory> factories = InstanceFactory.allOf(processingEnv.getTypeUtils(), asTypeElement(type));
-        if (!InstanceFactory.canSelect(factories)) {
+    private boolean checkInstanceFactories(TypeElement annotatedElement, TypeMirror type, TypeHandler instance) {
+        if (!instance.select().isPresent()) {
             error(annotatedElement, String.format("Don't know how to create '%1$s'", type));
             return false;
         }
@@ -213,7 +222,7 @@ public final class ServiceDefinitionProcessor extends AbstractProcessor {
     }
 
     private JavaFile generate(ClassName top, ServiceLoaderGenerator generator) {
-        return JavaFile.builder(top.packageName(), generator.generate(top.simpleName(), this::selectInstanceFactory)).build();
+        return JavaFile.builder(top.packageName(), generator.generate(top.simpleName())).build();
     }
 
     private JavaFile generateNested(ClassName top, List<ServiceLoaderGenerator> generators) {
@@ -221,14 +230,10 @@ public final class ServiceDefinitionProcessor extends AbstractProcessor {
                 .addModifiers(Modifier.PUBLIC, Modifier.FINAL);
         generators
                 .stream()
-                .map(generator -> generator.generate(resolveLoaderName(generator).simpleName(), this::selectInstanceFactory))
+                .map(generator -> generator.generate(resolveLoaderName(generator).simpleName()))
                 .map(o -> o.toBuilder().addModifiers(Modifier.STATIC).build())
                 .forEach(nestedTypes::addType);
         return JavaFile.builder(top.packageName(), nestedTypes.build()).build();
-    }
-
-    private InstanceFactory selectInstanceFactory(TypeMirror typeMirror) {
-        return InstanceFactory.select(InstanceFactory.allOf(processingEnv.getTypeUtils(), asTypeElement(typeMirror)));
     }
 
     private TypeElement asTypeElement(String o) {

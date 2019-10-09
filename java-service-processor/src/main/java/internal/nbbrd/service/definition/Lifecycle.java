@@ -22,11 +22,11 @@ import nbbrd.service.Mutability;
  *
  * @author Philippe Charles
  */
-enum LoaderKind {
+enum Lifecycle {
 
     IMMUTABLE, MUTABLE, CONCURRENT, CONSTANT, ATOMIC, UNSAFE_MUTABLE;
 
-    static LoaderKind of(Mutability mutability, boolean singleton) {
+    static Lifecycle of(Mutability mutability, boolean singleton) {
         switch (mutability) {
             case NONE:
                 return singleton ? CONSTANT : IMMUTABLE;
