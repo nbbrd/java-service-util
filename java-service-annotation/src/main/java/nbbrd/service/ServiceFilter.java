@@ -14,30 +14,35 @@
  * See the Licence for the specific language governing permissions and 
  * limitations under the Licence.
  */
-package nbbrd.service.examples;
+package nbbrd.service;
 
-import java.io.File;
-import java.util.List;
-import nbbrd.service.ServiceDefinition;
-import nbbrd.service.ServiceFilter;
-import nbbrd.service.ServiceSorter;
+import java.lang.annotation.Documented;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
 /**
+ * Specifies that a method must be used as a filter on a service.
  *
  * @author Philippe Charles
  */
-@ServiceDefinition
-public interface FileSearch {
+@Documented
+@Target({ElementType.METHOD})
+@Retention(RetentionPolicy.SOURCE)
+public @interface ServiceFilter {
 
-    List<File> searchByName(String name);
+    /**
+     * Applies a logical negation.
+     *
+     * @return true if negation is required, false otherwise
+     */
+    boolean negate() default false;
 
-    @ServiceFilter
-    boolean isAvailable();
-
-    @ServiceSorter
-    int getCost();
-
-    public static void main(String[] args) {
-        FileSearchLoader.load().ifPresent(search -> search.searchByName(".xlsx").forEach(System.out::println));
-    }
+    /**
+     * Sets the filter ordering in case of multiple filters.
+     *
+     * @return an ordering
+     */
+    int position() default Integer.MAX_VALUE;
 }

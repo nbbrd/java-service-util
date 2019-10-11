@@ -20,7 +20,9 @@ import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.JavaFile;
 import com.squareup.javapoet.TypeSpec;
 import internal.nbbrd.service.ProcessorUtil;
+import internal.nbbrd.service.Unreachable;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import javax.annotation.processing.AbstractProcessor;
@@ -36,7 +38,11 @@ import javax.lang.model.element.TypeElement;
  * @author Philippe Charles
  */
 @org.openide.util.lookup.ServiceProvider(service = Processor.class)
-@SupportedAnnotationTypes({"nbbrd.service.ServiceDefinition"})
+@SupportedAnnotationTypes({
+    "nbbrd.service.ServiceDefinition",
+    "nbbrd.service.ServiceFilter",
+    "nbbrd.service.ServiceSorter"
+})
 public final class ServiceDefinitionProcessor extends AbstractProcessor {
 
     @Override
@@ -52,44 +58,47 @@ public final class ServiceDefinitionProcessor extends AbstractProcessor {
         ServiceDefinitionCollector collector = new ServiceDefinitionCollector(processingEnv);
         ServiceDefinitionChecker checker = new ServiceDefinitionChecker(processingEnv);
 
-        List<DefinitionValue> allDefinitions = collector.collect(annotations, roundEnv);
+        LoadData data = collector.collect(annotations, roundEnv);
 
-        if (!allDefinitions.isEmpty()) {
-            checker.checkModuleInfo(allDefinitions);
-
-            allDefinitions
-                    .stream()
-                    .filter(checker::checkConstraints)
-                    .collect(Collectors.groupingBy(ServiceDefinitionProcessor::getTopLevelClassName))
-                    .forEach(this::generate);
+        if (!data.getDefinitions().isEmpty()) {
+            checker.checkModuleInfo(data.getDefinitions());
         }
+
+        Map<ClassName, List<LoadDefinition>> definitionsByTopLevel = data.getDefinitions()
+                .stream()
+                .filter(checker::checkConstraints)
+                .collect(Collectors.groupingBy(definition -> definition.resolveLoaderName().topLevelClassName()));
+
+        Map<ClassName, List<LoadFilter>> filtersByService = data.getFilters()
+                .stream()
+                .filter(checker::checkFilter)
+                .collect(Collectors.groupingBy(filter -> filter.getServiceType().map(ClassName::get).orElseThrow(Unreachable::new)));
+
+        Map<ClassName, List<LoadSorter>> sortersByService = data.getSorters()
+                .stream()
+                .filter(checker::checkSorter)
+                .collect(Collectors.groupingBy(sorter -> sorter.getServiceType().map(ClassName::get).orElseThrow(Unreachable::new)));
+
+        definitionsByTopLevel.forEach((topLevel, definitions) -> generate(topLevel, ServiceDefinitionGenerator.allOf(definitions, filtersByService, sortersByService)));
 
         return true;
     }
 
-    private void generate(ClassName topLevelClassName, List<DefinitionValue> definitions) {
-        TypeSpec typeSpec = isNotNested(topLevelClassName, definitions)
-                ? generate(definitions.get(0))
-                : generateNested(topLevelClassName, definitions);
-        ProcessorUtil.write(processingEnv, JavaFile.builder(topLevelClassName.packageName(), typeSpec).build());
+    private void generate(ClassName topLevel, List<ServiceDefinitionGenerator> generators) {
+        TypeSpec typeSpec = isNotNested(topLevel, generators)
+                ? generators.get(0).generate(false)
+                : generateNested(topLevel, generators);
+        ProcessorUtil.write(processingEnv, JavaFile.builder(topLevel.packageName(), typeSpec).build());
     }
 
-    private boolean isNotNested(ClassName topLevelClassName, List<DefinitionValue> definitions) {
-        return definitions.size() == 1 && topLevelClassName.equals(definitions.get(0).resolveLoaderName());
+    private boolean isNotNested(ClassName topLevel, List<ServiceDefinitionGenerator> generators) {
+        return generators.size() == 1 && topLevel.equals(generators.get(0).getDefinition().resolveLoaderName());
     }
 
-    private TypeSpec generate(DefinitionValue definition) {
-        return new ServiceDefinitionGenerator(definition).generate(false);
-    }
-
-    private TypeSpec generateNested(ClassName topLevelClassName, List<DefinitionValue> definitions) {
-        return TypeSpec.classBuilder(topLevelClassName)
+    private TypeSpec generateNested(ClassName topLevel, List<ServiceDefinitionGenerator> generators) {
+        return TypeSpec.classBuilder(topLevel)
                 .addModifiers(Modifier.PUBLIC, Modifier.FINAL)
-                .addTypes(definitions.stream().map(o -> new ServiceDefinitionGenerator(o).generate(true)).collect(Collectors.toList()))
+                .addTypes(generators.stream().map(o -> o.generate(true)).collect(Collectors.toList()))
                 .build();
-    }
-
-    private static ClassName getTopLevelClassName(DefinitionValue definition) {
-        return definition.resolveLoaderName().topLevelClassName();
     }
 }

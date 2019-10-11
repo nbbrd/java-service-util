@@ -16,6 +16,7 @@
  */
 package internal.nbbrd.service.definition;
 
+import com.google.common.truth.StringSubject;
 import com.google.testing.compile.Compilation;
 import static com.google.testing.compile.CompilationSubject.assertThat;
 import com.google.testing.compile.JavaFileObjects;
@@ -30,12 +31,11 @@ public class ServiceDefinitionProcessorTest {
 
     @Test
     public void testNonNestedDef() {
-        Compilation compilation = com.google.testing.compile.Compiler.javac()
-                .withProcessors(new ServiceDefinitionProcessor())
-                .compile(JavaFileObjects.forResource("definition/NonNestedDef.java"));
+        JavaFileObject file = JavaFileObjects.forResource("definition/NonNestedDef.java");
+        Compilation compilation = compile(file);
 
         assertThat(compilation)
-                .succeeded();
+                .succeededWithoutWarnings();
 
         assertThat(compilation)
                 .generatedSourceFile("definition.NonNestedDefLoader")
@@ -44,12 +44,11 @@ public class ServiceDefinitionProcessorTest {
 
     @Test
     public void testNestedDef() {
-        Compilation compilation = com.google.testing.compile.Compiler.javac()
-                .withProcessors(new ServiceDefinitionProcessor())
-                .compile(JavaFileObjects.forResource("definition/NestedDef.java"));
+        JavaFileObject file = JavaFileObjects.forResource("definition/NestedDef.java");
+        Compilation compilation = compile(file);
 
         assertThat(compilation)
-                .succeeded();
+                .succeededWithoutWarnings();
 
         assertThat(compilation)
                 .generatedSourceFile("definition.NestedDefLoader")
@@ -59,178 +58,121 @@ public class ServiceDefinitionProcessorTest {
 
     @Test
     public void testSingleDef() {
-        Compilation compilation = com.google.testing.compile.Compiler.javac()
-                .withProcessors(new ServiceDefinitionProcessor())
-                .compile(JavaFileObjects.forResource("definition/SingleDef.java"));
+        JavaFileObject file = JavaFileObjects.forResource("definition/SingleDef.java");
+        Compilation compilation = compile(file);
 
         assertThat(compilation)
                 .succeeded();
-
-        assertThat(compilation)
-                .generatedSourceFile("definition.SingleDefLoader")
-                .contentsAsUtf8String()
-                .contains("private final SingleDef.Immutable resource = doLoad();");
-
-        assertThat(compilation)
-                .generatedSourceFile("definition.SingleDefLoader")
-                .contentsAsUtf8String()
-                .contains("public static SingleDef.Immutable load()");
-
-        assertThat(compilation)
-                .generatedSourceFile("definition.SingleDefLoader")
-                .contentsAsUtf8String()
-                .contains("private SingleDef.Mutable resource = doLoad();");
-
-        assertThat(compilation)
-                .generatedSourceFile("definition.SingleDefLoader")
-                .contentsAsUtf8String()
-                .contains("private final AtomicReference<SingleDef.ThreadSafe> resource = new AtomicReference<>(doLoad());");
-
-        assertThat(compilation)
-                .generatedSourceFile("definition.SingleDefLoader")
-                .contentsAsUtf8String()
-                .contains("private static final SingleDef.ImmutableSingleton RESOURCE = doLoad();");
-
-        assertThat(compilation)
-                .generatedSourceFile("definition.SingleDefLoader")
-                .contentsAsUtf8String()
-                .contains("private static SingleDef.MutableSingleton RESOURCE = doLoad();");
 
         assertThat(compilation)
                 .hadWarningContaining("Thread-unsafe singleton for 'definition.SingleDef.MutableSingleton'");
 
-        assertThat(compilation)
+        StringSubject result = assertThat(compilation)
                 .generatedSourceFile("definition.SingleDefLoader")
-                .contentsAsUtf8String()
-                .contains("private static final AtomicReference<SingleDef.ThreadSafeSingleton> RESOURCE = new AtomicReference<>(doLoad());");
+                .contentsAsUtf8String();
+
+        result.contains("private final SingleDef.Immutable resource = doLoad();");
+
+        result.contains("public static SingleDef.Immutable load()");
+
+        result.contains("private SingleDef.Mutable resource = doLoad();");
+
+        result.contains("private final AtomicReference<SingleDef.ThreadSafe> resource = new AtomicReference<>(doLoad());");
+
+        result.contains("private static final SingleDef.ImmutableSingleton RESOURCE = doLoad();");
+
+        result.contains("private static SingleDef.MutableSingleton RESOURCE = doLoad();");
+
+        result.contains("private static final AtomicReference<SingleDef.ThreadSafeSingleton> RESOURCE = new AtomicReference<>(doLoad());");
     }
 
     @Test
     public void testOptionalDef() {
-        Compilation compilation = com.google.testing.compile.Compiler.javac()
-                .withProcessors(new ServiceDefinitionProcessor())
-                .compile(JavaFileObjects.forResource("definition/OptionalDef.java"));
+        JavaFileObject file = JavaFileObjects.forResource("definition/OptionalDef.java");
+        Compilation compilation = compile(file);
 
         assertThat(compilation)
                 .succeeded();
-
-        assertThat(compilation)
-                .generatedSourceFile("definition.OptionalDefLoader")
-                .contentsAsUtf8String()
-                .contains("private final Optional<OptionalDef.Immutable> resource = doLoad();");
-
-        assertThat(compilation)
-                .generatedSourceFile("definition.OptionalDefLoader")
-                .contentsAsUtf8String()
-                .contains("public static Optional<OptionalDef.Immutable> load()");
-
-        assertThat(compilation)
-                .generatedSourceFile("definition.OptionalDefLoader")
-                .contentsAsUtf8String()
-                .contains("private Optional<OptionalDef.Mutable> resource = doLoad();");
-
-        assertThat(compilation)
-                .generatedSourceFile("definition.OptionalDefLoader")
-                .contentsAsUtf8String()
-                .contains("private final AtomicReference<Optional<OptionalDef.ThreadSafe>> resource = new AtomicReference<>(doLoad());");
-
-        assertThat(compilation)
-                .generatedSourceFile("definition.OptionalDefLoader")
-                .contentsAsUtf8String()
-                .contains("private static final Optional<OptionalDef.ImmutableSingleton> RESOURCE = doLoad();");
-
-        assertThat(compilation)
-                .generatedSourceFile("definition.OptionalDefLoader")
-                .contentsAsUtf8String()
-                .contains("private static Optional<OptionalDef.MutableSingleton> RESOURCE = doLoad();");
 
         assertThat(compilation)
                 .hadWarningContaining("Thread-unsafe singleton for 'definition.OptionalDef.MutableSingleton'");
 
-        assertThat(compilation)
+        StringSubject result = assertThat(compilation)
                 .generatedSourceFile("definition.OptionalDefLoader")
-                .contentsAsUtf8String()
-                .contains("private static final AtomicReference<Optional<OptionalDef.ThreadSafeSingleton>> RESOURCE = new AtomicReference<>(doLoad());");
+                .contentsAsUtf8String();
+
+        result.contains("private final Optional<OptionalDef.Immutable> resource = doLoad();");
+
+        result.contains("public static Optional<OptionalDef.Immutable> load()");
+
+        result.contains("private Optional<OptionalDef.Mutable> resource = doLoad();");
+
+        result.contains("private final AtomicReference<Optional<OptionalDef.ThreadSafe>> resource = new AtomicReference<>(doLoad());");
+
+        result.contains("private static final Optional<OptionalDef.ImmutableSingleton> RESOURCE = doLoad();");
+
+        result.contains("private static Optional<OptionalDef.MutableSingleton> RESOURCE = doLoad();");
+
+        result.contains("private static final AtomicReference<Optional<OptionalDef.ThreadSafeSingleton>> RESOURCE = new AtomicReference<>(doLoad());");
     }
 
     @Test
     public void testMultipleDef() {
-        Compilation compilation = com.google.testing.compile.Compiler.javac()
-                .withProcessors(new ServiceDefinitionProcessor())
-                .compile(JavaFileObjects.forResource("definition/MultipleDef.java"));
+        JavaFileObject file = JavaFileObjects.forResource("definition/MultipleDef.java");
+        Compilation compilation = compile(file);
 
         assertThat(compilation)
                 .succeeded();
-
-        assertThat(compilation)
-                .generatedSourceFile("definition.MultipleDefLoader")
-                .contentsAsUtf8String()
-                .contains("private final List<MultipleDef.Immutable> resource = doLoad();");
-
-        assertThat(compilation)
-                .generatedSourceFile("definition.MultipleDefLoader")
-                .contentsAsUtf8String()
-                .contains("public static List<MultipleDef.Immutable> load()");
-
-        assertThat(compilation)
-                .generatedSourceFile("definition.MultipleDefLoader")
-                .contentsAsUtf8String()
-                .contains("private List<MultipleDef.Mutable> resource = doLoad();");
-
-        assertThat(compilation)
-                .generatedSourceFile("definition.MultipleDefLoader")
-                .contentsAsUtf8String()
-                .contains("private final AtomicReference<List<MultipleDef.ThreadSafe>> resource = new AtomicReference<>(doLoad());");
-
-        assertThat(compilation)
-                .generatedSourceFile("definition.MultipleDefLoader")
-                .contentsAsUtf8String()
-                .contains("private static final List<MultipleDef.ImmutableSingleton> RESOURCE = doLoad();");
-
-        assertThat(compilation)
-                .generatedSourceFile("definition.MultipleDefLoader")
-                .contentsAsUtf8String()
-                .contains("private static List<MultipleDef.MutableSingleton> RESOURCE = doLoad();");
 
         assertThat(compilation)
                 .hadWarningContaining("Thread-unsafe singleton for 'definition.MultipleDef.MutableSingleton'");
 
-        assertThat(compilation)
+        StringSubject result = assertThat(compilation)
                 .generatedSourceFile("definition.MultipleDefLoader")
-                .contentsAsUtf8String()
-                .contains("private static final AtomicReference<List<MultipleDef.ThreadSafeSingleton>> RESOURCE = new AtomicReference<>(doLoad());");
+                .contentsAsUtf8String();
+
+        result.contains("private final List<MultipleDef.Immutable> resource = doLoad();");
+
+        result.contains("public static List<MultipleDef.Immutable> load()");
+
+        result.contains("private List<MultipleDef.Mutable> resource = doLoad();");
+
+        result.contains("private final AtomicReference<List<MultipleDef.ThreadSafe>> resource = new AtomicReference<>(doLoad());");
+
+        result.contains("private static final List<MultipleDef.ImmutableSingleton> RESOURCE = doLoad();");
+
+        result.contains("private static List<MultipleDef.MutableSingleton> RESOURCE = doLoad();");
+
+        result.contains("private static final AtomicReference<List<MultipleDef.ThreadSafeSingleton>> RESOURCE = new AtomicReference<>(doLoad());");
     }
 
     @Test
     public void testAlternateFactories() {
-        Compilation compilation = com.google.testing.compile.Compiler.javac()
-                .withProcessors(new ServiceDefinitionProcessor())
-                .compile(JavaFileObjects.forResource("definition/AlternateFactories.java"));
+        JavaFileObject file = JavaFileObjects.forResource("definition/AlternateFactories.java");
+        Compilation compilation = compile(file);
 
         assertThat(compilation)
-                .succeeded();
+                .succeededWithoutWarnings();
     }
 
     @Test
     public void testUnknownFactory() {
-        Compilation compilation = com.google.testing.compile.Compiler.javac()
-                .withProcessors(new ServiceDefinitionProcessor())
-                .compile(JavaFileObjects.forResource("definition/UnknownFactory.java"));
+        JavaFileObject file = JavaFileObjects.forResource("definition/UnknownFactory.java");
+        Compilation compilation = compile(file);
 
         assertThat(compilation)
                 .failed();
 
         assertThat(compilation)
-                .hadErrorContaining("Don't know how to create");
+                .hadErrorContaining("Don't know how to create")
+                .inFile(file)
+                .onLine(9);
     }
 
     @Test
     public void testNonAssignableFallback() {
         JavaFileObject file = JavaFileObjects.forResource("definition/NonAssignableFallback.java");
-
-        Compilation compilation = com.google.testing.compile.Compiler.javac()
-                .withProcessors(new ServiceDefinitionProcessor())
-                .compile(file);
+        Compilation compilation = compile(file);
 
         assertThat(compilation)
                 .failed();
@@ -244,10 +186,7 @@ public class ServiceDefinitionProcessorTest {
     @Test
     public void testNonAssignablePreprocessor() {
         JavaFileObject file = JavaFileObjects.forResource("definition/NonAssignablePreprocessor.java");
-
-        Compilation compilation = com.google.testing.compile.Compiler.javac()
-                .withProcessors(new ServiceDefinitionProcessor())
-                .compile(file);
+        Compilation compilation = compile(file);
 
         assertThat(compilation)
                 .failed();
@@ -256,5 +195,178 @@ public class ServiceDefinitionProcessorTest {
                 .hadErrorContaining("doesn't extend nor implement")
                 .inFile(file)
                 .onLine(10);
+    }
+
+    @Test
+    public void testFilters() {
+        JavaFileObject file = JavaFileObjects.forResource("definition/Filters.java");
+        Compilation compilation = compile(file);
+
+        assertThat(compilation)
+                .succeededWithoutWarnings();
+
+        StringSubject result = assertThat(compilation)
+                .generatedSourceFile("definition.FiltersLoader")
+                .contentsAsUtf8String();
+
+        result.contains("private final Optional<Filters.SingleFilter> resource = doLoad();");
+        result.contains(".filter(Filters.SingleFilter::isAvailable)");
+
+        result.contains("private final Optional<Filters.MultiFilter> resource = doLoad();");
+        result.contains(".filter(((Predicate<Filters.MultiFilter>)Filters.MultiFilter::isAvailable).and(Filters.MultiFilter::isFastEnough))");
+
+        result.contains("private final Optional<Filters.ReversedFilter> resource = doLoad();");
+        result.contains(".filter(Predicate.not(Filters.ReversedFilter::isAvailable))");
+
+        result.contains("private final Optional<Filters.MultiFilterWithPosition> resource = doLoad();");
+        result.contains(".filter(((Predicate<Filters.MultiFilterWithPosition>)Filters.MultiFilterWithPosition::isFastEnough).and(Filters.MultiFilterWithPosition::isAvailable))");
+    }
+
+    @Test
+    public void testNoArgFilter() {
+        JavaFileObject file = JavaFileObjects.forResource("definition/NoArgFilter.java");
+        Compilation compilation = compile(file);
+
+        assertThat(compilation)
+                .failed();
+
+        assertThat(compilation)
+                .hadErrorContaining("Filter method must have no-args");
+    }
+
+    @Test
+    public void testStaticFilter() {
+        JavaFileObject file = JavaFileObjects.forResource("definition/StaticFilter.java");
+        Compilation compilation = compile(file);
+
+        assertThat(compilation)
+                .failed();
+
+        assertThat(compilation)
+                .hadErrorContaining("Filter method does not apply to static methods")
+                .inFile(file)
+                .onLine(10);
+    }
+
+    @Test
+    public void testLostFilter() {
+        JavaFileObject file = JavaFileObjects.forResource("definition/LostFilter.java");
+        Compilation compilation = compile(file);
+
+        assertThat(compilation)
+                .failed();
+
+        assertThat(compilation)
+                .hadErrorContaining("Filter method only applies to methods of a service")
+                .inFile(file)
+                .onLine(8);
+    }
+
+    @Test
+    public void testNonBooleanFilter() {
+        JavaFileObject file = JavaFileObjects.forResource("definition/NonBooleanFilter.java");
+        Compilation compilation = compile(file);
+
+        assertThat(compilation)
+                .failed();
+
+        assertThat(compilation)
+                .hadErrorContaining("Filter method must return boolean")
+                .inFile(file)
+                .onLine(10);
+    }
+
+    @Test
+    public void testSorters() {
+        JavaFileObject file = JavaFileObjects.forResource("definition/Sorters.java");
+        Compilation compilation = compile(file);
+
+        assertThat(compilation)
+                .succeededWithoutWarnings();
+
+        StringSubject result = assertThat(compilation)
+                .generatedSourceFile("definition.SortersLoader")
+                .contentsAsUtf8String();
+
+        result.contains("private final Optional<Sorters.IntSorter> resource = doLoad();");
+        result.contains(".sorted(Comparator.comparingInt(Sorters.IntSorter::getCost))");
+
+        result.contains("private final Optional<Sorters.LongSorter> resource = doLoad();");
+        result.contains(".sorted(Comparator.comparingLong(Sorters.LongSorter::getCost))");
+
+        result.contains("private final Optional<Sorters.DoubleSorter> resource = doLoad();");
+        result.contains(".sorted(Comparator.comparingDouble(Sorters.DoubleSorter::getCost))");
+
+        result.contains("private final Optional<Sorters.ComparableSorter> resource = doLoad();");
+        result.contains(".sorted(Comparator.comparing(Sorters.ComparableSorter::getCost))");
+
+        result.contains("private final Optional<Sorters.MultiSorter> resource = doLoad();");
+        result.contains(".sorted(((Comparator<Sorters.MultiSorter>)Comparator.comparingInt(Sorters.MultiSorter::getCost)).thenComparing(Comparator.comparingDouble(Sorters.MultiSorter::getAccuracy)))");
+
+        result.contains("private final Optional<Sorters.ReversedSorter> resource = doLoad();");
+        result.contains(".sorted(Collections.reverseOrder(Comparator.comparingInt(Sorters.ReversedSorter::getCost)))");
+
+        result.contains("private final Optional<Sorters.MultiSorterWithPosition> resource = doLoad();");
+        result.contains(".sorted(((Comparator<Sorters.MultiSorterWithPosition>)Comparator.comparingDouble(Sorters.MultiSorterWithPosition::getAccuracy)).thenComparing(Comparator.comparingInt(Sorters.MultiSorterWithPosition::getCost)))");
+    }
+
+    @Test
+    public void testNoArgSorter() {
+        JavaFileObject file = JavaFileObjects.forResource("definition/NoArgSorter.java");
+        Compilation compilation = compile(file);
+
+        assertThat(compilation)
+                .failed();
+
+        assertThat(compilation)
+                .hadErrorContaining("Sorter method must have no-args");
+    }
+
+    @Test
+    public void testStaticSorter() {
+        JavaFileObject file = JavaFileObjects.forResource("definition/StaticSorter.java");
+        Compilation compilation = compile(file);
+
+        assertThat(compilation)
+                .failed();
+
+        assertThat(compilation)
+                .hadErrorContaining("Sorter method does not apply to static methods")
+                .inFile(file)
+                .onLine(10);
+    }
+
+    @Test
+    public void testLostSorter() {
+        JavaFileObject file = JavaFileObjects.forResource("definition/LostSorter.java");
+        Compilation compilation = compile(file);
+
+        assertThat(compilation)
+                .failed();
+
+        assertThat(compilation)
+                .hadErrorContaining("Sorter method only applies to methods of a service")
+                .inFile(file)
+                .onLine(8);
+    }
+
+    @Test
+    public void testNonComparableSorter() {
+        JavaFileObject file = JavaFileObjects.forResource("definition/NonComparableSorter.java");
+        Compilation compilation = compile(file);
+
+        assertThat(compilation)
+                .failed();
+
+        assertThat(compilation)
+                .hadErrorContaining("Sorter method must return double, int, long or comparable")
+                .inFile(file)
+                .onLine(10);
+    }
+
+    private Compilation compile(JavaFileObject file) {
+        return com.google.testing.compile.Compiler.javac()
+                .withProcessors(new ServiceDefinitionProcessor())
+                .compile(file);
     }
 }

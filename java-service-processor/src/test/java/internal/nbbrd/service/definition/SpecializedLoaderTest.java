@@ -17,7 +17,7 @@
 package internal.nbbrd.service.definition;
 
 import com.squareup.javapoet.ClassName;
-import static internal.nbbrd.service.definition.DefinitionValue.resolveLoaderName;
+import static internal.nbbrd.service.definition.LoadDefinition.resolveLoaderName;
 import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.Test;
 

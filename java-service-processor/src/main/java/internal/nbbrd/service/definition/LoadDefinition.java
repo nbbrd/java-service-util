@@ -26,7 +26,7 @@ import nbbrd.service.Quantifier;
  */
 @lombok.Value
 @lombok.Builder
-class DefinitionValue {
+class LoadDefinition {
 
     private Quantifier quantifier;
     private Lifecycle lifecycle;

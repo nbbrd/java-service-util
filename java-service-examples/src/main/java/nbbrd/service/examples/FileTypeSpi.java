@@ -20,17 +20,15 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
-import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-import java.util.stream.Stream;
 import nbbrd.service.Quantifier;
 import nbbrd.service.ServiceDefinition;
 import nbbrd.service.ServiceProvider;
+import nbbrd.service.ServiceSorter;
 
 /**
  *
@@ -38,7 +36,6 @@ import nbbrd.service.ServiceProvider;
  */
 @ServiceDefinition(
         quantifier = Quantifier.MULTIPLE,
-        preprocessor = FileTypeSpi.ProbePreprocessor.class,
         loaderName = "internal.FileTypeSpiLoader")
 public interface FileTypeSpi {
 
@@ -48,15 +45,8 @@ public interface FileTypeSpi {
 
     String getContentTypeOrNull(Path file) throws IOException;
 
+    @ServiceSorter
     Accuracy getAccuracy();
-
-    static final class ProbePreprocessor implements UnaryOperator<Stream<FileTypeSpi>> {
-
-        @Override
-        public Stream<FileTypeSpi> apply(Stream<FileTypeSpi> probes) {
-            return probes.sorted(Comparator.comparing(FileTypeSpi::getAccuracy));
-        }
-    }
 
     @ServiceProvider
     static final class ByExtensionProbe implements FileTypeSpi {

@@ -24,14 +24,20 @@ import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
 import internal.nbbrd.service.Instantiator;
+import internal.nbbrd.service.Unreachable;
 import java.util.Collections;
+import java.util.Comparator;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.ServiceLoader;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
+import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.type.TypeMirror;
 import nbbrd.service.Quantifier;
@@ -40,10 +46,32 @@ import nbbrd.service.Quantifier;
  *
  * @author Philippe Charles
  */
-@lombok.AllArgsConstructor
+@lombok.Value
 final class ServiceDefinitionGenerator {
 
-    private final DefinitionValue definition;
+    public static List<ServiceDefinitionGenerator> allOf(
+            List<LoadDefinition> definitions,
+            Map<ClassName, List<LoadFilter>> filtersByService,
+            Map<ClassName, List<LoadSorter>> sortersByService) {
+        return definitions
+                .stream()
+                .map(definition -> of(definition, filtersByService, sortersByService))
+                .collect(Collectors.toList());
+    }
+
+    public static ServiceDefinitionGenerator of(
+            LoadDefinition definition,
+            Map<ClassName, List<LoadFilter>> filtersByService,
+            Map<ClassName, List<LoadSorter>> sortersByService) {
+        return new ServiceDefinitionGenerator(definition,
+                filtersByService.getOrDefault(definition.getServiceType(), Collections.emptyList()),
+                sortersByService.getOrDefault(definition.getServiceType(), Collections.emptyList())
+        );
+    }
+
+    private final LoadDefinition definition;
+    private final List<LoadFilter> filters;
+    private final List<LoadSorter> sorters;
 
     public TypeSpec generate(boolean nested) {
         String className = definition.resolveLoaderName().simpleName();
@@ -92,11 +120,22 @@ final class ServiceDefinitionGenerator {
                 .add("<p>Properties:\n")
                 .add("<li>Quantifier: $L\n", definition.getQuantifier())
                 .add("<li>Fallback: $L\n", toJavadocLink(definition.getFallback()))
-                .add("<li>Preprocessor: $L\n", toJavadocLink(definition.getPreprocessor()))
+                .add("<li>Preprocessor: $L\n", getPreprocessorJavadoc())
                 .add("<li>Mutability: $L\n", definition.getLifecycle().toMutability())
                 .add("<li>Singleton: $L\n", definition.getLifecycle().isSingleton())
                 .add("<li>Name: $L\n", definition.getLoaderName().isEmpty() ? "null" : definition.getLoaderName())
                 .build();
+    }
+
+    private String getPreprocessorJavadoc() {
+        if (definition.getPreprocessor().isPresent()) {
+            return toJavadocLink(definition.getPreprocessor());
+        }
+        if (!filters.isEmpty() || !sorters.isEmpty()) {
+            return "filters:" + filters.stream().map(o -> getMethodName(o.getTarget())).collect(Collectors.joining("+", "[", "]"))
+                    + " sorters:" + sorters.stream().map(o -> getMethodName(o.getTarget())).collect(Collectors.joining("+", "[", "]"));
+        }
+        return "null";
     }
 
     private MethodSpec newDoLoadMethod(FieldSpec sourceField, TypeName quantifierType) {
@@ -115,9 +154,90 @@ final class ServiceDefinitionGenerator {
     }
 
     private CodeBlock getPreprocessorCode(FieldSpec sourceField) {
-        return definition.getPreprocessor().isPresent()
-                ? CodeBlock.of("$L\n.apply($T.stream($N.spliterator(), false))", getInstantiatorCode(definition.getPreprocessor().get()), StreamSupport.class, sourceField)
-                : CodeBlock.of("$T.stream($N.spliterator(), false)", StreamSupport.class, sourceField);
+        CodeBlock streamBlock = CodeBlock.of("$T.stream($N.spliterator(), false)", StreamSupport.class, sourceField);
+
+        if (definition.getPreprocessor().isPresent()) {
+            return CodeBlock.of("$L\n.apply($L)", getInstantiatorCode(definition.getPreprocessor().get()), streamBlock);
+        }
+
+        CodeBlock.Builder result = CodeBlock.builder();
+        result.add(streamBlock);
+        if (!filters.isEmpty()) {
+            result.add("\n.filter($L)", getFiltersCode(filters));
+        }
+        if (!sorters.isEmpty()) {
+            result.add("\n.sorted($L)", getSortersCode(sorters));
+        }
+        return result.build();
+    }
+
+    private CodeBlock getFiltersCode(List<LoadFilter> filters) {
+        Iterator<CodeBlock> filterIter = filters.stream()
+                .sorted(Comparator.comparingInt(LoadFilter::getPosition))
+                .map(this::getFilterCode)
+                .iterator();
+
+        CodeBlock first = filterIter.next();
+
+        if (!filterIter.hasNext()) {
+            return first;
+        }
+
+        CodeBlock.Builder result = CodeBlock.builder();
+        result.add("(($T<$T>)$L)", Predicate.class, definition.getServiceType(), first);
+        while (filterIter.hasNext()) {
+            result.add(".and($L)", filterIter.next());
+        }
+        return result.build();
+    }
+
+    private CodeBlock getFilterCode(LoadFilter filter) {
+        CodeBlock result = CodeBlock.of("$T::$L", filter.getServiceType().orElseThrow(Unreachable::new), getMethodName(filter.getTarget()));
+        return filter.isNegate()
+                ? CodeBlock.of("$T.not($L)", Predicate.class, result)
+                : result;
+    }
+
+    private CodeBlock getSortersCode(List<LoadSorter> sorters) {
+        Iterator<CodeBlock> iter = sorters.stream()
+                .sorted(Comparator.comparingInt(LoadSorter::getPosition))
+                .map(this::getSorterCode)
+                .iterator();
+
+        CodeBlock first = iter.next();
+
+        if (!iter.hasNext()) {
+            return first;
+        }
+
+        CodeBlock.Builder result = CodeBlock.builder();
+        result.add("(($T<$T>)$L)", Comparator.class, definition.getServiceType(), first);
+        while (iter.hasNext()) {
+            result.add(".thenComparing($L)", iter.next());
+        }
+        return result.build();
+    }
+
+    private CodeBlock getSorterCode(LoadSorter sorter) {
+        CodeBlock result = CodeBlock.of("$T.$L($T::$L)", Comparator.class, getComparatorMethod(sorter), sorter.getServiceType().orElseThrow(Unreachable::new), getMethodName(sorter.getTarget()));
+        return sorter.isReverse()
+                ? CodeBlock.of("$T.reverseOrder($L)", Collections.class, result)
+                : result;
+    }
+
+    private String getComparatorMethod(LoadSorter sorter) {
+        switch (sorter.getKeyType().get()) {
+            case COMPARABLE:
+                return "comparing";
+            case DOUBLE:
+                return "comparingDouble";
+            case INT:
+                return "comparingInt";
+            case LONG:
+                return "comparingLong";
+            default:
+                throw new Unreachable();
+        }
     }
 
     private CodeBlock getQuantifierCode() {
@@ -131,7 +251,7 @@ final class ServiceDefinitionGenerator {
             case MULTIPLE:
                 return CodeBlock.of("\n.collect($T.collectingAndThen($T.toList(), $T::unmodifiableList))", Collectors.class, Collectors.class, Collections.class);
             default:
-                throw new RuntimeException();
+                throw new Unreachable();
         }
     }
 
@@ -146,7 +266,7 @@ final class ServiceDefinitionGenerator {
             case STATIC_FIELD:
                 return CodeBlock.of("$T.$L", instance.getType(), instantiator.getElement().getSimpleName());
             default:
-                throw new RuntimeException();
+                throw new Unreachable();
         }
     }
 
@@ -159,7 +279,7 @@ final class ServiceDefinitionGenerator {
             case MULTIPLE:
                 return typeOf(List.class, definition.getServiceType());
             default:
-                throw new RuntimeException();
+                throw new Unreachable();
         }
     }
 
@@ -197,7 +317,7 @@ final class ServiceDefinitionGenerator {
             case ATOMIC:
                 return FieldSpec.builder(typeOf(AtomicReference.class, quantifierType), name, Modifier.PRIVATE, Modifier.FINAL);
             default:
-                throw new RuntimeException();
+                throw new Unreachable();
         }
     }
 
@@ -231,7 +351,7 @@ final class ServiceDefinitionGenerator {
             case MULTIPLE:
                 return CodeBlock.of("Gets a list of $L instances.\n", toJavadocLink(definition.getServiceType()));
             default:
-                throw new RuntimeException();
+                throw new Unreachable();
         }
     }
 
@@ -265,7 +385,7 @@ final class ServiceDefinitionGenerator {
             case MULTIPLE:
                 return CodeBlock.of("Sets a list of $L instances.\n", toJavadocLink(definition.getServiceType()));
             default:
-                throw new RuntimeException();
+                throw new Unreachable();
         }
     }
 
@@ -373,6 +493,10 @@ final class ServiceDefinitionGenerator {
 
     private static String toJavadocLink(Optional<TypeHandler> type) {
         return type.map(o -> "{@link " + o.getType() + "}").orElse("null");
+    }
+
+    private static String getMethodName(ExecutableElement x) {
+        return x.getSimpleName().toString();
     }
 
     private static final Modifier[] NO_MODIFIER = new Modifier[0];

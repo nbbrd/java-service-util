@@ -14,30 +14,12 @@
  * See the Licence for the specific language governing permissions and 
  * limitations under the Licence.
  */
-package nbbrd.service.examples;
-
-import java.io.File;
-import java.util.List;
-import nbbrd.service.ServiceDefinition;
-import nbbrd.service.ServiceFilter;
-import nbbrd.service.ServiceSorter;
+package internal.nbbrd.service;
 
 /**
  *
  * @author Philippe Charles
  */
-@ServiceDefinition
-public interface FileSearch {
+public final class Unreachable extends RuntimeException {
 
-    List<File> searchByName(String name);
-
-    @ServiceFilter
-    boolean isAvailable();
-
-    @ServiceSorter
-    int getCost();
-
-    public static void main(String[] args) {
-        FileSearchLoader.load().ifPresent(search -> search.searchByName(".xlsx").forEach(System.out::println));
-    }
 }

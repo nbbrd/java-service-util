@@ -14,30 +14,24 @@
  * See the Licence for the specific language governing permissions and 
  * limitations under the Licence.
  */
-package nbbrd.service.examples;
+package internal.nbbrd.service.definition;
 
-import java.io.File;
 import java.util.List;
-import nbbrd.service.ServiceDefinition;
-import nbbrd.service.ServiceFilter;
-import nbbrd.service.ServiceSorter;
 
 /**
  *
  * @author Philippe Charles
  */
-@ServiceDefinition
-public interface FileSearch {
+@lombok.Value
+@lombok.Builder(builderClassName = "Builder")
+class LoadData {
 
-    List<File> searchByName(String name);
+    @lombok.Singular
+    private List<LoadDefinition> definitions;
 
-    @ServiceFilter
-    boolean isAvailable();
+    @lombok.Singular
+    private List<LoadFilter> filters;
 
-    @ServiceSorter
-    int getCost();
-
-    public static void main(String[] args) {
-        FileSearchLoader.load().ifPresent(search -> search.searchByName(".xlsx").forEach(System.out::println));
-    }
+    @lombok.Singular
+    private List<LoadSorter> sorters;
 }

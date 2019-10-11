@@ -14,30 +14,21 @@
  * See the Licence for the specific language governing permissions and 
  * limitations under the Licence.
  */
-package nbbrd.service.examples;
+package internal.nbbrd.service.definition;
 
-import java.io.File;
-import java.util.List;
-import nbbrd.service.ServiceDefinition;
-import nbbrd.service.ServiceFilter;
-import nbbrd.service.ServiceSorter;
+import java.util.Optional;
+import javax.lang.model.element.ExecutableElement;
+import javax.lang.model.element.TypeElement;
 
 /**
  *
  * @author Philippe Charles
  */
-@ServiceDefinition
-public interface FileSearch {
+@lombok.Value
+class LoadFilter {
 
-    List<File> searchByName(String name);
-
-    @ServiceFilter
-    boolean isAvailable();
-
-    @ServiceSorter
-    int getCost();
-
-    public static void main(String[] args) {
-        FileSearchLoader.load().ifPresent(search -> search.searchByName(".xlsx").forEach(System.out::println));
-    }
+    private ExecutableElement target;
+    private boolean negate;
+    private int position;
+    private Optional<TypeElement> serviceType;
 }

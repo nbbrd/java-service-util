@@ -25,23 +25,35 @@ import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.processing.ProcessingEnvironment;
+import javax.lang.model.element.Element;
+import javax.lang.model.element.ExecutableElement;
+import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.DeclaredType;
+import javax.lang.model.type.PrimitiveType;
+import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Types;
 import javax.tools.Diagnostic;
 import nbbrd.service.Quantifier;
+import nbbrd.service.ServiceDefinition;
 
 /**
  *
  * @author Philippe Charles
  */
-@lombok.AllArgsConstructor
 final class ServiceDefinitionChecker {
 
     private final ProcessingEnvironment env;
+    private final PrimitiveType booleanType;
 
-    public void checkModuleInfo(List<DefinitionValue> definitions) {
+    public ServiceDefinitionChecker(ProcessingEnvironment env) {
+        this.env = env;
+        Types types = env.getTypeUtils();
+        this.booleanType = types.getPrimitiveType(TypeKind.BOOLEAN);
+    }
+
+    public void checkModuleInfo(List<LoadDefinition> definitions) {
         List<String> serviceTypes = definitions.stream()
                 .map(definition -> definition.getServiceType().toString())
                 .collect(Collectors.toList());
@@ -69,7 +81,49 @@ final class ServiceDefinitionChecker {
         }
     }
 
-    public boolean checkConstraints(DefinitionValue definition) {
+    public boolean checkFilter(LoadFilter filter) {
+        ExecutableElement x = filter.getTarget();
+        if (x.getModifiers().contains(Modifier.STATIC)) {
+            error(x, "Filter method does not apply to static methods");
+            return false;
+        }
+        if (!filter.getServiceType().isPresent() || filter.getServiceType().get().getAnnotation(ServiceDefinition.class) == null) {
+            error(x, "Filter method only applies to methods of a service");
+            return false;
+        }
+        if (!x.getParameters().isEmpty()) {
+            error(x, "Filter method must have no-args");
+            return false;
+        }
+        if (!x.getReturnType().equals(booleanType)) {
+            error(x, "Filter method must return boolean");
+            return false;
+        }
+        return true;
+    }
+
+    public boolean checkSorter(LoadSorter sorter) {
+        ExecutableElement x = sorter.getTarget();
+        if (x.getModifiers().contains(Modifier.STATIC)) {
+            error(x, "Sorter method does not apply to static methods");
+            return false;
+        }
+        if (!sorter.getServiceType().isPresent() || sorter.getServiceType().get().getAnnotation(ServiceDefinition.class) == null) {
+            error(x, "Sorter method only applies to methods of a service");
+            return false;
+        }
+        if (!x.getParameters().isEmpty()) {
+            error(x, "Sorter method must have no-args");
+            return false;
+        }
+        if (!sorter.getKeyType().isPresent()) {
+            error(x, "Sorter method must return double, int, long or comparable");
+            return false;
+        }
+        return true;
+    }
+
+    public boolean checkConstraints(LoadDefinition definition) {
         Types types = env.getTypeUtils();
         TypeElement service = asTypeElement(definition.getServiceType());
 
@@ -144,7 +198,7 @@ final class ServiceDefinitionChecker {
         return true;
     }
 
-    private boolean checkMutability(DefinitionValue definition, TypeElement service, Types types) {
+    private boolean checkMutability(LoadDefinition definition, TypeElement service, Types types) {
         if (definition.getLifecycle() == Lifecycle.UNSAFE_MUTABLE) {
             warn(service, String.format("Thread-unsafe singleton for '%1$s'", service));
         }
@@ -175,11 +229,11 @@ final class ServiceDefinitionChecker {
         return (TypeElement) env.getTypeUtils().asElement(o);
     }
 
-    private void error(TypeElement annotatedElement, String message) {
+    private void error(Element annotatedElement, String message) {
         env.getMessager().printMessage(Diagnostic.Kind.ERROR, message, annotatedElement);
     }
 
-    private void warn(TypeElement annotatedElement, String message) {
+    private void warn(Element annotatedElement, String message) {
         env.getMessager().printMessage(Diagnostic.Kind.WARNING, message, annotatedElement);
     }
 }

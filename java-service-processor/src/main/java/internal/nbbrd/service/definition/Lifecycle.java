@@ -16,6 +16,7 @@
  */
 package internal.nbbrd.service.definition;
 
+import internal.nbbrd.service.Unreachable;
 import nbbrd.service.Mutability;
 
 /**
@@ -35,7 +36,7 @@ enum Lifecycle {
             case CONCURRENT:
                 return singleton ? ATOMIC : CONCURRENT;
             default:
-                throw new RuntimeException();
+                throw new Unreachable();
         }
     }
 
@@ -96,7 +97,7 @@ enum Lifecycle {
             case ATOMIC:
                 return Mutability.CONCURRENT;
             default:
-                throw new RuntimeException();
+                throw new Unreachable();
         }
     }
 }
