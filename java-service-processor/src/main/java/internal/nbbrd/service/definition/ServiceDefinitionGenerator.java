@@ -23,7 +23,6 @@ import com.squareup.javapoet.MethodSpec;
 import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
-import internal.nbbrd.service.ProcessorUtil;
 import internal.nbbrd.service.Instantiator;
 import java.util.Collections;
 import java.util.List;
@@ -31,58 +30,24 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.ServiceLoader;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 import javax.lang.model.element.Modifier;
-import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.TypeMirror;
-import javax.lang.model.util.Types;
 import nbbrd.service.Quantifier;
-import nbbrd.service.ServiceDefinition;
 
 /**
  *
  * @author Philippe Charles
  */
-@lombok.Value
-@lombok.Builder
-class ServiceLoaderGenerator {
+@lombok.AllArgsConstructor
+final class ServiceDefinitionGenerator {
 
-    static ServiceLoaderGenerator of(TypeElement serviceType, Types util) {
-        return of(serviceType.getAnnotation(ServiceDefinition.class), ClassName.get(serviceType), util);
-    }
+    private final DefinitionValue definition;
 
-    static ServiceLoaderGenerator of(ServiceDefinition definition, ClassName serviceType, Types util) {
-        Fallback fallback = new Fallback(
-                nonNull(definition::fallback)
-                        .map(type -> new TypeHandler(type, Instantiator.allOf(util, (TypeElement) util.asElement(type))))
-        );
+    public TypeSpec generate(boolean nested) {
+        String className = definition.resolveLoaderName().simpleName();
 
-        Preprocessor preprocessor = new Preprocessor(
-                nonNull(definition::preprocessor)
-                        .map(type -> new TypeHandler(type, Instantiator.allOf(util, (TypeElement) util.asElement(type))))
-        );
-
-        return ServiceLoaderGenerator
-                .builder()
-                .quantifier(definition.quantifier())
-                .lifecycle(Lifecycle.of(definition.mutability(), definition.singleton()))
-                .serviceType(serviceType)
-                .fallback(fallback)
-                .preprocessor(preprocessor)
-                .loaderName(definition.loaderName())
-                .build();
-    }
-
-    private Quantifier quantifier;
-    private Lifecycle lifecycle;
-    private ClassName serviceType;
-    private Fallback fallback;
-    private Preprocessor preprocessor;
-    private String loaderName;
-
-    public TypeSpec generate(String className) {
         TypeName quantifierType = getQuantifierType();
 
         FieldSpec sourceField = newSourceField();
@@ -98,17 +63,21 @@ class ServiceLoaderGenerator {
                 .addField(resourceField)
                 .addMethod(getMethod);
 
-        if (lifecycle.isSingleton()) {
+        if (nested) {
+            result.addModifiers(Modifier.STATIC).build();
+        }
+
+        if (definition.getLifecycle().isSingleton()) {
             result.addMethod(MethodSpec.constructorBuilder().addModifiers(Modifier.PRIVATE).build());
         }
 
-        if (lifecycle.isModifiable()) {
+        if (definition.getLifecycle().isModifiable()) {
             result.addMethod(newSetMethod(resourceField, quantifierType));
             result.addMethod(newReloadMethod(sourceField, doLoadMethod));
             result.addMethod(newResetMethod(sourceField, doLoadMethod));
         }
 
-        if (lifecycle == Lifecycle.IMMUTABLE) {
+        if (definition.getLifecycle() == Lifecycle.IMMUTABLE) {
             result.addMethod(newLoadMethod(className, quantifierType, getMethod));
         }
 
@@ -118,15 +87,15 @@ class ServiceLoaderGenerator {
     private CodeBlock getMainJavadoc() {
         return CodeBlock
                 .builder()
-                .add("Custom service loader for $L.\n", toJavadocLink(serviceType))
-                .add("<br>This class $L thread-safe.\n", lifecycle.isThreadSafe() ? "is" : "is not")
+                .add("Custom service loader for $L.\n", toJavadocLink(definition.getServiceType()))
+                .add("<br>This class $L thread-safe.\n", definition.getLifecycle().isThreadSafe() ? "is" : "is not")
                 .add("<p>Properties:\n")
-                .add("<li>Quantifier: $L\n", quantifier)
-                .add("<li>Fallback: $L\n", toJavadocLink(fallback.getTypeHandler()))
-                .add("<li>Preprocessor: $L\n", toJavadocLink(preprocessor.getTypeHandler()))
-                .add("<li>Mutability: $L\n", lifecycle.toMutability())
-                .add("<li>Singleton: $L\n", lifecycle.isSingleton())
-                .add("<li>Name: $L\n", loaderName.isEmpty() ? "null" : loaderName)
+                .add("<li>Quantifier: $L\n", definition.getQuantifier())
+                .add("<li>Fallback: $L\n", toJavadocLink(definition.getFallback()))
+                .add("<li>Preprocessor: $L\n", toJavadocLink(definition.getPreprocessor()))
+                .add("<li>Mutability: $L\n", definition.getLifecycle().toMutability())
+                .add("<li>Singleton: $L\n", definition.getLifecycle().isSingleton())
+                .add("<li>Name: $L\n", definition.getLoaderName().isEmpty() ? "null" : definition.getLoaderName())
                 .build();
     }
 
@@ -146,19 +115,19 @@ class ServiceLoaderGenerator {
     }
 
     private CodeBlock getPreprocessorCode(FieldSpec sourceField) {
-        return preprocessor.getTypeHandler().isPresent()
-                ? CodeBlock.of("$L\n.apply($T.stream($N.spliterator(), false))", getInstantiatorCode(preprocessor.getTypeHandler().get()), StreamSupport.class, sourceField)
+        return definition.getPreprocessor().isPresent()
+                ? CodeBlock.of("$L\n.apply($T.stream($N.spliterator(), false))", getInstantiatorCode(definition.getPreprocessor().get()), StreamSupport.class, sourceField)
                 : CodeBlock.of("$T.stream($N.spliterator(), false)", StreamSupport.class, sourceField);
     }
 
     private CodeBlock getQuantifierCode() {
-        switch (quantifier) {
+        switch (definition.getQuantifier()) {
             case OPTIONAL:
                 return CodeBlock.of("\n.findFirst()");
             case SINGLE:
-                return fallback.getTypeHandler().isPresent()
-                        ? CodeBlock.of("\n.findFirst()\n.orElseGet(() -> $L)", getInstantiatorCode(fallback.getTypeHandler().get()))
-                        : CodeBlock.of("\n.findFirst()\n.orElseThrow(() -> new $T(\"Missing mandatory provider of $T\"))", IllegalStateException.class, serviceType);
+                return definition.getFallback().isPresent()
+                        ? CodeBlock.of("\n.findFirst()\n.orElseGet(() -> $L)", getInstantiatorCode(definition.getFallback().get()))
+                        : CodeBlock.of("\n.findFirst()\n.orElseThrow(() -> new $T(\"Missing mandatory provider of $T\"))", IllegalStateException.class, definition.getServiceType());
             case MULTIPLE:
                 return CodeBlock.of("\n.collect($T.collectingAndThen($T.toList(), $T::unmodifiableList))", Collectors.class, Collectors.class, Collections.class);
             default:
@@ -182,42 +151,42 @@ class ServiceLoaderGenerator {
     }
 
     private TypeName getQuantifierType() {
-        switch (quantifier) {
+        switch (definition.getQuantifier()) {
             case OPTIONAL:
-                return typeOf(Optional.class, serviceType);
+                return typeOf(Optional.class, definition.getServiceType());
             case SINGLE:
-                return serviceType;
+                return definition.getServiceType();
             case MULTIPLE:
-                return typeOf(List.class, serviceType);
+                return typeOf(List.class, definition.getServiceType());
             default:
                 throw new RuntimeException();
         }
     }
 
     private List<TypeName> getQuantifierException() {
-        return quantifier == Quantifier.SINGLE && !fallback.getTypeHandler().isPresent()
+        return definition.getQuantifier() == Quantifier.SINGLE && !definition.getFallback().isPresent()
                 ? Collections.singletonList(ClassName.get(IllegalStateException.class))
                 : Collections.emptyList();
     }
 
     private FieldSpec newSourceField() {
-        return FieldSpec.builder(typeOf(ServiceLoader.class, serviceType), fieldName("source"))
+        return FieldSpec.builder(typeOf(ServiceLoader.class, definition.getServiceType()), fieldName("source"))
                 .addModifiers(Modifier.PRIVATE, Modifier.FINAL)
                 .addModifiers(getSingletonModifiers())
-                .initializer("$T.load($T.class)", ServiceLoader.class, serviceType)
+                .initializer("$T.load($T.class)", ServiceLoader.class, definition.getServiceType())
                 .build();
     }
 
-    private FieldSpec newResourceField(MethodSpec loader, TypeName quantifierType) {
+    private FieldSpec newResourceField(MethodSpec doLoadMethod, TypeName quantifierType) {
         return getResourceFieldBuilder(quantifierType)
                 .addModifiers(getSingletonModifiers())
-                .initializer(getResourceInitializer(loader))
+                .initializer(getResourceInitializer(doLoadMethod))
                 .build();
     }
 
     private FieldSpec.Builder getResourceFieldBuilder(TypeName quantifierType) {
         String name = fieldName("resource");
-        switch (lifecycle) {
+        switch (definition.getLifecycle()) {
             case IMMUTABLE:
             case CONSTANT:
                 return FieldSpec.builder(quantifierType, name, Modifier.PRIVATE, Modifier.FINAL);
@@ -232,10 +201,10 @@ class ServiceLoaderGenerator {
         }
     }
 
-    private CodeBlock getResourceInitializer(MethodSpec loader) {
-        return lifecycle.isAtomicReference()
-                ? CodeBlock.of("new $T<>($N())", ClassName.get(AtomicReference.class), loader)
-                : CodeBlock.of("$N()", loader);
+    private CodeBlock getResourceInitializer(MethodSpec doLoadMethod) {
+        return definition.getLifecycle().isAtomicReference()
+                ? CodeBlock.of("new $T<>($N())", ClassName.get(AtomicReference.class), doLoadMethod)
+                : CodeBlock.of("$N()", doLoadMethod);
     }
 
     private MethodSpec newGetMethod(FieldSpec resourceField, TypeName quantifierType) {
@@ -254,20 +223,20 @@ class ServiceLoaderGenerator {
     }
 
     private CodeBlock getGetDescription() {
-        switch (quantifier) {
+        switch (definition.getQuantifier()) {
             case OPTIONAL:
-                return CodeBlock.of("Gets an optional $L instance.\n", toJavadocLink(serviceType));
+                return CodeBlock.of("Gets an optional $L instance.\n", toJavadocLink(definition.getServiceType()));
             case SINGLE:
-                return CodeBlock.of("Gets a $L instance.\n", toJavadocLink(serviceType));
+                return CodeBlock.of("Gets a $L instance.\n", toJavadocLink(definition.getServiceType()));
             case MULTIPLE:
-                return CodeBlock.of("Gets a list of $L instances.\n", toJavadocLink(serviceType));
+                return CodeBlock.of("Gets a list of $L instances.\n", toJavadocLink(definition.getServiceType()));
             default:
                 throw new RuntimeException();
         }
     }
 
     private CodeBlock getGetterStatement(FieldSpec resourceField) {
-        return lifecycle.isAtomicReference()
+        return definition.getLifecycle().isAtomicReference()
                 ? CodeBlock.of("return $N.get()", resourceField)
                 : CodeBlock.of("return $N", resourceField);
     }
@@ -288,25 +257,25 @@ class ServiceLoaderGenerator {
     }
 
     private CodeBlock getSetDescription() {
-        switch (quantifier) {
+        switch (definition.getQuantifier()) {
             case OPTIONAL:
-                return CodeBlock.of("Sets an optional $L instance.\n", toJavadocLink(serviceType));
+                return CodeBlock.of("Sets an optional $L instance.\n", toJavadocLink(definition.getServiceType()));
             case SINGLE:
-                return CodeBlock.of("Sets a $L instance.\n", toJavadocLink(serviceType));
+                return CodeBlock.of("Sets a $L instance.\n", toJavadocLink(definition.getServiceType()));
             case MULTIPLE:
-                return CodeBlock.of("Sets a list of $L instances.\n", toJavadocLink(serviceType));
+                return CodeBlock.of("Sets a list of $L instances.\n", toJavadocLink(definition.getServiceType()));
             default:
                 throw new RuntimeException();
         }
     }
 
     private CodeBlock getSetterStatement(FieldSpec resourceField) {
-        return lifecycle.isAtomicReference()
+        return definition.getLifecycle().isAtomicReference()
                 ? CodeBlock.of("$N.set($T.requireNonNull(newValue))", resourceField, Objects.class)
                 : CodeBlock.of("$N = $T.requireNonNull(newValue)", resourceField, Objects.class);
     }
 
-    private MethodSpec newReloadMethod(FieldSpec sourceField, MethodSpec loader) {
+    private MethodSpec newReloadMethod(FieldSpec sourceField, MethodSpec loaderMethod) {
         MethodSpec.Builder result = MethodSpec.methodBuilder("reload")
                 .addJavadoc(CodeBlock
                         .builder()
@@ -317,21 +286,21 @@ class ServiceLoaderGenerator {
                 .addModifiers(getSingletonModifiers())
                 .addExceptions(getQuantifierException());
 
-        if (lifecycle.isAtomicReference()) {
+        if (definition.getLifecycle().isAtomicReference()) {
             result.beginControlFlow("synchronized($N)", sourceField);
         }
 
         result.addStatement("$N.reload()", sourceField);
-        result.addStatement("set($N())", loader);
+        result.addStatement("set($N())", loaderMethod);
 
-        if (lifecycle.isAtomicReference()) {
+        if (definition.getLifecycle().isAtomicReference()) {
             result.endControlFlow();
         }
 
         return result.build();
     }
 
-    private MethodSpec newResetMethod(FieldSpec sourceField, MethodSpec loader) {
+    private MethodSpec newResetMethod(FieldSpec sourceField, MethodSpec loaderMethod) {
         MethodSpec.Builder result = MethodSpec.methodBuilder("reset")
                 .addJavadoc(CodeBlock
                         .builder()
@@ -342,13 +311,13 @@ class ServiceLoaderGenerator {
                 .addModifiers(getSingletonModifiers())
                 .addExceptions(getQuantifierException());
 
-        if (lifecycle.isAtomicReference()) {
+        if (definition.getLifecycle().isAtomicReference()) {
             result.beginControlFlow("synchronized($N)", sourceField);
         }
 
-        result.addStatement("set($N())", loader);
+        result.addStatement("set($N())", loaderMethod);
 
-        if (lifecycle.isAtomicReference()) {
+        if (definition.getLifecycle().isAtomicReference()) {
             result.endControlFlow();
         }
 
@@ -377,31 +346,17 @@ class ServiceLoaderGenerator {
     }
 
     private Modifier[] getSingletonModifiers() {
-        return lifecycle.isSingleton() ? SINGLETON_MODIFIER : NO_MODIFIER;
+        return definition.getLifecycle().isSingleton() ? SINGLETON_MODIFIER : NO_MODIFIER;
     }
 
     private String fieldName(String name) {
-        return lifecycle.isSingleton() ? name.toUpperCase() : name;
+        return definition.getLifecycle().isSingleton() ? name.toUpperCase() : name;
     }
 
     private CodeBlock getThreadSafetyComment() {
-        return lifecycle.isThreadSafe()
+        return definition.getLifecycle().isThreadSafe()
                 ? CodeBlock.of("<br>This method is thread-safe.\n")
                 : CodeBlock.of("<br>This method is not thread-safe.\n");
-    }
-
-    private static Optional<TypeMirror> nonNull(Supplier<Class<?>> type) {
-        return Optional.of(ProcessorUtil.extractResultType(type)).filter(ServiceLoaderGenerator::isNonNullValue);
-    }
-
-    private static boolean isNonNullValue(TypeMirror type) {
-        switch (type.toString()) {
-            case "nbbrd.service.ServiceDefinition.NoProcessing":
-            case "java.lang.Void":
-                return false;
-            default:
-                return true;
-        }
     }
 
     private static ParameterizedTypeName typeOf(Class<?> rawType, TypeName typeArgument) {

@@ -19,10 +19,7 @@ package internal.nbbrd.service.definition;
 import com.google.testing.compile.Compilation;
 import static com.google.testing.compile.CompilationSubject.assertThat;
 import com.google.testing.compile.JavaFileObjects;
-import com.squareup.javapoet.ClassName;
-import static internal.nbbrd.service.definition.ServiceDefinitionProcessor.resolveLoaderName;
 import javax.tools.JavaFileObject;
-import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
 /**
@@ -30,12 +27,6 @@ import org.junit.Test;
  * @author Philippe Charles
  */
 public class ServiceDefinitionProcessorTest {
-
-    @Test
-    public void testResolveLoaderName() {
-        Assertions.assertThat(resolveLoaderName("", ClassName.get("hello", "World"))).isEqualTo(ClassName.get("hello", "WorldLoader"));
-        Assertions.assertThat(resolveLoaderName("", ClassName.get("hello", "World", "Nested"))).isEqualTo(ClassName.get("hello", "WorldLoader", "Nested"));
-    }
 
     @Test
     public void testNonNestedDef() {

@@ -16,14 +16,23 @@
  */
 package internal.nbbrd.service.definition;
 
-import java.util.Optional;
+import com.squareup.javapoet.ClassName;
+import static internal.nbbrd.service.definition.DefinitionValue.resolveLoaderName;
+import static org.assertj.core.api.Assertions.assertThat;
+import org.junit.Test;
 
 /**
  *
  * @author Philippe Charles
  */
-@lombok.Value
-class Fallback {
+public class SpecializedLoaderTest {
 
-    private Optional<TypeHandler> typeHandler;
+    @Test
+    public void testResolveLoaderName() {
+        assertThat(resolveLoaderName("", ClassName.get("hello", "World")))
+                .isEqualTo(ClassName.get("hello", "WorldLoader"));
+
+        assertThat(resolveLoaderName("", ClassName.get("hello", "World", "Nested")))
+                .isEqualTo(ClassName.get("hello", "WorldLoader", "Nested"));
+    }
 }
