@@ -38,7 +38,8 @@ public class MultiProvider implements HelloService, SomeService {}
 
 ## @ServiceDefinition
 The `@ServiceDefinition` annotation **generates a specialized service loader** that enforces a specific usage.  
-It generates boilerplate code, thus reducing bugs and improving code coherence.
+It generates boilerplate code, thus reducing bugs and improving code coherence.  
+It also improves documentation by declaring services explicitly. 
 
 Current features:
 - generates a specialized service loader with the following properties:
@@ -46,6 +47,7 @@ Current features:
   - `preprocessor`: filter/map/sort operations 
   - `mutability`: none, basic or concurrent access
   - `singleton`: global or local scope
+- generates javadoc alongside code
 - checks coherence of service use in modules if `module-info.java` is available
 
 Current limitations:
@@ -56,7 +58,7 @@ Examples can be found in the [examples project](https://github.com/nbbrd/java-se
 
 ### Quantifier property
 
-OPTIONAL example:
+OPTIONAL: when a service is not guaranteed to be available such as OS-specific API
 ```java
 @ServiceDefinition(quantifier = Quantifier.OPTIONAL)
 public interface WinRegistry { 
@@ -64,11 +66,11 @@ public interface WinRegistry {
   static int HKEY_LOCAL_MACHINE = 0;
 }
 
-Optional<WinRegistry> optional = new WinRegistryLoader().get();
+Optional<WinRegistry> optional = WinRegistryLoader.load();
 optional.ifPresent(reg -> System.out.println(reg.readString(HKEY_LOCAL_MACHINE, "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion", "ProductName")));
 ```
 
-SINGLE example:
+SINGLE: when a single service is guaranteed to be available
 ```java
 @ServiceDefinition(quantifier = Quantifier.SINGLE, fallback = FallbackLogger.class)
 public interface LoggerFinder {
@@ -82,42 +84,43 @@ public class FallbackLogger implements LoggerFinder {
   }
 }
 
-LoggerFinder single = new LoggerFinderLoader().get();
+LoggerFinder single = LoggerFinderLoader.load();
 single.getLogger("MyClass").accept("some message");
 ```
 
-MULTIPLE example:
+MULTIPLE: when several instances of a service could be used at the same time
 ```java
 @ServiceDefinition(quantifier = Quantifier.MULTIPLE)
 public interface Translator {
   String translate(String text);
 }
 
-List<Translator> multiple = new TranslatorLoader().get();
+List<Translator> multiple = TranslatorLoader.load();
 multiple.forEach(translator -> System.out.println(translator.translate("hello")));
 ```
 
 ### Preprocessor property
 
+A preprocessor applies map/filter/sort to services instances during the loading.  
+It can be set either by
+- setting the `preprocessor` property of `@ServiceDefinition` 
+- using `@ServiceFilter` and `@ServiceSorter` annotations
+
 Filter/sort example:
 ```java
-@ServiceDefinition(preprocessor = ByAvailabilityAndCost.class)
+@ServiceDefinition
 public interface FileSearch {
+
   List<File> searchByName(String name);
+
+  @ServiceFilter
   boolean isAvailable();
+
+  @ServiceSorter
   int getCost();
 }
 
-public class ByAvailabilityAndCost implements UnaryOperator<Stream<FileSearch>> {
-  @Override
-  public Stream<FileSearch> apply(Stream<FileSearch> stream) {
-    return stream
-            .filter(FileSearch::isAvailable)
-            .sorted(Comparator.comparingInt(FileSearch::getCost));
-  }
-}
-
-new FileSearchLoader().get().ifPresent(search -> search.searchByName(".xlsx").forEach(System.out::println));
+FileSearchLoader.load().ifPresent(search -> search.searchByName(".xlsx").forEach(System.out::println));
 ```
 
 ### Mutability property
@@ -152,10 +155,10 @@ public interface StatefulAlgorithm {
   double compute(double... values);
 }
 
-StatefulAlgorithm algo1 = new StatefulAlgorithmLoader().get().orElseThrow(RuntimeException::new);
+StatefulAlgorithm algo1 = StatefulAlgorithmLoader.load().orElseThrow(RuntimeException::new);
 algo1.init(SecureRandom.getInstance("NativePRNG"));
 
-StatefulAlgorithm algo2 = new StatefulAlgorithmLoader().get().orElseThrow(RuntimeException::new);
+StatefulAlgorithm algo2 = StatefulAlgorithmLoader.load().orElseThrow(RuntimeException::new);
 algo2.init(SecureRandom.getInstance("PKCS11"));
 
 Stream.of(algo1, algo2)
@@ -183,7 +186,7 @@ public final class FileType {
   private FileType() {
   }
 
-  private static final List<FileTypeSpi> PROBES = new internal.FileTypeSpiLoader().get();
+  private static final List<FileTypeSpi> PROBES = internal.FileTypeSpiLoader.load();
 
   public static Optional<String> probeContentType(Path file) throws IOException {
     for (FileTypeSpi probe : PROBES) {
@@ -198,7 +201,6 @@ public final class FileType {
 
 @ServiceDefinition(
   quantifier = Quantifier.MULTIPLE,
-  preprocessor = FileTypeSpi.ProbePreprocessor.class,
   loaderName = "internal.FileTypeSpiLoader")
 public interface FileTypeSpi {
 
@@ -206,14 +208,8 @@ public interface FileTypeSpi {
 
   String getContentTypeOrNull(Path file) throws IOException;
 
+  @ServiceSorter
   Accuracy getAccuracy();
-
-  static final class ProbePreprocessor implements UnaryOperator<Stream<FileTypeSpi>> {
-    @Override
-    public Stream<FileTypeSpi> apply(Stream<FileTypeSpi> probes) {
-        return probes.sorted(Comparator.comparing(FileTypeSpi::getAccuracy));
-    }
-  }
 }
 
 String[] files = {"hello.csv", "stuff.txt"};
