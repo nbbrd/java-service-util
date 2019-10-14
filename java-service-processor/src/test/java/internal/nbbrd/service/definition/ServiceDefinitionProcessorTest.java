@@ -216,7 +216,7 @@ public class ServiceDefinitionProcessorTest {
         result.contains(".filter(((Predicate<Filters.MultiFilter>)Filters.MultiFilter::isAvailable).and(Filters.MultiFilter::isFastEnough))");
 
         result.contains("private final Optional<Filters.ReversedFilter> resource = doLoad();");
-        result.contains(".filter(Predicate.not(Filters.ReversedFilter::isAvailable))");
+        result.contains(".filter(((Predicate<Filters.ReversedFilter>)Filters.ReversedFilter::isAvailable).negate())");
 
         result.contains("private final Optional<Filters.MultiFilterWithPosition> resource = doLoad();");
         result.contains(".filter(((Predicate<Filters.MultiFilterWithPosition>)Filters.MultiFilterWithPosition::isFastEnough).and(Filters.MultiFilterWithPosition::isAvailable))");

@@ -194,7 +194,7 @@ final class ServiceDefinitionGenerator {
     private CodeBlock getFilterCode(LoadFilter filter) {
         CodeBlock result = CodeBlock.of("$T::$L", filter.getServiceType().orElseThrow(Unreachable::new), getMethodName(filter.getTarget()));
         return filter.isNegate()
-                ? CodeBlock.of("$T.not($L)", Predicate.class, result)
+                ? CodeBlock.of("(($T<$T>)$L).negate()", Predicate.class, definition.getServiceType(), result)
                 : result;
     }
 
