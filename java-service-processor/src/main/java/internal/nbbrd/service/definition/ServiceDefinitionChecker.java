@@ -225,10 +225,6 @@ final class ServiceDefinitionChecker {
         return env.getElementUtils().getTypeElement(o.toString());
     }
 
-    private TypeElement asTypeElement(TypeMirror o) {
-        return (TypeElement) env.getTypeUtils().asElement(o);
-    }
-
     private void error(Element annotatedElement, String message) {
         env.getMessager().printMessage(Diagnostic.Kind.ERROR, message, annotatedElement);
     }

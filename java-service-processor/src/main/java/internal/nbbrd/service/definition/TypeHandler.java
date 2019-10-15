@@ -20,13 +20,12 @@ import internal.nbbrd.service.Instantiator;
 import java.util.List;
 import java.util.Optional;
 import javax.lang.model.type.TypeMirror;
-import lombok.Value;
 
 /**
  *
  * @author Philippe Charles
  */
-@Value
+@lombok.Value
 public class TypeHandler {
 
     private TypeMirror type;

@@ -40,7 +40,6 @@ import nbbrd.service.ServiceSorter;
  *
  * @author Philippe Charles
  */
-@lombok.AllArgsConstructor
 final class ServiceDefinitionCollector {
 
     private final ProcessingEnvironment env;

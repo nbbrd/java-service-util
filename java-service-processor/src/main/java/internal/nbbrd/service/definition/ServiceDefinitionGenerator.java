@@ -39,7 +39,6 @@ import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
-import javax.lang.model.type.TypeMirror;
 import nbbrd.service.Quantifier;
 
 /**
@@ -484,10 +483,6 @@ final class ServiceDefinitionGenerator {
     }
 
     private static String toJavadocLink(ClassName type) {
-        return "{@link " + type + "}";
-    }
-
-    private static String toJavadocLink(TypeMirror type) {
         return "{@link " + type + "}";
     }
 

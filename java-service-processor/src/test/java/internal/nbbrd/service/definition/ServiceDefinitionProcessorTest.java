@@ -156,8 +156,8 @@ public class ServiceDefinitionProcessorTest {
     }
 
     @Test
-    public void testUnknownFactory() {
-        JavaFileObject file = JavaFileObjects.forResource("definition/UnknownFactory.java");
+    public void testNonInstantiableFallback() {
+        JavaFileObject file = JavaFileObjects.forResource("definition/NonInstantiableFallback.java");
         Compilation compilation = compile(file);
 
         assertThat(compilation)
@@ -167,6 +167,20 @@ public class ServiceDefinitionProcessorTest {
                 .hadErrorContaining("Don't know how to create")
                 .inFile(file)
                 .onLine(9);
+    }
+
+    @Test
+    public void testNonInstantiablePreprocessor() {
+        JavaFileObject file = JavaFileObjects.forResource("definition/NonInstantiablePreprocessor.java");
+        Compilation compilation = compile(file);
+
+        assertThat(compilation)
+                .failed();
+
+        assertThat(compilation)
+                .hadErrorContaining("Don't know how to create")
+                .inFile(file)
+                .onLine(11);
     }
 
     @Test
