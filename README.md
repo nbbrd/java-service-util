@@ -70,7 +70,7 @@ Optional<WinRegistry> optional = WinRegistryLoader.load();
 optional.ifPresent(reg -> System.out.println(reg.readString(HKEY_LOCAL_MACHINE, "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion", "ProductName")));
 ```
 
-SINGLE: when a single service is guaranteed to be available
+SINGLE: when exactly one service is guaranteed to be available
 ```java
 @ServiceDefinition(quantifier = Quantifier.SINGLE, fallback = FallbackLogger.class)
 public interface LoggerFinder {
@@ -102,9 +102,9 @@ multiple.forEach(translator -> System.out.println(translator.translate("hello"))
 ### Preprocessor property
 
 A preprocessor applies map/filter/sort to services instances during the loading.  
-It can be set either by
-- setting the `preprocessor` property of `@ServiceDefinition` 
-- using `@ServiceFilter` and `@ServiceSorter` annotations
+It can be specified by using one of these two solutions:
+- Basic solution: `@ServiceFilter` and `@ServiceSorter` annotations
+- Advanced solution: `preprocessor` property of `@ServiceDefinition` 
 
 Filter/sort example:
 ```java
