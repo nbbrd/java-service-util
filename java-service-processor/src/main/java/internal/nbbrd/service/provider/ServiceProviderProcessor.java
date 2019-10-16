@@ -14,8 +14,9 @@
  * See the Licence for the specific language governing permissions and 
  * limitations under the Licence.
  */
-package internal.nbbrd.service;
+package internal.nbbrd.service.provider;
 
+import internal.nbbrd.service.Instantiator;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -119,18 +120,18 @@ public final class ServiceProviderProcessor extends AbstractProcessor {
             return;
         }
 
-        if (TypeFactory.of(types, service, provider).stream().noneMatch(this::isValidFactory)) {
+        if (Instantiator.allOf(types, service, provider).stream().noneMatch(this::isValidInstantiator)) {
             error(ref, String.format("Provider '%1$s' must have a public no-argument constructor", ref.getProvider()));
             return;
         }
     }
 
-    private boolean isValidFactory(TypeFactory factory) {
-        switch (factory.getKind()) {
+    private boolean isValidInstantiator(Instantiator instantiator) {
+        switch (instantiator.getKind()) {
             case CONSTRUCTOR:
                 return true;
             case STATIC_METHOD:
-                return ((ExecutableElement) factory.getElement()).getSimpleName().contentEquals("provider");
+                return ((ExecutableElement) instantiator.getElement()).getSimpleName().contentEquals("provider");
             default:
                 return false;
         }
@@ -177,7 +178,7 @@ public final class ServiceProviderProcessor extends AbstractProcessor {
         for (ProviderRef ref : refs) {
             TypeElement service = processingEnv.getElementUtils().getTypeElement(ref.getService());
             TypeElement provider = processingEnv.getElementUtils().getTypeElement(ref.getProvider());
-            if (TypeFactory.of(processingEnv.getTypeUtils(), service, provider).stream().anyMatch(o -> o.getKind() == TypeFactory.Kind.STATIC_METHOD)) {
+            if (Instantiator.allOf(processingEnv.getTypeUtils(), service, provider).stream().anyMatch(o -> o.getKind() == Instantiator.Kind.STATIC_METHOD)) {
                 error(ref, "Static method support not implemented yet");
             }
         }

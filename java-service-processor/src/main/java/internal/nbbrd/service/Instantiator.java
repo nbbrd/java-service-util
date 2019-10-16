@@ -34,25 +34,25 @@ import javax.lang.model.util.Types;
  * @author Philippe Charles
  */
 @lombok.Value
-final class TypeFactory {
+public final class Instantiator {
 
-    enum Kind {
+    public enum Kind {
         CONSTRUCTOR, STATIC_METHOD, ENUM_FIELD, STATIC_FIELD;
     }
 
     private Kind kind;
     private Element element;
 
-    static List<TypeFactory> of(Types util, TypeElement type) {
-        return of(util, type, type);
+    public static List<Instantiator> allOf(Types util, TypeElement type) {
+        return allOf(util, type, type);
     }
 
-    static List<TypeFactory> of(Types util, TypeElement service, TypeElement provider) {
-        List<TypeFactory> result = new ArrayList<>();
-        getPublicNoArgumentConstructor(provider).map(o -> new TypeFactory(Kind.CONSTRUCTOR, o)).forEach(result::add);
-        getStaticFactoryMethods(util, service, provider).map(o -> new TypeFactory(Kind.STATIC_METHOD, o)).forEach(result::add);
-        getEnumFields(util, provider).map(o -> new TypeFactory(Kind.ENUM_FIELD, o)).forEach(result::add);;
-        getStaticFields(util, service, provider).map(o -> new TypeFactory(Kind.STATIC_FIELD, o)).forEach(result::add);;
+    public static List<Instantiator> allOf(Types util, TypeElement service, TypeElement provider) {
+        List<Instantiator> result = new ArrayList<>();
+        getPublicNoArgumentConstructor(provider).map(o -> new Instantiator(Kind.CONSTRUCTOR, o)).forEach(result::add);
+        getStaticFactoryMethods(util, service, provider).map(o -> new Instantiator(Kind.STATIC_METHOD, o)).forEach(result::add);
+        getEnumFields(util, provider).map(o -> new Instantiator(Kind.ENUM_FIELD, o)).forEach(result::add);
+        getStaticFields(util, service, provider).map(o -> new Instantiator(Kind.STATIC_FIELD, o)).forEach(result::add);
         return result;
     }
 
@@ -60,7 +60,7 @@ final class TypeFactory {
         return ElementFilter
                 .constructorsIn(type.getEnclosedElements())
                 .stream()
-                .filter(TypeFactory::isNoArgPublicMethod);
+                .filter(Instantiator::isNoArgPublicMethod);
     }
 
     static boolean isNoArgPublicMethod(ExecutableElement method) {
@@ -71,7 +71,7 @@ final class TypeFactory {
         return ElementFilter
                 .methodsIn(provider.getEnclosedElements())
                 .stream()
-                .filter(TypeFactory::isNoArgPublicMethod)
+                .filter(Instantiator::isNoArgPublicMethod)
                 .filter(method -> method.getModifiers().contains(Modifier.STATIC))
                 .filter(method -> util.isSubtype(method.getReturnType(), service.asType()));
     }
@@ -94,16 +94,5 @@ final class TypeFactory {
                         .filter(field -> field.getModifiers().containsAll(Arrays.asList(Modifier.PUBLIC, Modifier.STATIC, Modifier.FINAL)))
                         .filter(field -> util.isSubtype(field.asType(), service.asType()))
                 : Stream.empty();
-    }
-
-    public static boolean canSelect(List<TypeFactory> factories) {
-        return factories.size() == 1
-                || factories.stream().anyMatch(o -> o.getKind() == TypeFactory.Kind.CONSTRUCTOR);
-    }
-
-    public static TypeFactory select(List<TypeFactory> factories) {
-        return factories.size() == 1
-                ? factories.get(0)
-                : factories.stream().filter(o -> o.getKind() == TypeFactory.Kind.CONSTRUCTOR).findFirst().orElseThrow(RuntimeException::new);
     }
 }

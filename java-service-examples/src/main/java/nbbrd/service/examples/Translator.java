@@ -14,12 +14,23 @@
  * See the Licence for the specific language governing permissions and 
  * limitations under the Licence.
  */
-package internal.nbbrd.service;
+package nbbrd.service.examples;
+
+import java.util.List;
+import nbbrd.service.Quantifier;
+import nbbrd.service.ServiceDefinition;
 
 /**
  *
  * @author Philippe Charles
  */
-interface ProviderRegistry {
+@ServiceDefinition(quantifier = Quantifier.MULTIPLE)
+public interface Translator {
 
+    String translate(String text);
+
+    public static void main(String[] args) {
+        List<Translator> multiple = TranslatorLoader.load();
+        multiple.forEach(translator -> System.out.println(translator.translate("hello")));
+    }
 }

@@ -11,7 +11,7 @@ Key points:
 - has an automatic module name that makes it compatible with [JPMS](https://www.baeldung.com/java-9-modularity) 
 
 ## @ServiceProvider
-The `@ServiceProvider` annotation deals with the tedious work of registring service providers.
+The `@ServiceProvider` annotation **registers service providers** on classpath and modulepath.
 
 Current features:
 - generates classpath files in `META-INF/services` folder
@@ -20,7 +20,7 @@ Current features:
 - checks coherence between classpath and modulepath if `module-info.java` is available
 
 Current limitations:
-- detects modulepath `public static provider()` method but doesn't generate a workaround for classpath
+- detects modulepath `public static provider()` method but doesn't generate a [workaround for classpath](https://github.com/nbbrd/java-service-util/issues/12)
 
 Example:
 ```java
@@ -29,7 +29,7 @@ public interface HelloService {}
 public interface SomeService {}
 
 @ServiceProvider
-public class SimpleProvider implements HelloService {}
+public class InferredProvider implements HelloService {}
 
 @ServiceProvider(HelloService.class)
 @ServiceProvider(SomeService.class)
@@ -37,51 +37,184 @@ public class MultiProvider implements HelloService, SomeService {}
 ```
 
 ## @ServiceDefinition
-The `@ServiceDefinition` annotation generates a specialized service loader that takes care of the loading and enforces a specific usage.
+The `@ServiceDefinition` annotation **generates a specialized service loader** that enforces a specific usage.  
+It generates boilerplate code, thus reducing bugs and improving code coherence.  
+It also improves documentation by declaring services explicitly. 
 
 Current features:
-- generates a specialized service loader
+- generates a specialized service loader with the following properties:
+  - `quantifier`: optional, single or multiple service instances
+  - `preprocessor`: filter/map/sort operations 
+  - `mutability`: none, basic or concurrent access
+  - `singleton`: global or local scope
+- generates javadoc alongside code
 - checks coherence of service use in modules if `module-info.java` is available
 
-Example:
+Current limitations:
+- does not support [type inspection before instantiation](https://github.com/nbbrd/java-service-util/issues/13)
+- does not support [lazy instantiation](https://github.com/nbbrd/java-service-util/issues/6)
+
+Examples can be found in the [examples project](https://github.com/nbbrd/java-service-util/tree/develop/java-service-examples/src/main/java/nbbrd/service/examples).
+
+### Quantifier property
+
+OPTIONAL: when a service is not guaranteed to be available such as OS-specific API
 ```java
-public interface Logger {
-    void info(String message);
+@ServiceDefinition(quantifier = Quantifier.OPTIONAL)
+public interface WinRegistry { 
+  String readString(int hkey, String key, String valueName);
+  static int HKEY_LOCAL_MACHINE = 0;
 }
 
-public final class LoggerFactory {
-    private LoggerFactory() {}
-  
-    public static Logger getLogger(Class<?> type) {
-      return LoggerSpiLoader.get().makeNewLoggerInstance(type.getName());
+Optional<WinRegistry> optional = WinRegistryLoader.load();
+optional.ifPresent(reg -> System.out.println(reg.readString(HKEY_LOCAL_MACHINE, "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion", "ProductName")));
+```
+
+SINGLE: when a single service is guaranteed to be available
+```java
+@ServiceDefinition(quantifier = Quantifier.SINGLE, fallback = FallbackLogger.class)
+public interface LoggerFinder {
+  Consumer<String> getLogger(String name);
+}
+
+public class FallbackLogger implements LoggerFinder {
+  @Override
+  public Consumer<String> getLogger(String name) {
+    return message -> System.out.println(String.format("[%s] %s", name, message));
+  }
+}
+
+LoggerFinder single = LoggerFinderLoader.load();
+single.getLogger("MyClass").accept("some message");
+```
+
+MULTIPLE: when several instances of a service could be used at the same time
+```java
+@ServiceDefinition(quantifier = Quantifier.MULTIPLE)
+public interface Translator {
+  String translate(String text);
+}
+
+List<Translator> multiple = TranslatorLoader.load();
+multiple.forEach(translator -> System.out.println(translator.translate("hello")));
+```
+
+### Preprocessor property
+
+A preprocessor applies map/filter/sort to services instances during the loading.  
+It can be set either by
+- setting the `preprocessor` property of `@ServiceDefinition` 
+- using `@ServiceFilter` and `@ServiceSorter` annotations
+
+Filter/sort example:
+```java
+@ServiceDefinition
+public interface FileSearch {
+
+  List<File> searchByName(String name);
+
+  @ServiceFilter
+  boolean isAvailable();
+
+  @ServiceSorter
+  int getCost();
+}
+
+FileSearchLoader.load().ifPresent(search -> search.searchByName(".xlsx").forEach(System.out::println));
+```
+
+### Mutability property
+
+BASIC example:
+```java
+@ServiceDefinition(mutability = Mutability.BASIC)
+public interface Messenger {
+  void send(String message);
+}
+
+MessengerLoader loader = new MessengerLoader();
+loader.get().ifPresent(o -> o.send("First"));
+
+loader.set(Optional.of(msg -> System.out.println(msg)));
+loader.get().ifPresent(o -> o.send("Second"));
+
+loader.set(Optional.of(msg -> JOptionPane.showMessageDialog(null, msg)));
+loader.get().ifPresent(o -> o.send("Third"));
+
+loader.reload();
+loader.get().ifPresent(o -> o.send("Fourth"));
+```
+
+### Singleton property
+
+Local example:
+```java
+@ServiceDefinition(singleton = false)
+public interface StatefulAlgorithm {
+  void init(SecureRandom random);
+  double compute(double... values);
+}
+
+StatefulAlgorithm algo1 = StatefulAlgorithmLoader.load().orElseThrow(RuntimeException::new);
+algo1.init(SecureRandom.getInstance("NativePRNG"));
+
+StatefulAlgorithm algo2 = StatefulAlgorithmLoader.load().orElseThrow(RuntimeException::new);
+algo2.init(SecureRandom.getInstance("PKCS11"));
+
+Stream.of(algo1, algo2)
+      .parallel()
+      .forEach(algo -> System.out.println(algo.compute(1, 2, 3)));
+```
+
+Global example:
+```java
+@ServiceDefinition(singleton = true)
+public interface SystemSettings {
+  String getDeviceName();
+}
+
+SystemSettingsLoader.get().ifPresent(sys -> System.out.println(sys.getDeviceName()));
+```
+
+### SPI pattern
+
+In some cases, it is better to clearly separate API from SPI. Here is an example on how to do it:
+
+```java
+public final class FileType {
+
+  private FileType() {
+  }
+
+  private static final List<FileTypeSpi> PROBES = internal.FileTypeSpiLoader.load();
+
+  public static Optional<String> probeContentType(Path file) throws IOException {
+    for (FileTypeSpi probe : PROBES) {
+      String result;
+      if ((result = probe.getContentTypeOrNull(file)) != null) {
+        return Optional.of(result);
+      }
     }
+    return Optional.empty();
+  }
 }
 
 @ServiceDefinition(
-    singleton = true,
-    quantifier = Quantifier.SINGLE,
-    fallback = LoggerSpi.NoOpLoggerSpi.class
-)
-public interface LoggerSpi {
+  quantifier = Quantifier.MULTIPLE,
+  loaderName = "internal.FileTypeSpiLoader")
+public interface FileTypeSpi {
 
-    Logger makeNewLoggerInstance(String name);
+  enum Accuracy { HIGH, LOW }
 
-    enum NoOpLoggerSpi implements LoggerSpi {
-        INSTANCE;
+  String getContentTypeOrNull(Path file) throws IOException;
 
-        @Override
-        public Logger makeNewLoggerInstance(String name) {
-            return NoOpLogger.INSTANCE;
-        }
-    }
+  @ServiceSorter
+  Accuracy getAccuracy();
+}
 
-    enum NoOpLogger implements Logger {
-        INSTANCE;
-
-        @Override
-        public void info(String message) {
-        }
-    }
+String[] files = {"hello.csv", "stuff.txt"};
+for (String file : files) {
+  System.out.println(file + ": " + FileType.probeContentType(Paths.get(file)).orElse("?"));
 }
 ```
 

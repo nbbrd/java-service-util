@@ -4,7 +4,7 @@
     
     <groupId>be.nbb.rd</groupId>
     <artifactId>java-service-parent</artifactId>
-    <version>1.1.0</version>
+    <version>1.2.0</version>
     <packaging>pom</packaging>
 
     <name>java-service</name>
@@ -26,6 +26,7 @@
     <modules>
         <module>java-service-annotation</module>
         <module>java-service-processor</module>
+        <module>java-service-examples</module>
     </modules>
 
     <dependencyManagement>
@@ -34,7 +35,7 @@
             <dependency>
                 <groupId>org.projectlombok</groupId>
                 <artifactId>lombok</artifactId>
-                <version>1.18.8</version>
+                <version>1.18.10</version>
             </dependency>
             <dependency>
                 <groupId>org.netbeans.api</groupId>
@@ -112,6 +113,34 @@
             <properties>
                 <maven.compiler.release>8</maven.compiler.release>
             </properties>
+        </profile>
+        
+        <!-- Optional checks -->
+        <profile>
+            <id>optional-checks</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.jacoco</groupId>
+                        <artifactId>jacoco-maven-plugin</artifactId> 
+                        <version>0.8.4</version> 
+                        <executions> 
+                            <execution> 
+                                <goals> 
+                                    <goal>prepare-agent</goal> 
+                                </goals>
+                            </execution>
+                            <execution> 
+                                <id>report</id> 
+                                <phase>prepare-package</phase> 
+                                <goals> 
+                                    <goal>report</goal> 
+                                </goals> 
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
         </profile>
         
         <!-- Deploy SNAPSHOTS to jfrog with sources -->
