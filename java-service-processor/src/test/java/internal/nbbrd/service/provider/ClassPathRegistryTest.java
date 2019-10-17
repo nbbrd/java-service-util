@@ -16,7 +16,6 @@
  */
 package internal.nbbrd.service.provider;
 
-import static internal.nbbrd.service.provider.CustomName.newRef;
 import static org.assertj.core.api.Assertions.*;
 import org.junit.Test;
 
@@ -31,11 +30,11 @@ public class ClassPathRegistryTest {
         String content;
 
         content = "internal.lib.OldHelloService";
-        assertThat(ClassPathRegistry.parse(CustomName::new, new CustomName("lib.HelloService"), content))
-                .isEqualTo(newRef("lib.HelloService", "internal.lib.OldHelloService"));
+        assertThat(ClassPathRegistry.parse("lib.HelloService", content))
+                .isEqualTo(new ProviderEntry("lib.HelloService", "internal.lib.OldHelloService"));
 
         content = "internal.lib.OldHelloService # comment";
-        assertThat(ClassPathRegistry.parse(CustomName::new, new CustomName("lib.HelloService"), content))
-                .isEqualTo(newRef("lib.HelloService", "internal.lib.OldHelloService"));
+        assertThat(ClassPathRegistry.parse("lib.HelloService", content))
+                .isEqualTo(new ProviderEntry("lib.HelloService", "internal.lib.OldHelloService"));
     }
 }

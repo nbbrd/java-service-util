@@ -17,7 +17,6 @@
 package internal.nbbrd.service.provider;
 
 import internal.nbbrd.service.ModuleInfoEntries;
-import static internal.nbbrd.service.provider.CustomName.newRef;
 import static internal.nbbrd.service.provider.ModulePathRegistry.parseAll;
 import java.io.IOException;
 import static org.assertj.core.api.Assertions.*;
@@ -34,25 +33,25 @@ public class ModulePathRegistryTest {
         ModuleInfoEntries content;
 
         content = ModuleInfoEntries.builder().build();
-        assertThat(parseAll(CustomName::new, content))
+        assertThat(parseAll(content))
                 .isEmpty();
 
         content = ModuleInfoEntries
                 .builder()
                 .provision("lib.HelloService", "internal.lib.OldHelloService")
                 .build();
-        assertThat(parseAll(CustomName::new, content))
+        assertThat(parseAll(content))
                 .containsExactly(
-                        newRef("lib.HelloService", "internal.lib.OldHelloService")
+                        new ProviderEntry("lib.HelloService", "internal.lib.OldHelloService")
                 );
 
         content = ModuleInfoEntries
                 .builder()
                 .provision("lib.HelloService", "internal.lib.NewHelloService")
                 .build();
-        assertThat(parseAll(CustomName::new, content))
+        assertThat(parseAll(content))
                 .containsExactly(
-                        newRef("lib.HelloService", "internal.lib.NewHelloService")
+                        new ProviderEntry("lib.HelloService", "internal.lib.NewHelloService")
                 );
 
         content = ModuleInfoEntries
@@ -61,11 +60,11 @@ public class ModulePathRegistryTest {
                 .provision("lib.HelloService", "internal.lib.OldHelloService")
                 .provision("lib.HelloService", "abc.xyz.Ab")
                 .build();
-        assertThat(parseAll(CustomName::new, content))
+        assertThat(parseAll(content))
                 .containsExactly(
-                        newRef("lib.HelloService", "internal.lib.NewHelloService"),
-                        newRef("lib.HelloService", "internal.lib.OldHelloService"),
-                        newRef("lib.HelloService", "abc.xyz.Ab")
+                        new ProviderEntry("lib.HelloService", "internal.lib.NewHelloService"),
+                        new ProviderEntry("lib.HelloService", "internal.lib.OldHelloService"),
+                        new ProviderEntry("lib.HelloService", "abc.xyz.Ab")
                 );
     }
 }

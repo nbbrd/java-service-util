@@ -23,7 +23,6 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.processing.RoundEnvironment;
-import javax.lang.model.element.Name;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeMirror;
@@ -53,8 +52,8 @@ final class AnnotationRegistry implements ProviderRegistry {
 
     static Stream<ProviderRef> newRefs(TypeElement type) {
         return getAnnotations(type)
-                .map(annotation -> getServiceName(annotation, type))
-                .map(service -> new ProviderRef(service, type.getQualifiedName()));
+                .map(annotation -> getServiceType(annotation, type))
+                .map(service -> new ProviderRef(service, type));
     }
 
     static Stream<ServiceProvider> getAnnotations(TypeElement type) {
@@ -64,11 +63,11 @@ final class AnnotationRegistry implements ProviderRegistry {
                 : Stream.of(list.value());
     }
 
-    static Name getServiceName(ServiceProvider annotation, TypeElement type) {
-        return ((TypeElement) ((DeclaredType) getServiceType(annotation, type)).asElement()).getQualifiedName();
+    static TypeElement getServiceType(ServiceProvider annotation, TypeElement type) {
+        return (TypeElement) ((DeclaredType) getServiceTypeMirror(annotation, type)).asElement();
     }
 
-    static TypeMirror getServiceType(ServiceProvider annotation, TypeElement type) {
+    static TypeMirror getServiceTypeMirror(ServiceProvider annotation, TypeElement type) {
         TypeMirror serviceType = ProcessorUtil.extractResultType(annotation::value);
         return isNullValue(serviceType)
                 ? inferServiceType(type).orElse(serviceType)

@@ -21,11 +21,9 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.processing.ProcessingEnvironment;
-import javax.lang.model.element.Name;
 
 /**
  *
@@ -37,26 +35,23 @@ final class ModulePathRegistry implements ProviderRegistry {
     @lombok.NonNull
     private final ProcessingEnvironment env;
 
-    public Optional<List<ProviderRef>> readAll() throws IOException {
-        Function<String, Name> nameFactory = env.getElementUtils()::getName;
+    public Optional<List<ProviderEntry>> readAll() throws IOException {
         return ModuleInfoEntries.parse(env.getFiler())
-                .map(entries -> parseAll(nameFactory, entries));
+                .map(ModulePathRegistry::parseAll);
     }
 
-    static List<ProviderRef> parseAll(Function<String, Name> nameFactory, ModuleInfoEntries content) {
+    static List<ProviderEntry> parseAll(ModuleInfoEntries content) {
         return content
                 .getProvisions()
                 .entrySet()
                 .stream()
-                .flatMap(entry -> parse(nameFactory, entry))
+                .flatMap(ModulePathRegistry::parse)
                 .collect(Collectors.toList());
     }
 
-    private static Stream<ProviderRef> parse(Function<String, Name> nameFactory, Map.Entry<String, List<String>> entry) {
-        Name service = nameFactory.apply(entry.getKey());
+    private static Stream<ProviderEntry> parse(Map.Entry<String, List<String>> entry) {
         return entry.getValue()
                 .stream()
-                .map(nameFactory)
-                .map(provider -> new ProviderRef(service, provider));
+                .map(provider -> new ProviderEntry(entry.getKey(), provider));
     }
 }
