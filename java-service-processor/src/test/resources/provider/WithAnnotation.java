@@ -1,9 +1,10 @@
+package provider;
 
 import nbbrd.service.ServiceProvider;
 
-class WithAnnotation {
+public class WithAnnotation {
 
-    interface HelloService {
+    public interface HelloService {
     }
 
     @ServiceProvider(HelloService.class)

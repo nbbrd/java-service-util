@@ -24,11 +24,10 @@ import java.nio.file.NoSuchFileException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import javax.annotation.processing.FilerException;
 import javax.annotation.processing.ProcessingEnvironment;
-import javax.lang.model.element.Name;
+import javax.lang.model.element.TypeElement;
 import javax.lang.model.util.Elements;
 import javax.tools.FileObject;
 import javax.tools.StandardLocation;
@@ -43,7 +42,7 @@ final class ClassPathRegistry implements ProviderRegistry {
     @lombok.NonNull
     private final ProcessingEnvironment env;
 
-    public List<String> readLinesByService(Name service) throws IOException {
+    public List<String> readLinesByService(TypeElement service) throws IOException {
         FileObject src = env.getFiler().getResource(StandardLocation.CLASS_OUTPUT, "", getRelativeName(service));
         try (BufferedReader reader = new BufferedReader(src.openReader(false))) {
             List<String> result = new ArrayList<>();
@@ -58,7 +57,7 @@ final class ClassPathRegistry implements ProviderRegistry {
         }
     }
 
-    public void writeLinesByService(List<String> lines, Name service) throws IOException {
+    public void writeLinesByService(List<String> lines, TypeElement service) throws IOException {
         FileObject dst = env.getFiler().createResource(StandardLocation.CLASS_OUTPUT, "", getRelativeName(service));
         try (BufferedWriter writer = new BufferedWriter(dst.openWriter())) {
             for (String line : lines) {
@@ -68,36 +67,33 @@ final class ClassPathRegistry implements ProviderRegistry {
         }
     }
 
-    public List<ProviderRef> parseAll(Name service, List<String> lines) {
+    public List<ProviderEntry> parseAll(TypeElement service, List<String> lines) {
+        String serviceName = service.getQualifiedName().toString();
         return lines
                 .stream()
-                .map(env.getElementUtils()::getName)
-                .map(name -> new ProviderRef(service, name))
+                .map(line -> parse(serviceName, line))
                 .collect(Collectors.toList());
     }
 
-    public List<String> formatAll(Name service, List<ProviderRef> refs) {
+    public List<String> formatAll(TypeElement service, List<ProviderRef> refs) {
         Elements util = env.getElementUtils();
         return refs
                 .stream()
                 .filter(ref -> ref.getService().equals(service))
-                .map(ProviderRef::getProvider)
-                .map(provider -> util.getBinaryName(util.getTypeElement(provider)))
-                .map(Object::toString)
+                .map(ref -> util.getBinaryName(ref.getProvider()).toString())
                 .collect(Collectors.toList());
     }
 
-    static ProviderRef parse(Function<String, Name> nameFactory, Name service, String rawProvider) {
-        int commentIndex = rawProvider.indexOf('#');
+    static ProviderEntry parse(String service, String line) {
+        int commentIndex = line.indexOf('#');
         if (commentIndex != -1) {
-            rawProvider = rawProvider.substring(0, commentIndex);
+            line = line.substring(0, commentIndex);
         }
-        rawProvider = rawProvider.trim();
-        return new ProviderRef(service, nameFactory.apply(rawProvider));
+        line = line.trim();
+        return new ProviderEntry(service, line);
     }
 
-    private String getRelativeName(Name service) {
-        Elements util = env.getElementUtils();
-        return "META-INF/services/" + util.getBinaryName(util.getTypeElement(service));
+    private String getRelativeName(TypeElement service) {
+        return "META-INF/services/" + env.getElementUtils().getBinaryName(service);
     }
 }

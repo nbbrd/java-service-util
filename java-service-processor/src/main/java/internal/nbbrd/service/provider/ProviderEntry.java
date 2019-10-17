@@ -16,37 +16,20 @@
  */
 package internal.nbbrd.service.provider;
 
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Set;
-import java.util.stream.Collectors;
-import javax.lang.model.element.TypeElement;
-
 /**
  *
  * @author Philippe Charles
  */
 @lombok.Value
-final class ProviderRef {
+final class ProviderEntry {
 
     @lombok.NonNull
-    private final TypeElement service;
+    private final String service;
     @lombok.NonNull
-    private final TypeElement provider;
+    private final String provider;
 
     @Override
     public String toString() {
         return service + "/" + provider;
-    }
-
-    ProviderEntry toEntry() {
-        return new ProviderEntry(service.getQualifiedName().toString(), provider.getQualifiedName().toString());
-    }
-
-    static Set<ProviderRef> getDuplicates(Collection<ProviderRef> refs) {
-        return refs
-                .stream()
-                .filter(ref -> Collections.frequency(refs, ref) > 1)
-                .collect(Collectors.toSet());
     }
 }

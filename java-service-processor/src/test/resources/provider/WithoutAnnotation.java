@@ -1,7 +1,8 @@
+package provider;
 
-class WithoutAnnotation {
+public class WithoutAnnotation {
 
-    interface HelloService {
+    public interface HelloService {
     }
 
     public static class Provider1 implements HelloService {

@@ -19,10 +19,12 @@ package internal.nbbrd.service.provider;
 import internal.nbbrd.service.Instantiator;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.Processor;
 import javax.annotation.processing.RoundEnvironment;
@@ -31,7 +33,6 @@ import javax.lang.model.SourceVersion;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
-import javax.lang.model.element.Name;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
@@ -88,39 +89,27 @@ public final class ServiceProviderProcessor extends AbstractProcessor {
         Elements elements = processingEnv.getElementUtils();
         Types types = processingEnv.getTypeUtils();
 
-        if (ref.getService().contentEquals(Void.class.getName())) {
+        if (types.isSameType(ref.getService().asType(), elements.getTypeElement(Void.class.getName()).asType())) {
             error(ref, "Cannot infer service from provider " + ref.getProvider());
             return;
         }
 
-        TypeElement service = elements.getTypeElement(ref.getService());
-        if (service == null) {
-            error(ref, "Cannot find service " + ref.getService());
-            return;
-        }
-
-        TypeElement provider = elements.getTypeElement(ref.getProvider());
-        if (provider == null) {
-            error(ref, "Cannot find provider " + ref.getProvider());
-            return;
-        }
-
-        if (!types.isAssignable(provider.asType(), types.erasure(service.asType()))) {
+        if (!types.isAssignable(ref.getProvider().asType(), types.erasure(ref.getService().asType()))) {
             error(ref, String.format("Provider '%1$s' doesn't extend nor implement service '%2$s'", ref.getProvider(), ref.getService()));
             return;
         }
 
-        if (provider.getEnclosingElement().getKind() == ElementKind.CLASS && !provider.getModifiers().contains(Modifier.STATIC)) {
+        if (ref.getProvider().getEnclosingElement().getKind() == ElementKind.CLASS && !ref.getProvider().getModifiers().contains(Modifier.STATIC)) {
             error(ref, String.format("Provider '%1$s' must be static inner class", ref.getProvider()));
             return;
         }
 
-        if (provider.getModifiers().contains(Modifier.ABSTRACT)) {
+        if (ref.getProvider().getModifiers().contains(Modifier.ABSTRACT)) {
             error(ref, String.format("Provider '%1$s' must not be abstract", ref.getProvider()));
             return;
         }
 
-        if (Instantiator.allOf(types, service, provider).stream().noneMatch(this::isValidInstantiator)) {
+        if (Instantiator.allOf(types, ref.getService(), ref.getProvider()).stream().noneMatch(this::isValidInstantiator)) {
             error(ref, String.format("Provider '%1$s' must have a public no-argument constructor", ref.getProvider()));
             return;
         }
@@ -141,33 +130,58 @@ public final class ServiceProviderProcessor extends AbstractProcessor {
         refs.forEach(ref -> processingEnv.getMessager().printMessage(Diagnostic.Kind.NOTE, String.format("%1$s: %2$s", id, ref)));
     }
 
+    private void logEntries(String id, List<ProviderEntry> entries) {
+        entries.forEach(entry -> processingEnv.getMessager().printMessage(Diagnostic.Kind.NOTE, String.format("%1$s: %2$s", id, entry)));
+    }
+
     private void error(ProviderRef ref, String message) {
-        TypeElement provider = processingEnv.getElementUtils().getTypeElement(ref.getProvider());
-        processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR, message, provider);
+        processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR, message, ref.getProvider());
+    }
+
+    private void errorEntry(ProviderEntry entry, String message) {
+        TypeElement optionalType = processingEnv.getElementUtils().getTypeElement(entry.getProvider());
+        if (optionalType != null) {
+            processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR, message, optionalType);
+        } else {
+            processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR, message);
+        }
     }
 
     private void checkModulePath(List<ProviderRef> annotationRefs, ModulePathRegistry modulePath) throws IOException {
-        modulePath.readAll().ifPresent(modulePathRefs -> {
-            log("ModulePath", modulePathRefs);
+        modulePath.readAll().ifPresent(modulePathEntries -> {
+            logEntries("ModulePath", modulePathEntries);
 
-            annotationRefs
-                    .stream()
-                    .filter(ref -> (!modulePathRefs.contains(ref)))
+            getMissingRefs(annotationRefs, modulePathEntries)
                     .forEachOrdered(ref -> error(ref, "Missing module-info.java 'provides' directive for '" + ref + "'"));
 
-            modulePathRefs
-                    .stream()
-                    .filter(ref -> (!annotationRefs.contains(ref)))
-                    .forEachOrdered(ref -> error(ref, "Missing annotation for '" + ref + "'"));
+            System.out.println(Arrays.toString(annotationRefs.toArray()));
+            System.out.println(Arrays.toString(modulePathEntries.toArray()));
+            
+            getMissingEntries(annotationRefs, modulePathEntries)
+                    .forEachOrdered(entry -> errorEntry(entry, "Missing annotation for '" + entry + "'"));
         });
     }
 
-    private void registerClassPath(List<ProviderRef> annotationRefs, ClassPathRegistry classPath) throws IOException {
-        Map<Name, List<ProviderRef>> refByService = annotationRefs.stream().collect(Collectors.groupingBy(ProviderRef::getService));
+    static Stream<ProviderRef> getMissingRefs(List<ProviderRef> annotationRefs, List<ProviderEntry> modulePathEntries) {
+        return annotationRefs
+                .stream()
+                .filter(ref -> !modulePathEntries.contains(ref.toEntry()));
+    }
 
-        for (Map.Entry<Name, List<ProviderRef>> x : refByService.entrySet()) {
+    static Stream<ProviderEntry> getMissingEntries(List<ProviderRef> annotationRefs, List<ProviderEntry> modulePathEntries) {
+        Set<ProviderEntry> annotationEntries = annotationRefs.stream().map(ProviderRef::toEntry).collect(Collectors.toSet());
+
+        return modulePathEntries
+                .stream()
+                .filter(entry -> (!annotationEntries.contains(entry)));
+    }
+
+    private void registerClassPath(List<ProviderRef> annotationRefs, ClassPathRegistry classPath) throws IOException {
+        Map<TypeElement, List<ProviderRef>> refByService = annotationRefs.stream().collect(Collectors.groupingBy(ProviderRef::getService));
+
+        for (Map.Entry<TypeElement, List<ProviderRef>> x : refByService.entrySet()) {
             List<String> oldLines = classPath.readLinesByService(x.getKey());
-            log("ClassPath", classPath.parseAll(x.getKey(), oldLines));
+            logEntries("ClassPath", classPath.parseAll(x.getKey(), oldLines));
 
             List<String> newLines = classPath.formatAll(x.getKey(), generateDelegates(x.getValue()));
             classPath.writeLinesByService(merge(oldLines, newLines), x.getKey());
@@ -176,9 +190,7 @@ public final class ServiceProviderProcessor extends AbstractProcessor {
 
     private List<ProviderRef> generateDelegates(List<ProviderRef> refs) {
         for (ProviderRef ref : refs) {
-            TypeElement service = processingEnv.getElementUtils().getTypeElement(ref.getService());
-            TypeElement provider = processingEnv.getElementUtils().getTypeElement(ref.getProvider());
-            if (Instantiator.allOf(processingEnv.getTypeUtils(), service, provider).stream().anyMatch(o -> o.getKind() == Instantiator.Kind.STATIC_METHOD)) {
+            if (Instantiator.allOf(processingEnv.getTypeUtils(), ref.getService(), ref.getProvider()).stream().anyMatch(o -> o.getKind() == Instantiator.Kind.STATIC_METHOD)) {
                 error(ref, "Static method support not implemented yet");
             }
         }
