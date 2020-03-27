@@ -31,7 +31,7 @@ class LoadSorter {
         DOUBLE, INT, LONG, COMPARABLE;
     }
 
-    private ExecutableElement target;
+    private ExecutableElement method;
     private boolean reverse;
     private int position;
     private Optional<KeyType> keyType;

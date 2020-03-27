@@ -27,7 +27,7 @@ import javax.lang.model.element.TypeElement;
 @lombok.Value
 class LoadFilter {
 
-    private ExecutableElement target;
+    private ExecutableElement method;
     private boolean negate;
     private int position;
     private Optional<TypeElement> serviceType;

@@ -131,8 +131,8 @@ final class ServiceDefinitionGenerator {
             return toJavadocLink(definition.getPreprocessor());
         }
         if (!filters.isEmpty() || !sorters.isEmpty()) {
-            return "filters:" + filters.stream().map(o -> getMethodName(o.getTarget())).collect(Collectors.joining("+", "[", "]"))
-                    + " sorters:" + sorters.stream().map(o -> getMethodName(o.getTarget())).collect(Collectors.joining("+", "[", "]"));
+            return "filters:" + filters.stream().map(o -> getMethodName(o.getMethod())).collect(Collectors.joining("+", "[", "]"))
+                    + " sorters:" + sorters.stream().map(o -> getMethodName(o.getMethod())).collect(Collectors.joining("+", "[", "]"));
         }
         return "null";
     }
@@ -155,10 +155,16 @@ final class ServiceDefinitionGenerator {
     private CodeBlock getPreprocessorCode(FieldSpec sourceField) {
         CodeBlock streamBlock = CodeBlock.of("$T.stream($N.spliterator(), false)", StreamSupport.class, sourceField);
 
-        if (definition.getPreprocessor().isPresent()) {
-            return CodeBlock.of("$L\n.apply($L)", getInstantiatorCode(definition.getPreprocessor().get()), streamBlock);
-        }
+        return definition.getPreprocessor().isPresent()
+                ? getAdvancedPreprocessorCode(streamBlock)
+                : getBasicPreprocessorCode(streamBlock);
+    }
 
+    private CodeBlock getAdvancedPreprocessorCode(CodeBlock streamBlock) {
+        return CodeBlock.of("$L\n.apply($L)", getInstantiatorCode(definition.getPreprocessor().get()), streamBlock);
+    }
+
+    private CodeBlock getBasicPreprocessorCode(CodeBlock streamBlock) {
         CodeBlock.Builder result = CodeBlock.builder();
         result.add(streamBlock);
         if (!filters.isEmpty()) {
@@ -191,7 +197,7 @@ final class ServiceDefinitionGenerator {
     }
 
     private CodeBlock getFilterCode(LoadFilter filter) {
-        CodeBlock result = CodeBlock.of("$T::$L", filter.getServiceType().orElseThrow(Unreachable::new), getMethodName(filter.getTarget()));
+        CodeBlock result = CodeBlock.of("$T::$L", filter.getServiceType().orElseThrow(Unreachable::new), getMethodName(filter.getMethod()));
         return filter.isNegate()
                 ? CodeBlock.of("(($T<$T>)$L).negate()", Predicate.class, definition.getServiceType(), result)
                 : result;
@@ -218,7 +224,7 @@ final class ServiceDefinitionGenerator {
     }
 
     private CodeBlock getSorterCode(LoadSorter sorter) {
-        CodeBlock result = CodeBlock.of("$T.$L($T::$L)", Comparator.class, getComparatorMethod(sorter), sorter.getServiceType().orElseThrow(Unreachable::new), getMethodName(sorter.getTarget()));
+        CodeBlock result = CodeBlock.of("$T.$L($T::$L)", Comparator.class, getComparatorMethod(sorter), sorter.getServiceType().orElseThrow(Unreachable::new), getMethodName(sorter.getMethod()));
         return sorter.isReverse()
                 ? CodeBlock.of("$T.reverseOrder($L)", Collections.class, result)
                 : result;
