@@ -20,6 +20,7 @@ import com.squareup.javapoet.ClassName;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.type.TypeMirror;
 import javax.tools.Diagnostic;
 
 /**
@@ -42,6 +43,10 @@ public final class ExtEnvironment implements ProcessingEnvironment {
 
     public TypeElement asTypeElement(ClassName o) {
         return delegate.getElementUtils().getTypeElement(o.toString());
+    }
+
+    public TypeElement asTypeElement(TypeMirror o) {
+        return (TypeElement) delegate.getTypeUtils().asElement(o);
     }
 
     public void error(Element annotatedElement, String message) {

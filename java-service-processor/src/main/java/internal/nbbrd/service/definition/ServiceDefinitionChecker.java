@@ -20,9 +20,7 @@ import internal.nbbrd.service.ModuleInfoEntries;
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
-import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
@@ -128,6 +126,9 @@ final class ServiceDefinitionChecker {
         if (!checkFallback(definition.getQuantifier(), definition.getFallback(), service, types)) {
             return false;
         }
+        if (!checkWrapper(definition.getWrapper(), service, types)) {
+            return false;
+        }
         if (!checkPreprocessor(definition.getPreprocessor(), service, types)) {
             return false;
         }
@@ -137,7 +138,7 @@ final class ServiceDefinitionChecker {
         return true;
     }
 
-    private boolean checkFallback(Quantifier quantifier, Optional<TypeHandler> fallback, TypeElement service, Types types) {
+    private boolean checkFallback(Quantifier quantifier, Optional<TypeInstantiator> fallback, TypeElement service, Types types) {
         switch (quantifier) {
             case SINGLE:
                 if (!fallback.isPresent()) {
@@ -161,7 +162,7 @@ final class ServiceDefinitionChecker {
         return true;
     }
 
-    private boolean checkFallbackTypeHandler(TypeHandler handler, TypeElement service, Types types) {
+    private boolean checkFallbackTypeHandler(TypeInstantiator handler, TypeElement service, Types types) {
         if (!types.isAssignable(handler.getType(), types.erasure(service.asType()))) {
             env.error(service, String.format("Fallback '%1$s' doesn't extend nor implement service '%2$s'", handler.getType(), service));
             return false;
@@ -173,7 +174,28 @@ final class ServiceDefinitionChecker {
         return true;
     }
 
-    private boolean checkPreprocessor(Optional<TypeHandler> preprocessor, TypeElement service, Types types) {
+    private boolean checkWrapper(Optional<TypeWrapper> wrapper, TypeElement service, Types types) {
+        if (wrapper.isPresent()) {
+            if (!checkWrapperTypeHandler(wrapper.get(), service, types)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private boolean checkWrapperTypeHandler(TypeWrapper handler, TypeElement service, Types types) {
+        if (!types.isAssignable(handler.getType(), types.erasure(service.asType()))) {
+            env.error(service, String.format("Wrapper '%1$s' doesn't extend nor implement service '%2$s'", handler.getType(), service));
+            return false;
+        }
+
+        if (!checkWrapperFactories(service, handler.getType(), handler)) {
+            return false;
+        }
+        return true;
+    }
+
+    private boolean checkPreprocessor(Optional<TypeInstantiator> preprocessor, TypeElement service, Types types) {
         if (preprocessor.isPresent()) {
             if (!checkPreprocessorTypeHandler(preprocessor.get(), service, types)) {
                 return false;
@@ -182,9 +204,8 @@ final class ServiceDefinitionChecker {
         return true;
     }
 
-    private boolean checkPreprocessorTypeHandler(TypeHandler handler, TypeElement service, Types types) {
-        DeclaredType streamOf = types.getDeclaredType(env.asTypeElement(Stream.class), service.asType());
-        DeclaredType unaryOperatorOf = types.getDeclaredType(env.asTypeElement(UnaryOperator.class), streamOf);
+    private boolean checkPreprocessorTypeHandler(TypeInstantiator handler, TypeElement service, Types types) {
+        DeclaredType unaryOperatorOf = LoadDefinition.getPreprocessorType(env, service);
         if (!types.isAssignable(handler.getType(), unaryOperatorOf)) {
             env.error(service, String.format("Preprocessor '%1$s' doesn't extend nor implement 'UnaryOperator<Stream<%2$s>>'", handler.getType(), service));
             return false;
@@ -203,9 +224,17 @@ final class ServiceDefinitionChecker {
         return true;
     }
 
-    private boolean checkInstanceFactories(TypeElement annotatedElement, TypeMirror type, TypeHandler instance) {
+    private boolean checkInstanceFactories(TypeElement annotatedElement, TypeMirror type, TypeInstantiator instance) {
         if (!instance.select().isPresent()) {
-            env.error(annotatedElement, String.format("Don't know how to create '%1$s'", type));
+            env.error(annotatedElement, String.format("Don't know how to instantiate '%1$s'", type));
+            return false;
+        }
+        return true;
+    }
+
+    private boolean checkWrapperFactories(TypeElement annotatedElement, TypeMirror type, TypeWrapper instance) {
+        if (!instance.select().isPresent()) {
+            env.error(annotatedElement, String.format("Don't know how to wrap '%1$s'", type));
             return false;
         }
         return true;

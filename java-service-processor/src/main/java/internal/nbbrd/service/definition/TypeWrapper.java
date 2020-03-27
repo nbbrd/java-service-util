@@ -16,7 +16,7 @@
  */
 package internal.nbbrd.service.definition;
 
-import internal.nbbrd.service.Instantiator;
+import internal.nbbrd.service.Wrapper;
 import java.util.List;
 import java.util.Optional;
 import javax.lang.model.type.TypeMirror;
@@ -26,14 +26,14 @@ import javax.lang.model.type.TypeMirror;
  * @author Philippe Charles
  */
 @lombok.Value
-public class TypeHandler {
+public class TypeWrapper {
 
     private TypeMirror type;
-    private List<Instantiator> instantiators;
+    private List<Wrapper> wrappers;
 
-    public Optional<Instantiator> select() {
-        return instantiators.size() == 1
-                ? Optional.of(instantiators.get(0))
-                : instantiators.stream().filter(o -> o.getKind() == Instantiator.Kind.CONSTRUCTOR).findFirst();
+    public Optional<Wrapper> select() {
+        return wrappers.size() == 1
+                ? Optional.of(wrappers.get(0))
+                : wrappers.stream().filter(o -> o.getKind() == Wrapper.Kind.CONSTRUCTOR).findFirst();
     }
 }

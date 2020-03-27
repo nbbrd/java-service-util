@@ -164,9 +164,38 @@ public class ServiceDefinitionProcessorTest {
                 .failed();
 
         assertThat(compilation)
-                .hadErrorContaining("Don't know how to create")
+                .hadErrorContaining("Don't know how to instantiate")
                 .inFile(file)
                 .onLine(9);
+    }
+
+    @Test
+    public void testNonInstantiableWrapper() {
+        JavaFileObject file = JavaFileObjects.forResource("definition/NonInstantiableWrapper.java");
+        Compilation compilation = compile(file);
+
+        assertThat(compilation)
+                .failed();
+
+        assertThat(compilation)
+                .hadErrorContaining("Don't know how to wrap 'definition.NonInstantiableWrapper.WrapperByPrivateConstructor'")
+                .inFile(file)
+                .onLine(8);
+
+        assertThat(compilation)
+                .hadErrorContaining("Don't know how to wrap 'definition.NonInstantiableWrapper.WrapperByNoArgConstructor'")
+                .inFile(file)
+                .onLine(18);
+
+        assertThat(compilation)
+                .hadErrorContaining("Don't know how to wrap 'definition.NonInstantiableWrapper.WrapperByInvalidArgConstructor'")
+                .inFile(file)
+                .onLine(28);
+
+        assertThat(compilation)
+                .hadErrorContaining("Don't know how to wrap 'definition.NonInstantiableWrapper.WrapperByToManyStaticMethods'")
+                .inFile(file)
+                .onLine(38);
     }
 
     @Test
@@ -178,7 +207,7 @@ public class ServiceDefinitionProcessorTest {
                 .failed();
 
         assertThat(compilation)
-                .hadErrorContaining("Don't know how to create")
+                .hadErrorContaining("Don't know how to instantiate")
                 .inFile(file)
                 .onLine(11);
     }
@@ -209,6 +238,20 @@ public class ServiceDefinitionProcessorTest {
                 .hadErrorContaining("doesn't extend nor implement")
                 .inFile(file)
                 .onLine(10);
+    }
+
+    @Test
+    public void testNonAssignableWrapper() {
+        JavaFileObject file = JavaFileObjects.forResource("definition/NonAssignableWrapper.java");
+        Compilation compilation = compile(file);
+
+        assertThat(compilation)
+                .failed();
+
+        assertThat(compilation)
+                .hadErrorContaining("doesn't extend nor implement service")
+                .inFile(file)
+                .onLine(8);
     }
 
     @Test
@@ -288,6 +331,28 @@ public class ServiceDefinitionProcessorTest {
                 .hadErrorContaining("Filter method must return boolean")
                 .inFile(file)
                 .onLine(10);
+    }
+
+    @Test
+    public void testWrappers() {
+        JavaFileObject file = JavaFileObjects.forResource("definition/Wrappers.java");
+        Compilation compilation = compile(file);
+
+        assertThat(compilation)
+                .succeededWithoutWarnings();
+
+        StringSubject result = assertThat(compilation)
+                .generatedSourceFile("definition.WrappersLoader")
+                .contentsAsUtf8String();
+
+        result.contains("private final Optional<Wrappers.ByConstructor> resource = doLoad();");
+        result.contains(".map(Wrappers.WrapperByConstructor::new)");
+
+        result.contains("private final Optional<Wrappers.ByStaticMethod> resource = doLoad();");
+        result.contains(".map(Wrappers.WrapperByStaticMethod::wrap)");
+
+        result.contains("private final Optional<Wrappers.ByStaticMethodX> resource = doLoad();");
+        result.contains(".map(Wrappers.WrapperByStaticMethodX::wrap)");
     }
 
     @Test

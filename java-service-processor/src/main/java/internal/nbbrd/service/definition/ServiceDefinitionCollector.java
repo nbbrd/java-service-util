@@ -20,6 +20,7 @@ import com.squareup.javapoet.ClassName;
 import internal.nbbrd.service.ExtEnvironment;
 import internal.nbbrd.service.Instantiator;
 import internal.nbbrd.service.ProcessorUtil;
+import internal.nbbrd.service.Wrapper;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Supplier;
@@ -88,23 +89,26 @@ final class ServiceDefinitionCollector {
         return result.build();
     }
 
-    private LoadDefinition definitionOf(TypeElement x) {
-        ServiceDefinition annotation = x.getAnnotation(ServiceDefinition.class);
-        ClassName serviceType = ClassName.get(x);
+    private LoadDefinition definitionOf(TypeElement serviceType) {
+        ServiceDefinition annotation = serviceType.getAnnotation(ServiceDefinition.class);
         Types types = env.getTypeUtils();
 
-        Optional<TypeHandler> fallback = nonNull(annotation::fallback)
-                .map(type -> new TypeHandler(type, Instantiator.allOf(types, (TypeElement) types.asElement(type))));
+        Optional<TypeInstantiator> fallback = nonNull(annotation::fallback)
+                .map(fallbackType -> new TypeInstantiator(fallbackType, Instantiator.allOf(types, serviceType, env.asTypeElement(fallbackType))));
 
-        Optional<TypeHandler> preprocessor = nonNull(annotation::preprocessor)
-                .map(type -> new TypeHandler(type, Instantiator.allOf(types, (TypeElement) types.asElement(type))));
+        Optional<TypeWrapper> wrapper = nonNull(annotation::wrapper)
+                .map(wrapperType -> new TypeWrapper(wrapperType, Wrapper.allOf(types, serviceType, env.asTypeElement(wrapperType))));
+
+        Optional<TypeInstantiator> preprocessor = nonNull(annotation::preprocessor)
+                .map(preprocessorType -> new TypeInstantiator(preprocessorType, Instantiator.allOf(types, env.asTypeElement(preprocessorType), env.asTypeElement(preprocessorType))));
 
         return LoadDefinition
                 .builder()
                 .quantifier(annotation.quantifier())
                 .lifecycle(Lifecycle.of(annotation.mutability(), annotation.singleton()))
-                .serviceType(serviceType)
+                .serviceType(ClassName.get(serviceType))
                 .fallback(fallback)
+                .wrapper(wrapper)
                 .preprocessor(preprocessor)
                 .loaderName(annotation.loaderName())
                 .build();

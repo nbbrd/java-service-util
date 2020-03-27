@@ -17,7 +17,12 @@
 package internal.nbbrd.service.definition;
 
 import com.squareup.javapoet.ClassName;
+import internal.nbbrd.service.ExtEnvironment;
 import java.util.Optional;
+import java.util.function.UnaryOperator;
+import java.util.stream.Stream;
+import javax.lang.model.element.TypeElement;
+import javax.lang.model.type.DeclaredType;
 import nbbrd.service.Quantifier;
 
 /**
@@ -31,8 +36,9 @@ class LoadDefinition {
     private Quantifier quantifier;
     private Lifecycle lifecycle;
     private ClassName serviceType;
-    private Optional<TypeHandler> fallback;
-    private Optional<TypeHandler> preprocessor;
+    private Optional<TypeInstantiator> fallback;
+    private Optional<TypeWrapper> wrapper;
+    private Optional<TypeInstantiator> preprocessor;
     private String loaderName;
 
     public ClassName resolveLoaderName() {
@@ -50,5 +56,10 @@ class LoadDefinition {
             return topLoader;
         }
         return topLoader.nestedClass(serviceType.simpleName());
+    }
+
+    static DeclaredType getPreprocessorType(ExtEnvironment env, TypeElement service) {
+        DeclaredType streamOf = env.getTypeUtils().getDeclaredType(env.asTypeElement(Stream.class), service.asType());
+        return env.getTypeUtils().getDeclaredType(env.asTypeElement(UnaryOperator.class), streamOf);
     }
 }

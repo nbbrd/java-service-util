@@ -92,14 +92,28 @@ public @interface ServiceDefinition {
      * or static final field
      * </ul>
      *
-     * @return the fallback service type if required, {@link Void} otherwise
+     * @return the fallback class if required, {@link Void} otherwise
      */
     Class<?> fallback() default Void.class;
 
     /**
-     * Specifies the class that preprocess the service implementations.<br>This
-     * operation happens between loading and storage.<br>It may include
-     * filtering, sorting and mapping.
+     * Specifies the wrapper class to be used in basic preprocessing.
+     * <p>
+     * Requirements:
+     * <ul>
+     * <li>must be assignable to the service type
+     * <li>must be instantiable by constructor with single parameter of service
+     * type
+     * </ul>
+     *
+     * @return the wrapper class if required, {@link Void} otherwise
+     */
+    Class<?> wrapper() default Void.class;
+
+    /**
+     * Specifies the preprocessor class to be used in advanced
+     * preprocessing.<br>This operation happens between loading and
+     * storage.<br>It may include filtering, sorting and mapping.
      * <p>
      * Requirements:
      * <ul>
@@ -108,7 +122,8 @@ public @interface ServiceDefinition {
      * or static final field
      * </ul>
      *
-     * @return the preprocessor type if required, {@link NoProcessing} otherwise
+     * @return the preprocessor class if required, {@link NoProcessing}
+     * otherwise
      */
     Class<? extends UnaryOperator<? extends Stream>> preprocessor() default NoProcessing.class;
 
