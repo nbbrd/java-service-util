@@ -102,8 +102,8 @@ public @interface ServiceDefinition {
      * Requirements:
      * <ul>
      * <li>must be assignable to the service type
-     * <li>must be instantiable by constructor with single parameter of service
-     * type
+     * <li>must be instantiable either by constructor or static method, both
+     * with single parameter of service type
      * </ul>
      *
      * @return the wrapper class if required, {@link Void} otherwise
