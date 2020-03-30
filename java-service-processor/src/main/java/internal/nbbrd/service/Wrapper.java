@@ -16,12 +16,10 @@
  */
 package internal.nbbrd.service;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.lang.model.element.Element;
-import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
@@ -33,7 +31,7 @@ import javax.lang.model.util.Types;
  * @author Philippe Charles
  */
 @lombok.Value
-public final class Instantiator {
+public final class Wrapper {
 
     public enum Kind {
         CONSTRUCTOR {
@@ -42,46 +40,19 @@ public final class Instantiator {
                 return ElementFilter
                         .constructorsIn(provider.getEnclosedElements())
                         .stream()
-                        .filter(Instantiator::isNoArgPublicMethod)
+                        .filter(method -> isOneArgPublicMethod(util, method, service))
                         .map(Element.class::cast);
             }
-        },
-        STATIC_METHOD {
+        }, STATIC_METHOD {
             @Override
             public Stream<Element> parse(Types util, TypeElement service, TypeElement provider) {
                 return ElementFilter
                         .methodsIn(provider.getEnclosedElements())
                         .stream()
-                        .filter(Instantiator::isNoArgPublicMethod)
+                        .filter(method -> isOneArgPublicMethod(util, method, service))
                         .filter(method -> method.getModifiers().contains(Modifier.STATIC))
-                        .filter(method -> util.isAssignable(method.getReturnType(), service.asType()))
+                        .filter(method -> util.isSubtype(method.getReturnType(), service.asType()))
                         .map(Element.class::cast);
-            }
-        },
-        ENUM_FIELD {
-            @Override
-            public Stream<Element> parse(Types util, TypeElement service, TypeElement provider) {
-                return provider.getKind() == ElementKind.ENUM
-                        ? ElementFilter
-                                .fieldsIn(provider.getEnclosedElements())
-                                .stream()
-                                .filter(field -> field.getKind().equals(ElementKind.ENUM_CONSTANT))
-                                .map(Element.class::cast)
-                        : Stream.empty();
-            }
-        },
-        STATIC_FIELD {
-            @Override
-            public Stream<Element> parse(Types util, TypeElement service, TypeElement provider) {
-                return provider.getKind() != ElementKind.ENUM
-                        ? ElementFilter
-                                .fieldsIn(provider.getEnclosedElements())
-                                .stream()
-                                .filter(field -> field.getKind().equals(ElementKind.FIELD))
-                                .filter(field -> field.getModifiers().containsAll(Arrays.asList(Modifier.PUBLIC, Modifier.STATIC, Modifier.FINAL)))
-                                .filter(field -> util.isSubtype(field.asType(), service.asType()))
-                                .map(Element.class::cast)
-                        : Stream.empty();
             }
         };
 
@@ -91,14 +62,15 @@ public final class Instantiator {
     private Kind kind;
     private Element element;
 
-    public static List<Instantiator> allOf(Types util, TypeElement service, TypeElement provider) {
+    public static List<Wrapper> allOf(Types util, TypeElement service, TypeElement provider) {
         return Stream.of(Kind.values())
-                .flatMap(kind -> kind.parse(util, service, provider).map(element -> new Instantiator(kind, element)))
+                .flatMap(kind -> kind.parse(util, service, provider).map(element -> new Wrapper(kind, element)))
                 .collect(Collectors.toList());
     }
 
-    private static boolean isNoArgPublicMethod(ExecutableElement method) {
+    private static boolean isOneArgPublicMethod(Types util, ExecutableElement method, TypeElement service) {
         return method.getModifiers().contains(Modifier.PUBLIC)
-                && method.getParameters().isEmpty();
+                && method.getParameters().size() == 1
+                && util.isSameType(method.getParameters().get(0).asType(), service.asType());
     }
 }

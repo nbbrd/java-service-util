@@ -25,6 +25,7 @@ import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
 import internal.nbbrd.service.Instantiator;
 import internal.nbbrd.service.Unreachable;
+import internal.nbbrd.service.Wrapper;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Iterator;
@@ -119,20 +120,28 @@ final class ServiceDefinitionGenerator {
                 .add("<p>Properties:\n")
                 .add("<li>Quantifier: $L\n", definition.getQuantifier())
                 .add("<li>Fallback: $L\n", toJavadocLink(definition.getFallback()))
-                .add("<li>Preprocessor: $L\n", getPreprocessorJavadoc())
+                .add("<li>Preprocessing: $L\n", getPreprocessingJavadoc())
                 .add("<li>Mutability: $L\n", definition.getLifecycle().toMutability())
                 .add("<li>Singleton: $L\n", definition.getLifecycle().isSingleton())
                 .add("<li>Name: $L\n", definition.getLoaderName().isEmpty() ? "null" : definition.getLoaderName())
                 .build();
     }
 
-    private String getPreprocessorJavadoc() {
-        if (definition.getPreprocessor().isPresent()) {
-            return toJavadocLink(definition.getPreprocessor());
-        }
-        if (!filters.isEmpty() || !sorters.isEmpty()) {
-            return "filters:" + filters.stream().map(o -> getMethodName(o.getTarget())).collect(Collectors.joining("+", "[", "]"))
-                    + " sorters:" + sorters.stream().map(o -> getMethodName(o.getTarget())).collect(Collectors.joining("+", "[", "]"));
+    private String getPreprocessingJavadoc() {
+        return definition.getPreprocessor().isPresent()
+                ? getAdvancedPreprocessingJavadoc()
+                : getBasicPreprocessingJavadoc();
+    }
+
+    private String getAdvancedPreprocessingJavadoc() {
+        return toJavadocLink(definition.getPreprocessor());
+    }
+
+    private String getBasicPreprocessingJavadoc() {
+        if (definition.getWrapper().isPresent() || !filters.isEmpty() || !sorters.isEmpty()) {
+            return "wrapper: " + definition.getWrapper().map(wrapper -> wrapper.getType().toString()).orElse("none")
+                    + " filters:" + filters.stream().map(o -> getMethodName(o.getMethod())).collect(Collectors.joining("+", "[", "]"))
+                    + " sorters:" + sorters.stream().map(o -> getMethodName(o.getMethod())).collect(Collectors.joining("+", "[", "]"));
         }
         return "null";
     }
@@ -146,21 +155,31 @@ final class ServiceDefinitionGenerator {
                 .addStatement(CodeBlock
                         .builder()
                         .add("return ")
-                        .add(getPreprocessorCode(sourceField))
+                        .add(getPreprocessingCode(sourceField))
                         .add(getQuantifierCode())
                         .build())
                 .build();
     }
 
-    private CodeBlock getPreprocessorCode(FieldSpec sourceField) {
+    private CodeBlock getPreprocessingCode(FieldSpec sourceField) {
         CodeBlock streamBlock = CodeBlock.of("$T.stream($N.spliterator(), false)", StreamSupport.class, sourceField);
 
-        if (definition.getPreprocessor().isPresent()) {
-            return CodeBlock.of("$L\n.apply($L)", getInstantiatorCode(definition.getPreprocessor().get()), streamBlock);
-        }
+        return definition.getPreprocessor().isPresent()
+                ? getAdvancedPreprocessingCode(streamBlock)
+                : getBasicPreprocessingCode(streamBlock);
+    }
 
+    private CodeBlock getAdvancedPreprocessingCode(CodeBlock streamBlock) {
+        return CodeBlock.of("$L\n.apply($L)", getInstantiatorCode(definition.getPreprocessor().get()), streamBlock);
+    }
+
+    private CodeBlock getBasicPreprocessingCode(CodeBlock streamBlock) {
         CodeBlock.Builder result = CodeBlock.builder();
         result.add(streamBlock);
+        if (definition.getWrapper().isPresent()) {
+            result.add("\n.map($L)", getWrapperCode(definition.getWrapper().get()));
+            result.add("\n.map($T.class::cast)", definition.getServiceType());
+        }
         if (!filters.isEmpty()) {
             result.add("\n.filter($L)", getFiltersCode(filters));
         }
@@ -191,7 +210,7 @@ final class ServiceDefinitionGenerator {
     }
 
     private CodeBlock getFilterCode(LoadFilter filter) {
-        CodeBlock result = CodeBlock.of("$T::$L", filter.getServiceType().orElseThrow(Unreachable::new), getMethodName(filter.getTarget()));
+        CodeBlock result = CodeBlock.of("$T::$L", filter.getServiceType().orElseThrow(Unreachable::new), getMethodName(filter.getMethod()));
         return filter.isNegate()
                 ? CodeBlock.of("(($T<$T>)$L).negate()", Predicate.class, definition.getServiceType(), result)
                 : result;
@@ -218,7 +237,7 @@ final class ServiceDefinitionGenerator {
     }
 
     private CodeBlock getSorterCode(LoadSorter sorter) {
-        CodeBlock result = CodeBlock.of("$T.$L($T::$L)", Comparator.class, getComparatorMethod(sorter), sorter.getServiceType().orElseThrow(Unreachable::new), getMethodName(sorter.getTarget()));
+        CodeBlock result = CodeBlock.of("$T.$L($T::$L)", Comparator.class, getComparatorMethod(sorter), sorter.getServiceType().orElseThrow(Unreachable::new), getMethodName(sorter.getMethod()));
         return sorter.isReverse()
                 ? CodeBlock.of("$T.reverseOrder($L)", Collections.class, result)
                 : result;
@@ -254,7 +273,7 @@ final class ServiceDefinitionGenerator {
         }
     }
 
-    private CodeBlock getInstantiatorCode(TypeHandler instance) {
+    private CodeBlock getInstantiatorCode(TypeInstantiator instance) {
         Instantiator instantiator = instance.select().orElseThrow(RuntimeException::new);
         switch (instantiator.getKind()) {
             case CONSTRUCTOR:
@@ -264,6 +283,18 @@ final class ServiceDefinitionGenerator {
             case ENUM_FIELD:
             case STATIC_FIELD:
                 return CodeBlock.of("$T.$L", instance.getType(), instantiator.getElement().getSimpleName());
+            default:
+                throw new Unreachable();
+        }
+    }
+
+    private CodeBlock getWrapperCode(TypeWrapper instance) {
+        Wrapper wrapper = instance.select().orElseThrow(RuntimeException::new);
+        switch (wrapper.getKind()) {
+            case CONSTRUCTOR:
+                return CodeBlock.of("$T::new", instance.getType());
+            case STATIC_METHOD:
+                return CodeBlock.of("$T::$L", instance.getType(), wrapper.getElement().getSimpleName());
             default:
                 throw new Unreachable();
         }
@@ -486,7 +517,7 @@ final class ServiceDefinitionGenerator {
         return "{@link " + type + "}";
     }
 
-    private static String toJavadocLink(Optional<TypeHandler> type) {
+    private static String toJavadocLink(Optional<TypeInstantiator> type) {
         return type.map(o -> "{@link " + o.getType() + "}").orElse("null");
     }
 

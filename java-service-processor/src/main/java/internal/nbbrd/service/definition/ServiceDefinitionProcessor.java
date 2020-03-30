@@ -66,7 +66,7 @@ public final class ServiceDefinitionProcessor extends AbstractProcessor {
 
         Map<ClassName, List<LoadDefinition>> definitionsByTopLevel = data.getDefinitions()
                 .stream()
-                .filter(checker::checkConstraints)
+                .filter(checker::checkDefinition)
                 .collect(Collectors.groupingBy(definition -> definition.resolveLoaderName().topLevelClassName()));
 
         Map<ClassName, List<LoadFilter>> filtersByService = data.getFilters()

@@ -16,19 +16,24 @@
  */
 package internal.nbbrd.service.definition;
 
+import internal.nbbrd.service.Instantiator;
+import java.util.List;
 import java.util.Optional;
-import javax.lang.model.element.ExecutableElement;
-import javax.lang.model.element.TypeElement;
+import javax.lang.model.type.TypeMirror;
 
 /**
  *
  * @author Philippe Charles
  */
 @lombok.Value
-class LoadFilter {
+public class TypeInstantiator {
 
-    private ExecutableElement method;
-    private boolean negate;
-    private int position;
-    private Optional<TypeElement> serviceType;
+    private TypeMirror type;
+    private List<Instantiator> instantiators;
+
+    public Optional<Instantiator> select() {
+        return instantiators.size() == 1
+                ? Optional.of(instantiators.get(0))
+                : instantiators.stream().filter(o -> o.getKind() == Instantiator.Kind.CONSTRUCTOR).findFirst();
+    }
 }

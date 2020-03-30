@@ -17,8 +17,10 @@
 package internal.nbbrd.service.definition;
 
 import com.squareup.javapoet.ClassName;
+import internal.nbbrd.service.ExtEnvironment;
 import internal.nbbrd.service.Instantiator;
 import internal.nbbrd.service.ProcessorUtil;
+import internal.nbbrd.service.Wrapper;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Supplier;
@@ -42,19 +44,19 @@ import nbbrd.service.ServiceSorter;
  */
 final class ServiceDefinitionCollector {
 
-    private final ProcessingEnvironment env;
+    private final ExtEnvironment env;
     private final PrimitiveType intType;
     private final PrimitiveType longType;
     private final PrimitiveType doubleType;
     private final DeclaredType comparableType;
 
     public ServiceDefinitionCollector(ProcessingEnvironment env) {
-        this.env = env;
+        this.env = new ExtEnvironment(env);
         Types types = env.getTypeUtils();
         this.intType = types.getPrimitiveType(TypeKind.INT);
         this.longType = types.getPrimitiveType(TypeKind.LONG);
         this.doubleType = types.getPrimitiveType(TypeKind.DOUBLE);
-        this.comparableType = types.getDeclaredType(env.getElementUtils().getTypeElement(Comparable.class.getName()));
+        this.comparableType = types.getDeclaredType(this.env.asTypeElement(Comparable.class));
     }
 
     public LoadData collect(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
@@ -87,23 +89,26 @@ final class ServiceDefinitionCollector {
         return result.build();
     }
 
-    private LoadDefinition definitionOf(TypeElement x) {
-        ServiceDefinition annotation = x.getAnnotation(ServiceDefinition.class);
-        ClassName serviceType = ClassName.get(x);
+    private LoadDefinition definitionOf(TypeElement serviceType) {
+        ServiceDefinition annotation = serviceType.getAnnotation(ServiceDefinition.class);
         Types types = env.getTypeUtils();
 
-        Optional<TypeHandler> fallback = nonNull(annotation::fallback)
-                .map(type -> new TypeHandler(type, Instantiator.allOf(types, (TypeElement) types.asElement(type))));
+        Optional<TypeInstantiator> fallback = nonNull(annotation::fallback)
+                .map(fallbackType -> new TypeInstantiator(fallbackType, Instantiator.allOf(types, serviceType, env.asTypeElement(fallbackType))));
 
-        Optional<TypeHandler> preprocessor = nonNull(annotation::preprocessor)
-                .map(type -> new TypeHandler(type, Instantiator.allOf(types, (TypeElement) types.asElement(type))));
+        Optional<TypeWrapper> wrapper = nonNull(annotation::wrapper)
+                .map(wrapperType -> new TypeWrapper(wrapperType, Wrapper.allOf(types, serviceType, env.asTypeElement(wrapperType))));
+
+        Optional<TypeInstantiator> preprocessor = nonNull(annotation::preprocessor)
+                .map(preprocessorType -> new TypeInstantiator(preprocessorType, Instantiator.allOf(types, env.asTypeElement(preprocessorType), env.asTypeElement(preprocessorType))));
 
         return LoadDefinition
                 .builder()
                 .quantifier(annotation.quantifier())
                 .lifecycle(Lifecycle.of(annotation.mutability(), annotation.singleton()))
-                .serviceType(serviceType)
+                .serviceType(ClassName.get(serviceType))
                 .fallback(fallback)
+                .wrapper(wrapper)
                 .preprocessor(preprocessor)
                 .loaderName(annotation.loaderName())
                 .build();
@@ -125,16 +130,17 @@ final class ServiceDefinitionCollector {
     }
 
     private LoadSorter.KeyType getKeyTypeOrNull(ExecutableElement x) {
-        if (x.getReturnType().equals(doubleType)) {
+        Types types = env.getTypeUtils();
+        if (types.isSameType(x.getReturnType(), doubleType)) {
             return LoadSorter.KeyType.DOUBLE;
         }
-        if (x.getReturnType().equals(intType)) {
+        if (types.isSameType(x.getReturnType(), intType)) {
             return LoadSorter.KeyType.INT;
         }
-        if (x.getReturnType().equals(longType)) {
+        if (types.isSameType(x.getReturnType(), longType)) {
             return LoadSorter.KeyType.LONG;
         }
-        if (env.getTypeUtils().isAssignable(x.getReturnType(), comparableType)) {
+        if (types.isAssignable(x.getReturnType(), comparableType)) {
             return LoadSorter.KeyType.COMPARABLE;
         }
         return null;

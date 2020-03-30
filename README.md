@@ -44,7 +44,7 @@ It also improves documentation by declaring services explicitly.
 Current features:
 - generates a specialized service loader with the following properties:
   - `quantifier`: optional, single or multiple service instances
-  - `preprocessor`: filter/map/sort operations 
+  - `preprocessing`: filter/map/sort operations 
   - `mutability`: none, basic or concurrent access
   - `singleton`: global or local scope
 - generates javadoc alongside code
@@ -99,16 +99,20 @@ List<Translator> multiple = TranslatorLoader.load();
 multiple.forEach(translator -> System.out.println(translator.translate("hello")));
 ```
 
-### Preprocessor property
+### Preprocessing
 
-A preprocessor applies map/filter/sort to services instances during the loading.  
+Preprocessing applies map/filter/sort to services instances during the loading.  
 It can be specified by using one of these two solutions:
-- Basic solution: `@ServiceFilter` and `@ServiceSorter` annotations
-- Advanced solution: `preprocessor` property of `@ServiceDefinition` 
+- Basic solution: 
+  - Map: `@ServiceDefinition#wrapper` property
+  - Filter: `@ServiceFilter` annotation
+  - Sort: `@ServiceSorter` annotation 
+- Advanced solution: 
+  - Preprocessor: `@ServiceDefinition#preprocessor` property
 
-Filter/sort example:
+Map/Filter/sort example:
 ```java
-@ServiceDefinition
+@ServiceDefinition(wrapper = FailSafeSearch.class)
 public interface FileSearch {
 
   List<File> searchByName(String name);
@@ -118,6 +122,21 @@ public interface FileSearch {
 
   @ServiceSorter
   int getCost();
+}
+
+class FailSafeSearch implements FileSearch {
+  
+  public FailSafeSearch(FileSearch delegate) { ... }
+
+  @Override
+  public List<File> searchByName(String name) {
+    try {
+      return delegate.searchByName(name);
+    } catch (RuntimeException unexpected) {
+      // log unexpected ...
+      return Collections.emptyList();
+    }
+  }
 }
 
 FileSearchLoader.load().ifPresent(search -> search.searchByName(".xlsx").forEach(System.out::println));
