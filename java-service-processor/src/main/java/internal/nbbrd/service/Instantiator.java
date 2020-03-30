@@ -54,7 +54,6 @@ public final class Instantiator {
                         .stream()
                         .filter(Instantiator::isNoArgPublicMethod)
                         .filter(method -> method.getModifiers().contains(Modifier.STATIC))
-                        .peek(method -> System.out.println(method.getReturnType() + " > " + service.asType()))
                         .filter(method -> util.isAssignable(method.getReturnType(), service.asType()))
                         .map(Element.class::cast);
             }

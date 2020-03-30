@@ -78,6 +78,7 @@ final class ServiceDefinitionChecker {
     }
 
     public boolean checkFilter(LoadFilter filter) {
+        Types types = env.getTypeUtils();
         ExecutableElement x = filter.getMethod();
         if (x.getModifiers().contains(Modifier.STATIC)) {
             env.error(x, "Filter method does not apply to static methods");
@@ -91,7 +92,7 @@ final class ServiceDefinitionChecker {
             env.error(x, "Filter method must have no-args");
             return false;
         }
-        if (!x.getReturnType().equals(booleanType)) {
+        if (!types.isSameType(x.getReturnType(), booleanType)) {
             env.error(x, "Filter method must return boolean");
             return false;
         }

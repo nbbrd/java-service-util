@@ -40,7 +40,7 @@ public final class Wrapper {
                 return ElementFilter
                         .constructorsIn(provider.getEnclosedElements())
                         .stream()
-                        .filter(method -> isOneArgPublicMethod(method, service))
+                        .filter(method -> isOneArgPublicMethod(util, method, service))
                         .map(Element.class::cast);
             }
         }, STATIC_METHOD {
@@ -49,7 +49,7 @@ public final class Wrapper {
                 return ElementFilter
                         .methodsIn(provider.getEnclosedElements())
                         .stream()
-                        .filter(method -> isOneArgPublicMethod(method, service))
+                        .filter(method -> isOneArgPublicMethod(util, method, service))
                         .filter(method -> method.getModifiers().contains(Modifier.STATIC))
                         .filter(method -> util.isSubtype(method.getReturnType(), service.asType()))
                         .map(Element.class::cast);
@@ -68,9 +68,9 @@ public final class Wrapper {
                 .collect(Collectors.toList());
     }
 
-    private static boolean isOneArgPublicMethod(ExecutableElement method, TypeElement service) {
+    private static boolean isOneArgPublicMethod(Types util, ExecutableElement method, TypeElement service) {
         return method.getModifiers().contains(Modifier.PUBLIC)
                 && method.getParameters().size() == 1
-                && method.getParameters().get(0).asType().equals(service.asType());
+                && util.isSameType(method.getParameters().get(0).asType(), service.asType());
     }
 }

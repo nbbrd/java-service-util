@@ -130,16 +130,17 @@ final class ServiceDefinitionCollector {
     }
 
     private LoadSorter.KeyType getKeyTypeOrNull(ExecutableElement x) {
-        if (x.getReturnType().equals(doubleType)) {
+        Types types = env.getTypeUtils();
+        if (types.isSameType(x.getReturnType(), doubleType)) {
             return LoadSorter.KeyType.DOUBLE;
         }
-        if (x.getReturnType().equals(intType)) {
+        if (types.isSameType(x.getReturnType(), intType)) {
             return LoadSorter.KeyType.INT;
         }
-        if (x.getReturnType().equals(longType)) {
+        if (types.isSameType(x.getReturnType(), longType)) {
             return LoadSorter.KeyType.LONG;
         }
-        if (env.getTypeUtils().isAssignable(x.getReturnType(), comparableType)) {
+        if (types.isAssignable(x.getReturnType(), comparableType)) {
             return LoadSorter.KeyType.COMPARABLE;
         }
         return null;
