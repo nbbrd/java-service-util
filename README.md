@@ -242,7 +242,7 @@ for (String file : files) {
 ```xml
 <dependencies>
   <dependency>
-    <groupId>be.nbb.rd</groupId>
+    <groupId>com.github.nbbrd.java-service-util</groupId>
     <artifactId>java-service-annotation</artifactId>
     <version>LATEST_VERSION</version>
     <scope>provided</scope>
@@ -257,7 +257,7 @@ for (String file : files) {
       <configuration>
         <annotationProcessorPaths>
           <path>
-            <groupId>be.nbb.rd</groupId>
+            <groupId>com.github.nbbrd.java-service-util</groupId>
             <artifactId>java-service-processor</artifactId>
             <version>LATEST_VERSION</version>
           </path>
@@ -267,21 +267,12 @@ for (String file : files) {
   </plugins>
 </build>
 
-<repositories>
-  <repository>
-    <id>oss-jfrog-artifactory-releases</id>
-    <url>https://oss.jfrog.org/artifactory/oss-release-local</url>
-    <snapshots>
-      <enabled>false</enabled>
-    </snapshots>
-  </repository>
-</repositories>
 ```
 Alternate setup if the IDE doesn't detect the processor:
 ```xml
 <dependencies>
   <dependency>
-    <groupId>be.nbb.rd</groupId>
+    <groupId>com.github.nbbrd.java-service-util</groupId>
     <artifactId>java-service-processor</artifactId>
     <version>LATEST_VERSION</version>
     <scope>provided</scope>
