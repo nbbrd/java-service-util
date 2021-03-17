@@ -1,20 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-    
-    <groupId>be.nbb.rd</groupId>
+
+    <groupId>com.github.nbbrd.java-service-util</groupId>
     <artifactId>java-service-parent</artifactId>
-    <version>1.3.0</version>
+    <version>1.3.1</version>
     <packaging>pom</packaging>
 
     <name>java-service</name>
     <description>Java service utilities</description>
     <url>https://github.com/nbbrd/java-service-util</url>
-
-    <organization>
-        <name>National Bank of Belgium</name>
-        <url>https://www.nbb.be</url>
-    </organization>
 
     <licenses>
         <license>
@@ -22,6 +18,21 @@
             <url>https://joinup.ec.europa.eu/page/eupl-text-11-12</url>
         </license>
     </licenses>
+
+    <developers>
+        <developer>
+            <name>Philippe Charles</name>
+            <email>philippe.charles@nbb.be</email>
+            <organization>National Bank of Belgium</organization>
+            <organizationUrl>https://www.nbb.be</organizationUrl>
+        </developer>
+    </developers>
+
+    <scm>
+        <connection>scm:git:git://github.com/nbbrd/java-service-util.git</connection>
+        <developerConnection>scm:git:ssh://github.com:nbbrd/java-service-util.git</developerConnection>
+        <url>http://github.com/nbbrd/java-service-util/tree/master</url>
+    </scm>
 
     <modules>
         <module>java-service-annotation</module>
@@ -35,38 +46,28 @@
             <dependency>
                 <groupId>org.projectlombok</groupId>
                 <artifactId>lombok</artifactId>
-                <version>1.18.12</version>
+                <version>1.18.18</version>
             </dependency>
             <dependency>
                 <groupId>org.netbeans.api</groupId>
                 <artifactId>org-openide-util-lookup</artifactId>
-                <version>RELEASE113</version>
+                <version>RELEASE123</version>
             </dependency>
 
             <!-- test libraries -->
             <dependency>
                 <groupId>junit</groupId>
                 <artifactId>junit</artifactId>
-                <version>4.13</version>
+                <version>4.13.2</version>
             </dependency>
             <dependency>
                 <groupId>org.assertj</groupId>
                 <artifactId>assertj-core</artifactId>
-                <version>3.15.0</version>
+                <version>3.19.0</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
-    
-    <repositories>
-        <repository>
-            <id>oss-jfrog-artifactory-releases</id>
-            <url>https://oss.jfrog.org/artifactory/oss-release-local</url>
-            <snapshots>
-                <enabled>false</enabled>
-            </snapshots>
-        </repository>
-    </repositories>
-    
+
     <profiles>
         <!-- Base Java8 build -->
         <profile>
@@ -79,7 +80,7 @@
             <properties>
                 <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
                 <maven.compiler.target>1.8</maven.compiler.target>
-                <maven.compiler.source>1.8</maven.compiler.source>                
+                <maven.compiler.source>1.8</maven.compiler.source>
             </properties>
             <build>
                 <plugins>
@@ -96,7 +97,7 @@
                 </plugins>
             </build>
         </profile>
-        
+
         <!-- Enforce Java8 API -->
         <profile>
             <id>enforce-java8-api</id>
@@ -107,8 +108,8 @@
                 <maven.compiler.release>8</maven.compiler.release>
             </properties>
         </profile>
-        
-        <!-- Enforce dependency rules -->
+
+        <!-- Enforce dependency & Maven-central rules -->
         <profile>
             <id>enforce-dependency-rules</id>
             <activation>
@@ -122,9 +123,19 @@
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-enforcer-plugin</artifactId>
                         <version>3.0.0-M3</version>
+                        <dependencies>
+                            <dependency>
+                                <groupId>org.kordamp.maven</groupId>
+                                <artifactId>pomchecker-enforcer-rules</artifactId>
+                                <version>1.1.0</version>
+                            </dependency>
+                        </dependencies>
                         <executions>
                             <execution>
                                 <id>enforce</id>
+                                <goals>
+                                    <goal>enforce</goal>
+                                </goals>
                                 <configuration>
                                     <rules>
                                         <requireMavenVersion>
@@ -134,18 +145,20 @@
                                         <requireReleaseDeps>
                                             <onlyWhenRelease>true</onlyWhenRelease>
                                         </requireReleaseDeps>
+                                        <CheckMavenCentral
+                                                implementation="org.kordamp.maven.enforcer.checker.CheckMavenCentral">
+                                            <release>false</release>
+                                            <strict>false</strict>
+                                        </CheckMavenCentral>
                                     </rules>
                                 </configuration>
-                                <goals>
-                                    <goal>enforce</goal>
-                                </goals>
                             </execution>
                         </executions>
                     </plugin>
                 </plugins>
             </build>
         </profile>
-        
+
         <!-- Enforce modern API -->
         <profile>
             <id>enforce-modern-api</id>
@@ -176,7 +189,7 @@
                 </plugins>
             </build>
         </profile>
-        
+
         <!-- Enforce code coverage -->
         <profile>
             <id>enforce-code-coverage</id>
@@ -184,57 +197,25 @@
                 <property>
                     <name>!skipEnforceCodeCoverage</name>
                 </property>
+                <jdk>(,11]</jdk>
             </activation>
             <build>
                 <plugins>
                     <plugin>
                         <groupId>org.jacoco</groupId>
-                        <artifactId>jacoco-maven-plugin</artifactId> 
-                        <version>0.8.5</version> 
-                        <executions> 
-                            <execution> 
-                                <goals> 
-                                    <goal>prepare-agent</goal> 
-                                </goals>
-                            </execution>
-                            <execution> 
-                                <id>report</id> 
-                                <phase>prepare-package</phase> 
-                                <goals> 
-                                    <goal>report</goal> 
-                                </goals> 
-                            </execution>
-                        </executions>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-        
-        <!-- Deploy SNAPSHOTS to jfrog with sources -->
-        <profile>
-            <id>deploy-snapshots</id>
-            <distributionManagement>
-                <snapshotRepository>
-                    <id>oss-jfrog-artifactory</id>
-                    <url>https://oss.jfrog.org/artifactory/oss-snapshot-local</url>
-                </snapshotRepository>
-            </distributionManagement>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-deploy-plugin</artifactId>
-                        <version>3.0.0-M1</version>
-                    </plugin>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-source-plugin</artifactId>
-                        <version>3.2.1</version>
+                        <artifactId>jacoco-maven-plugin</artifactId>
+                        <version>0.8.6</version>
                         <executions>
                             <execution>
-                                <phase>verify</phase>
                                 <goals>
-                                    <goal>jar-no-fork</goal>
+                                    <goal>prepare-agent</goal>
+                                </goals>
+                            </execution>
+                            <execution>
+                                <id>report</id>
+                                <phase>prepare-package</phase>
+                                <goals>
+                                    <goal>report</goal>
                                 </goals>
                             </execution>
                         </executions>
@@ -243,21 +224,27 @@
             </build>
         </profile>
 
-        <!-- Deploy RELEASES to jfrog with sources -->
+        <!-- Deploy SNAPSHOTS to OSSRH -->
         <profile>
-            <id>deploy-releases</id>
+            <id>deploy-snapshots</id>
             <distributionManagement>
-                <repository>
-                    <id>oss-jfrog-artifactory</id>
-                    <url>https://oss.jfrog.org/artifactory/oss-release-local</url>
-                </repository>
+                <snapshotRepository>
+                    <id>ossrh</id>
+                    <url>https://s01.oss.sonatype.org/content/repositories/snapshots/</url>
+                </snapshotRepository>
             </distributionManagement>
             <build>
                 <plugins>
                     <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-deploy-plugin</artifactId>
-                        <version>3.0.0-M1</version>
+                        <groupId>org.sonatype.plugins</groupId>
+                        <artifactId>nexus-staging-maven-plugin</artifactId>
+                        <version>1.6.8</version>
+                        <extensions>true</extensions>
+                        <configuration>
+                            <serverId>ossrh</serverId>
+                            <nexusUrl>https://s01.oss.sonatype.org/</nexusUrl>
+                            <autoReleaseAfterClose>true</autoReleaseAfterClose>
+                        </configuration>
                     </plugin>
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
@@ -265,9 +252,104 @@
                         <version>3.2.1</version>
                         <executions>
                             <execution>
-                                <phase>verify</phase>
+                                <id>attach-sources</id>
                                 <goals>
                                     <goal>jar-no-fork</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-javadoc-plugin</artifactId>
+                        <version>3.2.0</version>
+                        <executions>
+                            <execution>
+                                <id>attach-javadocs</id>
+                                <goals>
+                                    <goal>jar</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                        <configuration>
+                            <excludePackageNames>internal:internal.*:shaded:shaded.*</excludePackageNames>
+                        </configuration>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.simplify4u.plugins</groupId>
+                        <artifactId>sign-maven-plugin</artifactId>
+                        <version>0.3.0</version>
+                        <executions>
+                            <execution>
+                                <goals>
+                                    <goal>sign</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
+        <!-- Deploy RELEASES to OSSRH -->
+        <profile>
+            <id>deploy-releases</id>
+            <distributionManagement>
+                <repository>
+                    <id>ossrh</id>
+                    <url>https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+                </repository>
+            </distributionManagement>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.sonatype.plugins</groupId>
+                        <artifactId>nexus-staging-maven-plugin</artifactId>
+                        <version>1.6.8</version>
+                        <extensions>true</extensions>
+                        <configuration>
+                            <serverId>ossrh</serverId>
+                            <nexusUrl>https://s01.oss.sonatype.org/</nexusUrl>
+                            <autoReleaseAfterClose>true</autoReleaseAfterClose>
+                        </configuration>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-source-plugin</artifactId>
+                        <version>3.2.1</version>
+                        <executions>
+                            <execution>
+                                <id>attach-sources</id>
+                                <goals>
+                                    <goal>jar-no-fork</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-javadoc-plugin</artifactId>
+                        <version>3.2.0</version>
+                        <executions>
+                            <execution>
+                                <id>attach-javadocs</id>
+                                <goals>
+                                    <goal>jar</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                        <configuration>
+                            <excludePackageNames>internal:internal.*:shaded:shaded.*</excludePackageNames>
+                        </configuration>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.simplify4u.plugins</groupId>
+                        <artifactId>sign-maven-plugin</artifactId>
+                        <version>0.3.0</version>
+                        <executions>
+                            <execution>
+                                <goals>
+                                    <goal>sign</goal>
                                 </goals>
                             </execution>
                         </executions>

@@ -63,14 +63,14 @@ public @interface ServiceDefinition {
     /**
      * Specifies how many instances are returned by the loader.
      *
-     * @return
+     * @return a non-null quantifier
      */
     Quantifier quantifier() default Quantifier.OPTIONAL;
 
     /**
      * Specifies the mutability of the loader.
      *
-     * @return
+     * @return a non-null mutability
      */
     Mutability mutability() default Mutability.NONE;
 
@@ -83,7 +83,7 @@ public @interface ServiceDefinition {
 
     /**
      * Specifies the fallback class to use if no service is available.<br>This
-     * option is only used in conjunction with {@link Quantifier.SINGLE}.
+     * option is only used in conjunction with {@link Quantifier#SINGLE}.
      * <p>
      * Requirements:
      * <ul>

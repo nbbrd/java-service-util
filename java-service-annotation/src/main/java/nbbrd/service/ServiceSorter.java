@@ -35,7 +35,7 @@ public @interface ServiceSorter {
     /**
      * Applies a reverse sorting.
      *
-     * @return
+     * @return true for reverse sorting, false otherwise
      */
     boolean reverse() default false;
 

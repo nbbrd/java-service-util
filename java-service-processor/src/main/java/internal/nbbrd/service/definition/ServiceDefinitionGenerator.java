@@ -118,12 +118,14 @@ final class ServiceDefinitionGenerator {
                 .add("Custom service loader for $L.\n", toJavadocLink(definition.getServiceType()))
                 .add("<br>This class $L thread-safe.\n", definition.getLifecycle().isThreadSafe() ? "is" : "is not")
                 .add("<p>Properties:\n")
-                .add("<li>Quantifier: $L\n", definition.getQuantifier())
-                .add("<li>Fallback: $L\n", toJavadocLink(definition.getFallback()))
-                .add("<li>Preprocessing: $L\n", getPreprocessingJavadoc())
-                .add("<li>Mutability: $L\n", definition.getLifecycle().toMutability())
-                .add("<li>Singleton: $L\n", definition.getLifecycle().isSingleton())
-                .add("<li>Name: $L\n", definition.getLoaderName().isEmpty() ? "null" : definition.getLoaderName())
+                .add("<ul>\n")
+                .add("<li>Quantifier: $L</li>\n", definition.getQuantifier())
+                .add("<li>Fallback: $L</li>\n", toJavadocLink(definition.getFallback()))
+                .add("<li>Preprocessing: $L</li>\n", getPreprocessingJavadoc())
+                .add("<li>Mutability: $L</li>\n", definition.getLifecycle().toMutability())
+                .add("<li>Singleton: $L</li>\n", definition.getLifecycle().isSingleton())
+                .add("<li>Name: $L</li>\n", definition.getLoaderName().isEmpty() ? "null" : definition.getLoaderName())
+                .add("</ul>\n")
                 .build();
     }
 
