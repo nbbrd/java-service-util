@@ -55,7 +55,7 @@ public @interface ServiceProvider {
      * value is optional if the provider implements/extends exactly one
      * interface/class.
      *
-     * @return
+     * @return a non-null type
      */
     Class<?> value() default Void.class;
 
