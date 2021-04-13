@@ -42,7 +42,7 @@ import org.antlr.v4.runtime.tree.ParseTreeWalker;
  * @author Philippe Charles
  */
 @lombok.Value
-@lombok.Builder(builderClassName = "Builder")
+@lombok.Builder
 public class ModuleInfoEntries {
 
     @lombok.Singular
