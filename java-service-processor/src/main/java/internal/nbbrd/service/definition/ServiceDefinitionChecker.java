@@ -1,42 +1,41 @@
 /*
  * Copyright 2019 National Bank of Belgium
- * 
- * Licensed under the EUPL, Version 1.1 or - as soon they will be approved 
+ *
+ * Licensed under the EUPL, Version 1.1 or - as soon they will be approved
  * by the European Commission - subsequent versions of the EUPL (the "Licence");
  * You may not use this work except in compliance with the Licence.
  * You may obtain a copy of the Licence at:
- * 
+ *
  * http://ec.europa.eu/idabc/eupl
- * 
- * Unless required by applicable law or agreed to in writing, software 
+ *
+ * Unless required by applicable law or agreed to in writing, software
  * distributed under the Licence is distributed on an "AS IS" basis,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the Licence for the specific language governing permissions and 
+ * See the Licence for the specific language governing permissions and
  * limitations under the Licence.
  */
 package internal.nbbrd.service.definition;
 
+import internal.nbbrd.service.ExtEnvironment;
 import internal.nbbrd.service.ModuleInfoEntries;
-import java.io.IOException;
-import java.util.List;
-import java.util.Optional;
-import java.util.stream.Collectors;
+import nbbrd.service.Quantifier;
+import nbbrd.service.ServiceDefinition;
+
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
-import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.PrimitiveType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Types;
 import javax.tools.Diagnostic;
-import nbbrd.service.Quantifier;
-import nbbrd.service.ServiceDefinition;
-import internal.nbbrd.service.ExtEnvironment;
+import java.io.IOException;
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 /**
- *
  * @author Philippe Charles
  */
 final class ServiceDefinitionChecker {
@@ -133,6 +132,12 @@ final class ServiceDefinitionChecker {
         if (!checkPreprocessor(definition.getPreprocessor(), service, types)) {
             return false;
         }
+        if (!checkBackend(definition.getBackend(), service, types)) {
+            return false;
+        }
+        if (!checkCleaner(definition.getCleaner(), service, types)) {
+            return false;
+        }
         if (!checkMutability(definition, service, types)) {
             return false;
         }
@@ -206,9 +211,53 @@ final class ServiceDefinitionChecker {
     }
 
     private boolean checkPreprocessorTypeHandler(TypeInstantiator handler, TypeElement service, Types types) {
-        DeclaredType unaryOperatorOf = LoadDefinition.getPreprocessorType(env, service);
-        if (!types.isAssignable(handler.getType(), unaryOperatorOf)) {
-            env.error(service, String.format("Preprocessor '%1$s' doesn't extend nor implement 'UnaryOperator<Stream<%2$s>>'", handler.getType(), service));
+        TypeMirror expectedType = LoadDefinition.getPreprocessorType(env, service.asType());
+        if (!types.isAssignable(handler.getType(), expectedType)) {
+            env.error(service, String.format("Preprocessor '%1$s' doesn't extend nor implement '%2$s'", handler.getType(), expectedType));
+            return false;
+        }
+
+        if (!checkInstanceFactories(service, handler.getType(), handler)) {
+            return false;
+        }
+        return true;
+    }
+
+    private boolean checkBackend(Optional<TypeInstantiator> backend, TypeElement service, Types types) {
+        if (backend.isPresent()) {
+            if (!checkBackendTypeHandler(backend.get(), service, types)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private boolean checkBackendTypeHandler(TypeInstantiator handler, TypeElement service, Types types) {
+        TypeMirror expectedType = LoadDefinition.getBackendType(env, service.asType());
+        if (!types.isAssignable(handler.getType(), expectedType)) {
+            env.error(service, String.format("Backend '%1$s' doesn't extend nor implement '%2$s'", handler.getType(), expectedType));
+            return false;
+        }
+
+        if (!checkInstanceFactories(service, handler.getType(), handler)) {
+            return false;
+        }
+        return true;
+    }
+
+    private boolean checkCleaner(Optional<TypeInstantiator> cleaner, TypeElement service, Types types) {
+        if (cleaner.isPresent()) {
+            if (!checkCleanerTypeHandler(cleaner.get(), service, types)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private boolean checkCleanerTypeHandler(TypeInstantiator handler, TypeElement service, Types types) {
+        TypeMirror expectedType = LoadDefinition.getCleanerType(env, service.asType());
+        if (!types.isAssignable(handler.getType(), expectedType)) {
+            env.error(service, String.format("Cleaner '%1$s' doesn't extend nor implement '%2$s'", handler.getType(), expectedType));
             return false;
         }
 

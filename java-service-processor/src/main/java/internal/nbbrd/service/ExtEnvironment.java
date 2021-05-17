@@ -38,7 +38,7 @@ public final class ExtEnvironment implements ProcessingEnvironment {
     }
 
     public TypeElement asTypeElement(Class<?> o) {
-        return delegate.getElementUtils().getTypeElement(o.getName());
+        return delegate.getElementUtils().getTypeElement(o.getCanonicalName());
     }
 
     public TypeElement asTypeElement(ClassName o) {

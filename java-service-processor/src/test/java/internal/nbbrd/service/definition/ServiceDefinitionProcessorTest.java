@@ -41,7 +41,7 @@ public class ServiceDefinitionProcessorTest {
         assertThat(compilation)
                 .generatedSourceFile("definition.NonNestedDefLoader")
                 .contentsAsUtf8String()
-                .contains("private final ServiceLoader<NonNestedDef> source = ServiceLoader.load(NonNestedDef.class);");
+                .contains("private final Iterable source = ServiceLoader.load(NonNestedDef.class);");
     }
 
     @Test
@@ -443,6 +443,34 @@ public class ServiceDefinitionProcessorTest {
                 .hadErrorContaining("Sorter method must return double, int, long or comparable")
                 .inFile(file)
                 .onLine(10);
+    }
+
+    @Test
+    public void testCustomBackend() {
+        JavaFileObject file = JavaFileObjects.forResource("definition/CustomBackend.java");
+        Compilation compilation = compile(file);
+
+        assertThat(compilation)
+                .succeededWithoutWarnings();
+
+        assertThat(compilation)
+                .generatedSourceFile("definition.CustomBackendLoader")
+                .contentsAsUtf8String()
+                .contains("private final Iterable source = CustomBackend.NetBeansLookup.INSTANCE.apply(CustomBackend.class);");
+    }
+
+    @Test
+    public void testNonAssignableBackend() {
+        JavaFileObject file = JavaFileObjects.forResource("definition/NonAssignableBackend.java");
+        Compilation compilation = compile(file);
+
+        assertThat(compilation)
+                .failed();
+
+        assertThat(compilation)
+                .hadErrorContaining("doesn't extend nor implement")
+                .inFile(file)
+                .onLine(11);
     }
 
     private Compilation compile(JavaFileObject file) {

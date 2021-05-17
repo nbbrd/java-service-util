@@ -1,26 +1,25 @@
 /*
  * Copyright 2019 National Bank of Belgium
- * 
- * Licensed under the EUPL, Version 1.1 or - as soon they will be approved 
+ *
+ * Licensed under the EUPL, Version 1.1 or - as soon they will be approved
  * by the European Commission - subsequent versions of the EUPL (the "Licence");
  * You may not use this work except in compliance with the Licence.
  * You may obtain a copy of the Licence at:
- * 
+ *
  * http://ec.europa.eu/idabc/eupl
- * 
- * Unless required by applicable law or agreed to in writing, software 
+ *
+ * Unless required by applicable law or agreed to in writing, software
  * distributed under the Licence is distributed on an "AS IS" basis,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the Licence for the specific language governing permissions and 
+ * See the Licence for the specific language governing permissions and
  * limitations under the Licence.
  */
 package nbbrd.service;
 
-import java.lang.annotation.Documented;
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import java.lang.annotation.*;
+import java.util.ServiceLoader;
+import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.UnaryOperator;
 import java.util.stream.Stream;
 
@@ -117,7 +116,7 @@ public @interface ServiceDefinition {
      * <p>
      * Requirements:
      * <ul>
-     * <li>must be assignable to {@code UnaryOperator<? extends Stream<T>>}
+     * <li>must be assignable to {@code UnaryOperator<? extends Stream<SERVICE_TYPE>>}
      * <li>must be instantiable either by constructor, static method, enum field
      * or static final field
      * </ul>
@@ -135,11 +134,59 @@ public @interface ServiceDefinition {
      */
     String loaderName() default "";
 
+    /**
+     * Specifies the class that creates a service loader.
+     * <br>The default backend uses {@link ServiceLoader#load(Class)}.
+     * <p>
+     * Requirements:
+     * <ul>
+     * <li>must be assignable to {@code Function<Class, ? extends Iterable>}
+     * <li>must be instantiable either by constructor, static method, enum field
+     * or static final field
+     * </ul>
+     *
+     * @return the backend class if required, {@link DefaultBackend}
+     * otherwise
+     */
+    Class<? extends Function<? extends Class, ? extends Iterable>> backend() default DefaultBackend.class;
+
+    /**
+     * Specifies the class that deals with the cache cleaning.
+     * <br>The default cleaner uses {@link ServiceLoader#reload()}.
+     * <p>
+     * Requirements:
+     * <ul>
+     * <li>must be assignable to {@code Consumer<? extends Iterable>}
+     * <li>must be instantiable either by constructor, static method, enum field
+     * or static final field
+     * </ul>
+     *
+     * @return the backend class if required, {@link DefaultCleaner}
+     * otherwise
+     */
+    Class<? extends Consumer<? extends Iterable>> cleaner() default DefaultCleaner.class;
+
     final class NoProcessing implements UnaryOperator<Stream> {
 
         @Override
         public Stream apply(Stream t) {
             return t;
+        }
+    }
+
+    final class DefaultBackend implements Function<Class, Iterable> {
+
+        @Override
+        public Iterable apply(Class type) {
+            return ServiceLoader.load(type);
+        }
+    }
+
+    final class DefaultCleaner implements Consumer<Iterable> {
+
+        @Override
+        public void accept(Iterable serviceLoader) {
+            ((ServiceLoader) serviceLoader).reload();
         }
     }
 }
