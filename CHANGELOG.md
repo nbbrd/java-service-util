@@ -20,7 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.2.1] - 2019-10-18
 
 ### Fixed
-- Fixed NPE in ClassPathRegistry#getRelativeName(Name) with some JDK
+- Fixed NPE in `ClassPathRegistry#getRelativeName(Name)` with some JDK
 
 ## [1.2.0] - 2019-10-16
 

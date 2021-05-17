@@ -29,15 +29,15 @@ public interface LoggerFinder {
 
     Consumer<String> getLogger(String name);
 
-    public static class FallbackLogger implements LoggerFinder {
+    class FallbackLogger implements LoggerFinder {
 
         @Override
         public Consumer<String> getLogger(String name) {
-            return message -> System.out.println(String.format("[%s] %s", name, message));
+            return message -> System.out.printf("[%s] %s%n", name, message);
         }
     }
 
-    public static void main(String[] args) {
+    static void main(String[] args) {
         LoggerFinder single = LoggerFinderLoader.load();
         single.getLogger("MyClass").accept("some message");
     }

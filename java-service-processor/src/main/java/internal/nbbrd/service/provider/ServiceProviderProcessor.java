@@ -1,45 +1,40 @@
 /*
  * Copyright 2019 National Bank of Belgium
- * 
- * Licensed under the EUPL, Version 1.1 or - as soon they will be approved 
+ *
+ * Licensed under the EUPL, Version 1.1 or - as soon they will be approved
  * by the European Commission - subsequent versions of the EUPL (the "Licence");
  * You may not use this work except in compliance with the Licence.
  * You may obtain a copy of the Licence at:
- * 
+ *
  * http://ec.europa.eu/idabc/eupl
- * 
- * Unless required by applicable law or agreed to in writing, software 
+ *
+ * Unless required by applicable law or agreed to in writing, software
  * distributed under the Licence is distributed on an "AS IS" basis,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the Licence for the specific language governing permissions and 
+ * See the Licence for the specific language governing permissions and
  * limitations under the Licence.
  */
 package internal.nbbrd.service.provider;
 
 import internal.nbbrd.service.Instantiator;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
+
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.Processor;
 import javax.annotation.processing.RoundEnvironment;
 import javax.annotation.processing.SupportedAnnotationTypes;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.ElementKind;
-import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
 import javax.tools.Diagnostic;
+import java.io.IOException;
+import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
- *
  * @author Philippe Charles
  */
 @org.openide.util.lookup.ServiceProvider(service = Processor.class)
@@ -120,7 +115,7 @@ public final class ServiceProviderProcessor extends AbstractProcessor {
             case CONSTRUCTOR:
                 return true;
             case STATIC_METHOD:
-                return ((ExecutableElement) instantiator.getElement()).getSimpleName().contentEquals("provider");
+                return instantiator.getElement().getSimpleName().contentEquals("provider");
             default:
                 return false;
         }
@@ -156,7 +151,7 @@ public final class ServiceProviderProcessor extends AbstractProcessor {
 
             System.out.println(Arrays.toString(annotationRefs.toArray()));
             System.out.println(Arrays.toString(modulePathEntries.toArray()));
-            
+
             getMissingEntries(annotationRefs, modulePathEntries)
                     .forEachOrdered(entry -> errorEntry(entry, "Missing annotation for '" + entry + "'"));
         });

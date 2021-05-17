@@ -135,7 +135,7 @@ public @interface ServiceDefinition {
      */
     String loaderName() default "";
 
-    static final class NoProcessing implements UnaryOperator<Stream> {
+    final class NoProcessing implements UnaryOperator<Stream> {
 
         @Override
         public Stream apply(Stream t) {

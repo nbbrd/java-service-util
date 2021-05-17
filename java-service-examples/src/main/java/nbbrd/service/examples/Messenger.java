@@ -30,11 +30,11 @@ public interface Messenger {
 
     void send(String message);
 
-    public static void main(String[] args) {
+    static void main(String[] args) {
         MessengerLoader loader = new MessengerLoader();
         loader.get().ifPresent(o -> o.send("First"));
 
-        loader.set(Optional.of(msg -> System.out.println(msg)));
+        loader.set(Optional.of(System.out::println));
         loader.get().ifPresent(o -> o.send("Second"));
 
         loader.set(Optional.of(msg -> JOptionPane.showMessageDialog(null, msg)));

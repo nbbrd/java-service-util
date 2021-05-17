@@ -29,7 +29,7 @@ public interface Translator {
 
     String translate(String text);
 
-    public static void main(String[] args) {
+    static void main(String[] args) {
         List<Translator> multiple = TranslatorLoader.load();
         multiple.forEach(translator -> System.out.println(translator.translate("hello")));
     }

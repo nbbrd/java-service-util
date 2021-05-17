@@ -27,12 +27,10 @@ import javax.lang.model.element.TypeElement;
  * @author Philippe Charles
  */
 @lombok.Value
-final class ProviderRef {
+class ProviderRef {
 
-    @lombok.NonNull
-    private final TypeElement service;
-    @lombok.NonNull
-    private final TypeElement provider;
+    @lombok.NonNull TypeElement service;
+    @lombok.NonNull TypeElement provider;
 
     @Override
     public String toString() {

@@ -33,13 +33,13 @@ import nbbrd.service.Quantifier;
 @lombok.Builder
 class LoadDefinition {
 
-    private Quantifier quantifier;
-    private Lifecycle lifecycle;
-    private ClassName serviceType;
-    private Optional<TypeInstantiator> fallback;
-    private Optional<TypeWrapper> wrapper;
-    private Optional<TypeInstantiator> preprocessor;
-    private String loaderName;
+    Quantifier quantifier;
+    Lifecycle lifecycle;
+    ClassName serviceType;
+    Optional<TypeInstantiator> fallback;
+    Optional<TypeWrapper> wrapper;
+    Optional<TypeInstantiator> preprocessor;
+    String loaderName;
 
     public ClassName resolveLoaderName() {
         return resolveLoaderName(loaderName, serviceType);

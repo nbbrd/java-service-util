@@ -37,7 +37,7 @@ public interface FileSearch {
     @ServiceSorter
     int getCost();
 
-    public static void main(String[] args) {
+    static void main(String[] args) {
         FileSearchLoader.load().ifPresent(search -> search.searchByName(".xlsx").forEach(System.out::println));
     }
 }

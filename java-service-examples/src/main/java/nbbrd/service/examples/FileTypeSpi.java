@@ -49,7 +49,7 @@ public interface FileTypeSpi {
     Accuracy getAccuracy();
 
     @ServiceProvider
-    static final class ByExtensionProbe implements FileTypeSpi {
+    final class ByExtensionProbe implements FileTypeSpi {
 
         final Map<String, String> typeByExtension;
 
@@ -76,7 +76,7 @@ public interface FileTypeSpi {
     }
 
     @ServiceProvider
-    static final class ByMagicNumberProbe implements FileTypeSpi {
+    final class ByMagicNumberProbe implements FileTypeSpi {
 
         @Override
         public String getContentTypeOrNull(Path file) throws IOException {

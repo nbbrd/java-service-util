@@ -28,12 +28,12 @@ import javax.lang.model.element.TypeElement;
 class LoadSorter {
 
     public enum KeyType {
-        DOUBLE, INT, LONG, COMPARABLE;
+        DOUBLE, INT, LONG, COMPARABLE
     }
 
-    private ExecutableElement method;
-    private boolean reverse;
-    private int position;
-    private Optional<KeyType> keyType;
-    private Optional<TypeElement> serviceType;
+    ExecutableElement method;
+    boolean reverse;
+    int position;
+    Optional<KeyType> keyType;
+    Optional<TypeElement> serviceType;
 }

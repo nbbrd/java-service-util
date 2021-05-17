@@ -47,7 +47,7 @@ import nbbrd.service.Quantifier;
  * @author Philippe Charles
  */
 @lombok.Value
-final class ServiceDefinitionGenerator {
+class ServiceDefinitionGenerator {
 
     public static List<ServiceDefinitionGenerator> allOf(
             List<LoadDefinition> definitions,
@@ -69,9 +69,9 @@ final class ServiceDefinitionGenerator {
         );
     }
 
-    private final LoadDefinition definition;
-    private final List<LoadFilter> filters;
-    private final List<LoadSorter> sorters;
+    LoadDefinition definition;
+    List<LoadFilter> filters;
+    List<LoadSorter> sorters;
 
     public TypeSpec generate(boolean nested) {
         String className = definition.resolveLoaderName().simpleName();

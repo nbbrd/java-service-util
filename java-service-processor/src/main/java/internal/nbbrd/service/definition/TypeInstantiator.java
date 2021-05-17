@@ -28,8 +28,8 @@ import javax.lang.model.type.TypeMirror;
 @lombok.Value
 public class TypeInstantiator {
 
-    private TypeMirror type;
-    private List<Instantiator> instantiators;
+    TypeMirror type;
+    List<Instantiator> instantiators;
 
     public Optional<Instantiator> select() {
         return instantiators.size() == 1
