@@ -5,7 +5,7 @@
     <parent>
         <groupId>com.github.nbbrd.java-service-util</groupId>
         <artifactId>java-service-parent</artifactId>
-        <version>1.3.2</version>
+        <version>1.4.0</version>
     </parent>
 
     <artifactId>java-service-processor</artifactId>
@@ -83,7 +83,7 @@
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
-            <version>30.1-jre</version>
+            <version>30.1.1-jre</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
@@ -161,11 +161,11 @@
                     <relocations>
                         <relocation>
                             <pattern>org.antlr</pattern>
-                            <shadedPattern>internal.org.antlr</shadedPattern>
+                            <shadedPattern>internal.nbbrd.service.org.antlr</shadedPattern>
                         </relocation>
                         <relocation>
                             <pattern>com.squareup.javapoet</pattern>
-                            <shadedPattern>internal.com.squareup.javapoet</shadedPattern>
+                            <shadedPattern>internal.nbbrd.service.com.squareup.javapoet</shadedPattern>
                         </relocation>
                     </relocations>
                 </configuration>

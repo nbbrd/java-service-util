@@ -33,7 +33,7 @@ import javax.lang.model.util.Types;
  * @author Philippe Charles
  */
 @lombok.Value
-public final class Instantiator {
+public class Instantiator {
 
     public enum Kind {
         CONSTRUCTOR {
@@ -88,8 +88,8 @@ public final class Instantiator {
         public abstract Stream<Element> parse(Types util, TypeElement service, TypeElement provider);
     }
 
-    private Kind kind;
-    private Element element;
+    Kind kind;
+    Element element;
 
     public static List<Instantiator> allOf(Types util, TypeElement service, TypeElement provider) {
         return Stream.of(Kind.values())

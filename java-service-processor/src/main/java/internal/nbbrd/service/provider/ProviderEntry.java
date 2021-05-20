@@ -21,12 +21,13 @@ package internal.nbbrd.service.provider;
  * @author Philippe Charles
  */
 @lombok.Value
-final class ProviderEntry {
+class ProviderEntry {
 
     @lombok.NonNull
-    private final String service;
+    String service;
+
     @lombok.NonNull
-    private final String provider;
+    String provider;
 
     @Override
     public String toString() {

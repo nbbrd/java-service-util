@@ -1,53 +1,41 @@
 /*
  * Copyright 2019 National Bank of Belgium
- * 
- * Licensed under the EUPL, Version 1.1 or - as soon they will be approved 
+ *
+ * Licensed under the EUPL, Version 1.1 or - as soon they will be approved
  * by the European Commission - subsequent versions of the EUPL (the "Licence");
  * You may not use this work except in compliance with the Licence.
  * You may obtain a copy of the Licence at:
- * 
+ *
  * http://ec.europa.eu/idabc/eupl
- * 
- * Unless required by applicable law or agreed to in writing, software 
+ *
+ * Unless required by applicable law or agreed to in writing, software
  * distributed under the Licence is distributed on an "AS IS" basis,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the Licence for the specific language governing permissions and 
+ * See the Licence for the specific language governing permissions and
  * limitations under the Licence.
  */
 package internal.nbbrd.service.definition;
 
-import com.squareup.javapoet.ClassName;
-import com.squareup.javapoet.CodeBlock;
-import com.squareup.javapoet.FieldSpec;
-import com.squareup.javapoet.MethodSpec;
-import com.squareup.javapoet.ParameterizedTypeName;
-import com.squareup.javapoet.TypeName;
-import com.squareup.javapoet.TypeSpec;
+import com.squareup.javapoet.*;
 import internal.nbbrd.service.Instantiator;
 import internal.nbbrd.service.Unreachable;
 import internal.nbbrd.service.Wrapper;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.ServiceLoader;
+import nbbrd.service.Quantifier;
+
+import javax.lang.model.element.ExecutableElement;
+import javax.lang.model.element.Modifier;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
-import javax.lang.model.element.ExecutableElement;
-import javax.lang.model.element.Modifier;
-import nbbrd.service.Quantifier;
 
 /**
- *
  * @author Philippe Charles
  */
 @lombok.Value
-final class ServiceDefinitionGenerator {
+class ServiceDefinitionGenerator {
 
     public static List<ServiceDefinitionGenerator> allOf(
             List<LoadDefinition> definitions,
@@ -69,9 +57,9 @@ final class ServiceDefinitionGenerator {
         );
     }
 
-    private final LoadDefinition definition;
-    private final List<LoadFilter> filters;
-    private final List<LoadSorter> sorters;
+    LoadDefinition definition;
+    List<LoadFilter> filters;
+    List<LoadSorter> sorters;
 
     public TypeSpec generate(boolean nested) {
         String className = definition.resolveLoaderName().simpleName();
@@ -79,7 +67,8 @@ final class ServiceDefinitionGenerator {
         TypeName quantifierType = getQuantifierType();
 
         FieldSpec sourceField = newSourceField();
-        MethodSpec doLoadMethod = newDoLoadMethod(sourceField, quantifierType);
+        MethodSpec spliteratorMethod = newSpliteratorMethod(sourceField);
+        MethodSpec doLoadMethod = newDoLoadMethod(spliteratorMethod, quantifierType);
         FieldSpec resourceField = newResourceField(doLoadMethod, quantifierType);
         MethodSpec getMethod = newGetMethod(resourceField, quantifierType);
 
@@ -87,6 +76,7 @@ final class ServiceDefinitionGenerator {
                 .addJavadoc(getMainJavadoc())
                 .addModifiers(Modifier.PUBLIC, Modifier.FINAL)
                 .addField(sourceField)
+                .addMethod(spliteratorMethod)
                 .addMethod(doLoadMethod)
                 .addField(resourceField)
                 .addMethod(getMethod);
@@ -100,8 +90,10 @@ final class ServiceDefinitionGenerator {
         }
 
         if (definition.getLifecycle().isModifiable()) {
+            FieldSpec cleanerField = newCleanerField();
+            result.addField(cleanerField);
             result.addMethod(newSetMethod(resourceField, quantifierType));
-            result.addMethod(newReloadMethod(sourceField, doLoadMethod));
+            result.addMethod(newReloadMethod(sourceField, cleanerField, doLoadMethod));
             result.addMethod(newResetMethod(sourceField, doLoadMethod));
         }
 
@@ -125,6 +117,8 @@ final class ServiceDefinitionGenerator {
                 .add("<li>Mutability: $L</li>\n", definition.getLifecycle().toMutability())
                 .add("<li>Singleton: $L</li>\n", definition.getLifecycle().isSingleton())
                 .add("<li>Name: $L</li>\n", definition.getLoaderName().isEmpty() ? "null" : definition.getLoaderName())
+                .add("<li>Backend: $L</li>\n", definition.getBackend().map(o -> o.getType().toString()).orElse("null"))
+                .add("<li>Cleaner: $L</li>\n", definition.getCleaner().map(o -> o.getType().toString()).orElse("null"))
                 .add("</ul>\n")
                 .build();
     }
@@ -148,7 +142,39 @@ final class ServiceDefinitionGenerator {
         return "null";
     }
 
-    private MethodSpec newDoLoadMethod(FieldSpec sourceField, TypeName quantifierType) {
+    private MethodSpec newSpliteratorMethod(FieldSpec sourceField) {
+        FieldSpec delegateField = FieldSpec.builder(Iterator.class, "delegate")
+                .addModifiers(Modifier.FINAL)
+                .initializer("$N.iterator()", sourceField)
+                .build();
+
+        TypeSpec delegateClass = TypeSpec.anonymousClassBuilder("$T.MAX_VALUE, 0", Long.class)
+                .superclass(typeOf(Spliterators.AbstractSpliterator.class, definition.getServiceType()))
+                .addField(delegateField)
+                .addMethod(MethodSpec.methodBuilder("tryAdvance")
+                        .addAnnotation(Override.class)
+                        .addModifiers(Modifier.PUBLIC)
+                        .addParameter(typeOf(Consumer.class, WildcardTypeName.supertypeOf(definition.getServiceType())), "action")
+                        .returns(TypeName.BOOLEAN)
+                        .addCode(CodeBlock.builder()
+                                .beginControlFlow("if ($N.hasNext())", delegateField)
+                                .addStatement("action.accept(($T) $N.next())", definition.getServiceType(), delegateField)
+                                .addStatement("return true")
+                                .endControlFlow()
+                                .build())
+                        .addStatement("return false")
+                        .build())
+                .build();
+
+        return MethodSpec.methodBuilder("spliterator")
+                .addModifiers(Modifier.PRIVATE)
+                .addModifiers(getSingletonModifiers())
+                .returns(typeOf(Spliterator.class, definition.getServiceType()))
+                .addCode("return $L;\n", delegateClass)
+                .build();
+    }
+
+    private MethodSpec newDoLoadMethod(MethodSpec spliterator, TypeName quantifierType) {
         return MethodSpec.methodBuilder("doLoad")
                 .addModifiers(Modifier.PRIVATE)
                 .addModifiers(getSingletonModifiers())
@@ -157,22 +183,22 @@ final class ServiceDefinitionGenerator {
                 .addStatement(CodeBlock
                         .builder()
                         .add("return ")
-                        .add(getPreprocessingCode(sourceField))
+                        .add(getPreprocessingCode(spliterator))
                         .add(getQuantifierCode())
                         .build())
                 .build();
     }
 
-    private CodeBlock getPreprocessingCode(FieldSpec sourceField) {
-        CodeBlock streamBlock = CodeBlock.of("$T.stream($N.spliterator(), false)", StreamSupport.class, sourceField);
+    private CodeBlock getPreprocessingCode(MethodSpec spliterator) {
+        CodeBlock streamBlock = CodeBlock.of("$T.stream($N(), false)", StreamSupport.class, spliterator);
 
         return definition.getPreprocessor().isPresent()
-                ? getAdvancedPreprocessingCode(streamBlock)
+                ? getAdvancedPreprocessingCode(streamBlock, definition.getPreprocessor().get())
                 : getBasicPreprocessingCode(streamBlock);
     }
 
-    private CodeBlock getAdvancedPreprocessingCode(CodeBlock streamBlock) {
-        return CodeBlock.of("$L\n.apply($L)", getInstantiatorCode(definition.getPreprocessor().get()), streamBlock);
+    private CodeBlock getAdvancedPreprocessingCode(CodeBlock streamBlock, TypeInstantiator preprocessor) {
+        return CodeBlock.of("$L\n.apply($L)", getInstantiatorCode(preprocessor), streamBlock);
     }
 
     private CodeBlock getBasicPreprocessingCode(CodeBlock streamBlock) {
@@ -322,11 +348,31 @@ final class ServiceDefinitionGenerator {
     }
 
     private FieldSpec newSourceField() {
-        return FieldSpec.builder(typeOf(ServiceLoader.class, definition.getServiceType()), fieldName("source"))
+        return FieldSpec.builder(Iterable.class, fieldName("source"))
                 .addModifiers(Modifier.PRIVATE, Modifier.FINAL)
                 .addModifiers(getSingletonModifiers())
-                .initializer("$T.load($T.class)", ServiceLoader.class, definition.getServiceType())
+                .initializer("$L", getBackendInitCode())
                 .build();
+    }
+
+    private CodeBlock getBackendInitCode() {
+        return definition.getBackend().isPresent()
+                ? CodeBlock.of("$L.apply($T.class)", getInstantiatorCode(definition.getBackend().get()), definition.getServiceType())
+                : CodeBlock.of("$T.load($T.class)", ServiceLoader.class, definition.getServiceType());
+    }
+
+    private FieldSpec newCleanerField() {
+        return FieldSpec.builder(typeOf(Consumer.class, ClassName.get(Iterable.class)), fieldName("cleaner"))
+                .addModifiers(Modifier.PRIVATE, Modifier.FINAL)
+                .addModifiers(getSingletonModifiers())
+                .initializer("$L", getCleanerInitCode())
+                .build();
+    }
+
+    private CodeBlock getCleanerInitCode() {
+        return definition.getCleaner().isPresent()
+                ? CodeBlock.of("$L", getInstantiatorCode(definition.getCleaner().get()))
+                : CodeBlock.of("loader -> (($T)loader).reload()", ServiceLoader.class);
     }
 
     private FieldSpec newResourceField(MethodSpec doLoadMethod, TypeName quantifierType) {
@@ -427,7 +473,7 @@ final class ServiceDefinitionGenerator {
                 : CodeBlock.of("$N = $T.requireNonNull(newValue)", resourceField, Objects.class);
     }
 
-    private MethodSpec newReloadMethod(FieldSpec sourceField, MethodSpec loaderMethod) {
+    private MethodSpec newReloadMethod(FieldSpec sourceField, FieldSpec cleanerField, MethodSpec loaderMethod) {
         MethodSpec.Builder result = MethodSpec.methodBuilder("reload")
                 .addJavadoc(CodeBlock
                         .builder()
@@ -442,7 +488,7 @@ final class ServiceDefinitionGenerator {
             result.beginControlFlow("synchronized($N)", sourceField);
         }
 
-        result.addStatement("$N.reload()", sourceField);
+        result.addStatement("$N.accept($N)", cleanerField, sourceField);
         result.addStatement("set($N())", loaderMethod);
 
         if (definition.getLifecycle().isAtomicReference()) {

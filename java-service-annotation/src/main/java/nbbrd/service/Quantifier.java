@@ -33,5 +33,5 @@ public enum Quantifier {
     /**
      * Match zero or more instances
      */
-    MULTIPLE;
+    MULTIPLE
 }

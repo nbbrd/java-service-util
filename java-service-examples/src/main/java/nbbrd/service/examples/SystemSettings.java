@@ -27,7 +27,7 @@ public interface SystemSettings {
 
     String getDeviceName();
 
-    public static void main(String[] args) {
+    static void main(String[] args) {
         SystemSettingsLoader.get().ifPresent(sys -> System.out.println(sys.getDeviceName()));
     }
 }

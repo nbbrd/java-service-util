@@ -28,8 +28,8 @@ import javax.lang.model.type.TypeMirror;
 @lombok.Value
 public class TypeWrapper {
 
-    private TypeMirror type;
-    private List<Wrapper> wrappers;
+    TypeMirror type;
+    List<Wrapper> wrappers;
 
     public Optional<Wrapper> select() {
         return wrappers.size() == 1

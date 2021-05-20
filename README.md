@@ -48,6 +48,7 @@ Current features:
   - `mutability`: none, basic or concurrent access
   - `singleton`: global or local scope
 - generates javadoc alongside code
+- allows use of custom service loader
 - checks coherence of service use in modules if `module-info.java` is available
 
 Current limitations:
@@ -195,6 +196,53 @@ public interface SystemSettings {
 SystemSettingsLoader.get().ifPresent(sys -> System.out.println(sys.getDeviceName()));
 ```
 
+### Custom service loader
+
+It is possible to use a custom service loader such as [NetBeans Lookup](https://search.maven.org/search?q=g:org.netbeans.api%20AND%20a:org-openide-util-lookup&core=gav) instead of JDK `ServiceLoader`.
+
+Example:
+```java
+@ServiceDefinition(backend = NetBeansLookup.class, cleaner = NetBeansLookup.class)
+public interface ColorScheme {
+  List<Color> getColors();
+}
+
+public enum NetBeansLookup implements Function<Class, Iterable>, Consumer<Iterable> {
+
+  INSTANCE;
+
+  @Override
+  public Iterable apply(Class type) {
+    return new NetBeansLookupResult(type);
+  }
+
+  @Override
+  public void accept(Iterable iterable) {
+    ((NetBeansLookupResult) iterable).reload();
+  }
+
+  private static final class NetBeansLookupResult implements Iterable {
+
+    private final Lookup.Result result;
+    private Collection instances;
+
+    private NetBeansLookupResult(Class type) {
+      this.result = Lookup.getDefault().lookupResult(type);
+      this.instances = result.allInstances();
+    }
+
+    @Override
+    public Iterator iterator() {
+      return instances.iterator();
+    }
+
+    public void reload() {
+      this.instances = result.allInstances();
+    }
+  }
+}
+```
+
 ### SPI pattern
 
 In some cases, it is better to clearly separate API from SPI. Here is an example on how to do it:
@@ -282,5 +330,5 @@ Alternate setup if the IDE doesn't detect the processor:
 
 ## Related work
 
-- [NetBeans lookup](https://search.maven.org/search?q=g:org.netbeans.api%20AND%20a:org-openide-util-lookup&core=gav)
+- [NetBeans Lookup](https://search.maven.org/search?q=g:org.netbeans.api%20AND%20a:org-openide-util-lookup&core=gav)
 - [Google AutoServive](https://www.baeldung.com/google-autoservice)

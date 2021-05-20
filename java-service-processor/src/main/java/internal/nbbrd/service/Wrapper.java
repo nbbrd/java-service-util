@@ -31,7 +31,7 @@ import javax.lang.model.util.Types;
  * @author Philippe Charles
  */
 @lombok.Value
-public final class Wrapper {
+public class Wrapper {
 
     public enum Kind {
         CONSTRUCTOR {
@@ -59,8 +59,8 @@ public final class Wrapper {
         public abstract Stream<Element> parse(Types util, TypeElement service, TypeElement provider);
     }
 
-    private Kind kind;
-    private Element element;
+    Kind kind;
+    Element element;
 
     public static List<Wrapper> allOf(Types util, TypeElement service, TypeElement provider) {
         return Stream.of(Kind.values())

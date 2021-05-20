@@ -23,15 +23,15 @@ import java.util.List;
  * @author Philippe Charles
  */
 @lombok.Value
-@lombok.Builder(builderClassName = "Builder")
+@lombok.Builder
 class LoadData {
 
     @lombok.Singular
-    private List<LoadDefinition> definitions;
+    List<LoadDefinition> definitions;
 
     @lombok.Singular
-    private List<LoadFilter> filters;
+    List<LoadFilter> filters;
 
     @lombok.Singular
-    private List<LoadSorter> sorters;
+    List<LoadSorter> sorters;
 }

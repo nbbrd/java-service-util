@@ -1,17 +1,17 @@
 /*
  * Copyright 2019 National Bank of Belgium
- * 
- * Licensed under the EUPL, Version 1.1 or - as soon they will be approved 
+ *
+ * Licensed under the EUPL, Version 1.1 or - as soon they will be approved
  * by the European Commission - subsequent versions of the EUPL (the "Licence");
  * You may not use this work except in compliance with the Licence.
  * You may obtain a copy of the Licence at:
- * 
+ *
  * http://ec.europa.eu/idabc/eupl
- * 
- * Unless required by applicable law or agreed to in writing, software 
+ *
+ * Unless required by applicable law or agreed to in writing, software
  * distributed under the Licence is distributed on an "AS IS" basis,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the Licence for the specific language governing permissions and 
+ * See the Licence for the specific language governing permissions and
  * limitations under the Licence.
  */
 package internal.nbbrd.service.definition;
@@ -21,9 +21,10 @@ import internal.nbbrd.service.ExtEnvironment;
 import internal.nbbrd.service.Instantiator;
 import internal.nbbrd.service.ProcessorUtil;
 import internal.nbbrd.service.Wrapper;
-import java.util.Optional;
-import java.util.Set;
-import java.util.function.Supplier;
+import nbbrd.service.ServiceDefinition;
+import nbbrd.service.ServiceFilter;
+import nbbrd.service.ServiceSorter;
+
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.element.ExecutableElement;
@@ -34,12 +35,11 @@ import javax.lang.model.type.PrimitiveType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Types;
-import nbbrd.service.ServiceDefinition;
-import nbbrd.service.ServiceFilter;
-import nbbrd.service.ServiceSorter;
+import java.util.Optional;
+import java.util.Set;
+import java.util.function.Supplier;
 
 /**
- *
  * @author Philippe Charles
  */
 final class ServiceDefinitionCollector {
@@ -93,14 +93,20 @@ final class ServiceDefinitionCollector {
         ServiceDefinition annotation = serviceType.getAnnotation(ServiceDefinition.class);
         Types types = env.getTypeUtils();
 
-        Optional<TypeInstantiator> fallback = nonNull(annotation::fallback)
+        Optional<TypeInstantiator> fallback = nonNull(annotation::fallback, Void.class)
                 .map(fallbackType -> new TypeInstantiator(fallbackType, Instantiator.allOf(types, serviceType, env.asTypeElement(fallbackType))));
 
-        Optional<TypeWrapper> wrapper = nonNull(annotation::wrapper)
+        Optional<TypeWrapper> wrapper = nonNull(annotation::wrapper, Void.class)
                 .map(wrapperType -> new TypeWrapper(wrapperType, Wrapper.allOf(types, serviceType, env.asTypeElement(wrapperType))));
 
-        Optional<TypeInstantiator> preprocessor = nonNull(annotation::preprocessor)
+        Optional<TypeInstantiator> preprocessor = nonNull(annotation::preprocessor, ServiceDefinition.NoProcessing.class)
                 .map(preprocessorType -> new TypeInstantiator(preprocessorType, Instantiator.allOf(types, env.asTypeElement(preprocessorType), env.asTypeElement(preprocessorType))));
+
+        Optional<TypeInstantiator> backend = nonNull(annotation::backend, ServiceDefinition.DefaultBackend.class)
+                .map(type -> new TypeInstantiator(type, Instantiator.allOf(types, env.asTypeElement(type), env.asTypeElement(type))));
+
+        Optional<TypeInstantiator> cleaner = nonNull(annotation::cleaner, ServiceDefinition.DefaultCleaner.class)
+                .map(type -> new TypeInstantiator(type, Instantiator.allOf(types, env.asTypeElement(type), env.asTypeElement(type))));
 
         return LoadDefinition
                 .builder()
@@ -111,6 +117,8 @@ final class ServiceDefinitionCollector {
                 .wrapper(wrapper)
                 .preprocessor(preprocessor)
                 .loaderName(annotation.loaderName())
+                .backend(backend)
+                .cleaner(cleaner)
                 .build();
     }
 
@@ -150,17 +158,9 @@ final class ServiceDefinitionCollector {
         return x.getModifiers().contains(Modifier.STATIC) ? null : (TypeElement) x.getEnclosingElement();
     }
 
-    private Optional<TypeMirror> nonNull(Supplier<Class<?>> type) {
-        return Optional.of(ProcessorUtil.extractResultType(type)).filter(this::isNonNullValue);
-    }
-
-    private boolean isNonNullValue(TypeMirror type) {
-        switch (type.toString()) {
-            case "nbbrd.service.ServiceDefinition.NoProcessing":
-            case "java.lang.Void":
-                return false;
-            default:
-                return true;
-        }
+    private Optional<TypeMirror> nonNull(Supplier<Class<?>> type, Class<?> nullType) {
+        TypeMirror nullTypeMirror = env.asTypeElement(nullType).asType();
+        return Optional.of(ProcessorUtil.extractResultType(type))
+                .filter(typeMirror -> !env.getTypeUtils().isSameType(typeMirror, nullTypeMirror));
     }
 }

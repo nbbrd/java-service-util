@@ -29,9 +29,9 @@ public interface WinRegistry {
 
     String readString(int hkey, String key, String valueName);
 
-    static int HKEY_LOCAL_MACHINE = 0;
+    int HKEY_LOCAL_MACHINE = 0;
 
-    public static void main(String[] args) {
+    static void main(String[] args) {
         Optional<WinRegistry> optional = WinRegistryLoader.load();
         optional.ifPresent(reg -> System.out.println(reg.readString(HKEY_LOCAL_MACHINE, "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion", "ProductName")));
     }

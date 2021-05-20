@@ -42,14 +42,14 @@ import org.antlr.v4.runtime.tree.ParseTreeWalker;
  * @author Philippe Charles
  */
 @lombok.Value
-@lombok.Builder(builderClassName = "Builder")
+@lombok.Builder
 public class ModuleInfoEntries {
 
     @lombok.Singular
-    private List<String> usages;
+    List<String> usages;
 
     @lombok.Builder.Default
-    private Map<String, List<String>> provisions = Collections.emptyMap();
+    Map<String, List<String>> provisions = Collections.emptyMap();
 
     public static class Builder {
 
