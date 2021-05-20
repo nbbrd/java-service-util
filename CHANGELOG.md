@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Add custom service loader [#74](https://github.com/nbbrd/java-service-util/issues/74)
+
+### Fixed
+- Fix possible collision in shadedPattern
+
 ## [1.3.2] - 2021-03-19
 
 ### Changed
