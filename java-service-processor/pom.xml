@@ -161,11 +161,11 @@
                     <relocations>
                         <relocation>
                             <pattern>org.antlr</pattern>
-                            <shadedPattern>internal.org.antlr</shadedPattern>
+                            <shadedPattern>internal.nbbrd.service.org.antlr</shadedPattern>
                         </relocation>
                         <relocation>
                             <pattern>com.squareup.javapoet</pattern>
-                            <shadedPattern>internal.com.squareup.javapoet</shadedPattern>
+                            <shadedPattern>internal.nbbrd.service.com.squareup.javapoet</shadedPattern>
                         </relocation>
                     </relocations>
                 </configuration>
