@@ -47,6 +47,11 @@
                 <artifactId>org-openide-util-lookup</artifactId>
                 <version>RELEASE123</version>
             </dependency>
+            <dependency>
+                <groupId>org.checkerframework</groupId>
+                <artifactId>checker-qual</artifactId>
+                <version>3.12.0</version>
+            </dependency>
 
             <!-- test libraries -->
             <dependency>

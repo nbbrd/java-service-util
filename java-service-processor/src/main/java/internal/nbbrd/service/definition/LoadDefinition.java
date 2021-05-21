@@ -19,6 +19,7 @@ package internal.nbbrd.service.definition;
 import com.squareup.javapoet.ClassName;
 import internal.nbbrd.service.ExtEnvironment;
 import nbbrd.service.Quantifier;
+import org.checkerframework.checker.nullness.qual.NonNull;
 
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Types;
@@ -35,17 +36,34 @@ import java.util.stream.Stream;
 @lombok.Builder
 class LoadDefinition {
 
+    @lombok.NonNull
     Quantifier quantifier;
+
+    @lombok.NonNull
     Lifecycle lifecycle;
+
+    @lombok.NonNull
     ClassName serviceType;
+
+    @lombok.NonNull
     Optional<TypeInstantiator> fallback;
+
+    @lombok.NonNull
     Optional<TypeWrapper> wrapper;
+
+    @lombok.NonNull
     Optional<TypeInstantiator> preprocessor;
+
+    @lombok.NonNull
     String loaderName;
+
+    @lombok.NonNull
     Optional<TypeInstantiator> backend;
+
+    @lombok.NonNull
     Optional<TypeInstantiator> cleaner;
 
-    public ClassName resolveLoaderName() {
+    public @NonNull ClassName resolveLoaderName() {
         return resolveLoaderName(loaderName, serviceType);
     }
 
@@ -62,13 +80,13 @@ class LoadDefinition {
         return topLoader.nestedClass(serviceType.simpleName());
     }
 
-    static TypeMirror getPreprocessorType(ExtEnvironment env, TypeMirror service) {
+    static @NonNull TypeMirror getPreprocessorType(@NonNull ExtEnvironment env, @NonNull TypeMirror service) {
         Types types = env.getTypeUtils();
         TypeMirror streamOf = types.getDeclaredType(env.asTypeElement(Stream.class), service);
         return types.getDeclaredType(env.asTypeElement(UnaryOperator.class), streamOf);
     }
 
-    static TypeMirror getBackendType(ExtEnvironment env, TypeMirror service) {
+    static @NonNull TypeMirror getBackendType(@NonNull ExtEnvironment env, @NonNull TypeMirror service) {
         Types types = env.getTypeUtils();
         TypeMirror classOf = types.getDeclaredType(env.asTypeElement(Class.class));
         TypeMirror iterableOf = types.getDeclaredType(env.asTypeElement(Iterable.class));
@@ -76,7 +94,7 @@ class LoadDefinition {
         return types.getDeclaredType(env.asTypeElement(Function.class), classOf, extendsIterableOf);
     }
 
-    static TypeMirror getCleanerType(ExtEnvironment env, TypeMirror service) {
+    static @NonNull TypeMirror getCleanerType(@NonNull ExtEnvironment env, @NonNull TypeMirror service) {
         Types types = env.getTypeUtils();
         TypeMirror iterableOf = types.getDeclaredType(env.asTypeElement(Iterable.class));
         TypeMirror extendsIterableOf = types.getWildcardType(iterableOf, null);
