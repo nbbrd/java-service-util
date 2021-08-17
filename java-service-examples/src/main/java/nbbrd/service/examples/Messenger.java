@@ -25,7 +25,9 @@ import nbbrd.service.ServiceDefinition;
  *
  * @author Philippe Charles
  */
-@ServiceDefinition(mutability = Mutability.BASIC)
+@ServiceDefinition(
+        mutability = Mutability.BASIC
+)
 public interface Messenger {
 
     void send(String message);

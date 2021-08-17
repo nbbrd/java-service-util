@@ -22,7 +22,9 @@ import nbbrd.service.ServiceDefinition;
  *
  * @author Philippe Charles
  */
-@ServiceDefinition(singleton = true)
+@ServiceDefinition(
+        singleton = true
+)
 public interface SystemSettings {
 
     String getDeviceName();

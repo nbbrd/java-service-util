@@ -10,10 +10,8 @@ public class FileTypeSpiTest {
 
     @Test
     public void test() {
-        FileTypeSpiLoader x = new FileTypeSpiLoader();
-
-        assertThat(x.get())
-                .containsExactlyElementsOf(x.get())
+        assertThat(FileTypeSpiLoader.get())
+                .containsExactlyElementsOf(FileTypeSpiLoader.get())
                 .hasSize(2)
                 .satisfies(o -> assertThat(o).isInstanceOf(FileTypeSpi.ByMagicNumberProbe.class), atIndex(0))
                 .satisfies(o -> assertThat(o).isInstanceOf(FileTypeSpi.ByExtensionProbe.class), atIndex(1));

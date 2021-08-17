@@ -24,7 +24,9 @@ import nbbrd.service.ServiceDefinition;
  *
  * @author Philippe Charles
  */
-@ServiceDefinition(quantifier = Quantifier.MULTIPLE)
+@ServiceDefinition(
+        quantifier = Quantifier.MULTIPLE
+)
 public interface Translator {
 
     String translate(String text);

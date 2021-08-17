@@ -61,10 +61,12 @@ Examples can be found in the [examples project](https://github.com/nbbrd/java-se
 
 OPTIONAL: when a service is not guaranteed to be available such as OS-specific API
 ```java
-@ServiceDefinition(quantifier = Quantifier.OPTIONAL)
+@ServiceDefinition(
+  quantifier = Quantifier.OPTIONAL
+)
 public interface WinRegistry { 
   String readString(int hkey, String key, String valueName);
-  static int HKEY_LOCAL_MACHINE = 0;
+  int HKEY_LOCAL_MACHINE = 0;
 }
 
 Optional<WinRegistry> optional = WinRegistryLoader.load();
@@ -73,7 +75,10 @@ optional.ifPresent(reg -> System.out.println(reg.readString(HKEY_LOCAL_MACHINE, 
 
 SINGLE: when exactly one service is guaranteed to be available
 ```java
-@ServiceDefinition(quantifier = Quantifier.SINGLE, fallback = FallbackLogger.class)
+@ServiceDefinition(
+  quantifier = Quantifier.SINGLE, 
+  fallback = FallbackLogger.class
+)
 public interface LoggerFinder {
   Consumer<String> getLogger(String name);
 }
@@ -91,7 +96,9 @@ single.getLogger("MyClass").accept("some message");
 
 MULTIPLE: when several instances of a service could be used at the same time
 ```java
-@ServiceDefinition(quantifier = Quantifier.MULTIPLE)
+@ServiceDefinition(
+  quantifier = Quantifier.MULTIPLE
+)
 public interface Translator {
   String translate(String text);
 }
@@ -113,7 +120,9 @@ It can be specified by using one of these two solutions:
 
 Map/Filter/sort example:
 ```java
-@ServiceDefinition(wrapper = FailSafeSearch.class)
+@ServiceDefinition(
+  wrapper = FailSafeSearch.class
+)
 public interface FileSearch {
 
   List<File> searchByName(String name);
@@ -147,7 +156,9 @@ FileSearchLoader.load().ifPresent(search -> search.searchByName(".xlsx").forEach
 
 BASIC example:
 ```java
-@ServiceDefinition(mutability = Mutability.BASIC)
+@ServiceDefinition(
+  mutability = Mutability.BASIC
+)
 public interface Messenger {
   void send(String message);
 }
@@ -169,7 +180,9 @@ loader.get().ifPresent(o -> o.send("Fourth"));
 
 Local example:
 ```java
-@ServiceDefinition(singleton = false)
+@ServiceDefinition(
+  singleton = false
+)
 public interface StatefulAlgorithm {
   void init(SecureRandom random);
   double compute(double... values);
@@ -188,7 +201,9 @@ Stream.of(algo1, algo2)
 
 Global example:
 ```java
-@ServiceDefinition(singleton = true)
+@ServiceDefinition(
+  singleton = true
+)
 public interface SystemSettings {
   String getDeviceName();
 }
@@ -202,7 +217,10 @@ It is possible to use a custom service loader such as [NetBeans Lookup](https://
 
 Example:
 ```java
-@ServiceDefinition(backend = NetBeansLookup.class, cleaner = NetBeansLookup.class)
+@ServiceDefinition(
+  backend = NetBeansLookup.class, 
+  cleaner = NetBeansLookup.class
+)
 public interface ColorScheme {
   List<Color> getColors();
 }
@@ -250,15 +268,12 @@ In some cases, it is better to clearly separate API from SPI. Here is an example
 ```java
 public final class FileType {
 
-  private FileType() {
-  }
-
-  private static final List<FileTypeSpi> PROBES = internal.FileTypeSpiLoader.load();
+  private FileType() {}
 
   public static Optional<String> probeContentType(Path file) throws IOException {
-    for (FileTypeSpi probe : PROBES) {
-      String result;
-      if ((result = probe.getContentTypeOrNull(file)) != null) {
+    for (FileTypeSpi probe : internal.FileTypeSpiLoader.get()) {
+      String result = probe.getContentTypeOrNull(file);
+      if (result != null) {
         return Optional.of(result);
       }
     }
@@ -268,7 +283,9 @@ public final class FileType {
 
 @ServiceDefinition(
   quantifier = Quantifier.MULTIPLE,
-  loaderName = "internal.FileTypeSpiLoader")
+  loaderName = "internal.FileTypeSpiLoader",
+  singleton = true
+)
 public interface FileTypeSpi {
 
   enum Accuracy { HIGH, LOW }

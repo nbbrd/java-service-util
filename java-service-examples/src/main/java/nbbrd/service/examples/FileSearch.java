@@ -26,7 +26,9 @@ import nbbrd.service.ServiceSorter;
  *
  * @author Philippe Charles
  */
-@ServiceDefinition(wrapper = FailSafeSearch.class)
+@ServiceDefinition(
+        wrapper = FailSafeSearch.class
+)
 public interface FileSearch {
 
     List<File> searchByName(String name);
