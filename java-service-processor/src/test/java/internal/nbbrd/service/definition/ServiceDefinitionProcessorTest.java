@@ -19,7 +19,7 @@ package internal.nbbrd.service.definition;
 import com.google.common.truth.StringSubject;
 import com.google.testing.compile.Compilation;
 import com.google.testing.compile.JavaFileObjects;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import javax.tools.JavaFileObject;
 
