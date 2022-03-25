@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.github.nbbrd.java-service-util</groupId>
+        <artifactId>java-service-parent</artifactId>
+        <version>1.4.1-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>java-service-bom</artifactId>
+    <packaging>pom</packaging>
+
+    <name>java-service-bom</name>
+    <description>Java service utilities - Bill of Materials</description>
+    <url>https://github.com/nbbrd/java-service-util</url>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <artifactId>java-service-annotation</artifactId>
+                <groupId>${project.groupId}</groupId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <artifactId>java-service-processor</artifactId>
+                <groupId>${project.groupId}</groupId>
+                <version>${project.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>org.projectlombok</groupId>
+                        <artifactId>lombok</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>org.netbeans.api</groupId>
+                        <artifactId>org-openide-util-lookup</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>org.checkerframework</groupId>
+                        <artifactId>checker-qual</artifactId>
+                    </exclusion>
+                </exclusions>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+</project>

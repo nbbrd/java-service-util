@@ -6,6 +6,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Add Maven BOM [#125](https://github.com/nbbrd/java-service-util/issues/125)
+
 ## [1.4.0] - 2021-05-20
 
 ### Added
