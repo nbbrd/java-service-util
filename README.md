@@ -57,16 +57,14 @@ Current limitations:
 
 Examples can be found in the [examples project](https://github.com/nbbrd/java-service-util/tree/develop/java-service-examples/src/main/java/nbbrd/service/examples).
 
-### Quantifier property
+### Quantifier
 
 OPTIONAL: when a service is not guaranteed to be available such as OS-specific API
 ```java
-@ServiceDefinition(
-  quantifier = Quantifier.OPTIONAL
-)
+@ServiceDefinition( quantifier = Quantifier.OPTIONAL )
 public interface WinRegistry { 
-  String readString(int hkey, String key, String valueName);
-  int HKEY_LOCAL_MACHINE = 0;
+    String readString(int hkey, String key, String valueName);
+    int HKEY_LOCAL_MACHINE = 0;
 }
 
 Optional<WinRegistry> optional = WinRegistryLoader.load();
@@ -75,19 +73,16 @@ optional.ifPresent(reg -> System.out.println(reg.readString(HKEY_LOCAL_MACHINE, 
 
 SINGLE: when exactly one service is guaranteed to be available
 ```java
-@ServiceDefinition(
-  quantifier = Quantifier.SINGLE, 
-  fallback = FallbackLogger.class
-)
+@ServiceDefinition( quantifier = Quantifier.SINGLE, fallback = FallbackLogger.class )
 public interface LoggerFinder {
-  Consumer<String> getLogger(String name);
+    Consumer<String> getLogger(String name);
 }
 
 public class FallbackLogger implements LoggerFinder {
-  @Override
-  public Consumer<String> getLogger(String name) {
-    return message -> System.out.println(String.format("[%s] %s", name, message));
-  }
+    @Override
+    public Consumer<String> getLogger(String name) {
+        return message -> System.out.println(String.format("[%s] %s", name, message));
+    }
 }
 
 LoggerFinder single = LoggerFinderLoader.load();
@@ -96,11 +91,9 @@ single.getLogger("MyClass").accept("some message");
 
 MULTIPLE: when several instances of a service could be used at the same time
 ```java
-@ServiceDefinition(
-  quantifier = Quantifier.MULTIPLE
-)
+@ServiceDefinition( quantifier = Quantifier.MULTIPLE )
 public interface Translator {
-  String translate(String text);
+    String translate(String text);
 }
 
 List<Translator> multiple = TranslatorLoader.load();
@@ -120,47 +113,43 @@ It can be specified by using one of these two solutions:
 
 Map/Filter/sort example:
 ```java
-@ServiceDefinition(
-  wrapper = FailSafeSearch.class
-)
+@ServiceDefinition( wrapper = FailSafeSearch.class )
 public interface FileSearch {
 
-  List<File> searchByName(String name);
+    List<File> searchByName(String name);
 
-  @ServiceFilter
-  boolean isAvailable();
+    @ServiceFilter
+    boolean isAvailable();
 
-  @ServiceSorter
-  int getCost();
+    @ServiceSorter
+    int getCost();
 }
 
 class FailSafeSearch implements FileSearch {
   
-  public FailSafeSearch(FileSearch delegate) { ... }
+    public FailSafeSearch(FileSearch delegate) { ... }
 
-  @Override
-  public List<File> searchByName(String name) {
-    try {
-      return delegate.searchByName(name);
-    } catch (RuntimeException unexpected) {
-      // log unexpected ...
-      return Collections.emptyList();
+    @Override
+    public List<File> searchByName(String name) {
+        try {
+            return delegate.searchByName(name);
+        } catch (RuntimeException unexpected) {
+            // log unexpected ...
+            return Collections.emptyList();
+        }
     }
-  }
 }
 
 FileSearchLoader.load().ifPresent(search -> search.searchByName(".xlsx").forEach(System.out::println));
 ```
 
-### Mutability property
+### Mutability
 
 BASIC example:
 ```java
-@ServiceDefinition(
-  mutability = Mutability.BASIC
-)
+@ServiceDefinition( mutability = Mutability.BASIC )
 public interface Messenger {
-  void send(String message);
+    void send(String message);
 }
 
 MessengerLoader loader = new MessengerLoader();
@@ -176,16 +165,14 @@ loader.reload();
 loader.get().ifPresent(o -> o.send("Fourth"));
 ```
 
-### Singleton property
+### Singleton
 
 Local example:
 ```java
-@ServiceDefinition(
-  singleton = false
-)
+@ServiceDefinition( singleton = false )
 public interface StatefulAlgorithm {
-  void init(SecureRandom random);
-  double compute(double... values);
+    void init(SecureRandom random);
+    double compute(double... values);
 }
 
 StatefulAlgorithm algo1 = StatefulAlgorithmLoader.load().orElseThrow(RuntimeException::new);
@@ -201,11 +188,9 @@ Stream.of(algo1, algo2)
 
 Global example:
 ```java
-@ServiceDefinition(
-  singleton = true
-)
+@ServiceDefinition( singleton = true )
 public interface SystemSettings {
-  String getDeviceName();
+    String getDeviceName();
 }
 
 SystemSettingsLoader.get().ifPresent(sys -> System.out.println(sys.getDeviceName()));
@@ -217,47 +202,44 @@ It is possible to use a custom service loader such as [NetBeans Lookup](https://
 
 Example:
 ```java
-@ServiceDefinition(
-  backend = NetBeansLookup.class, 
-  cleaner = NetBeansLookup.class
-)
+@ServiceDefinition( backend = NetBeansLookup.class, cleaner = NetBeansLookup.class )
 public interface ColorScheme {
-  List<Color> getColors();
+    List<Color> getColors();
 }
 
 public enum NetBeansLookup implements Function<Class, Iterable>, Consumer<Iterable> {
 
-  INSTANCE;
+    INSTANCE;
 
-  @Override
-  public Iterable apply(Class type) {
-    return new NetBeansLookupResult(type);
-  }
-
-  @Override
-  public void accept(Iterable iterable) {
-    ((NetBeansLookupResult) iterable).reload();
-  }
-
-  private static final class NetBeansLookupResult implements Iterable {
-
-    private final Lookup.Result result;
-    private Collection instances;
-
-    private NetBeansLookupResult(Class type) {
-      this.result = Lookup.getDefault().lookupResult(type);
-      this.instances = result.allInstances();
+    @Override
+    public Iterable apply(Class type) {
+        return new NetBeansLookupResult(type);
     }
 
     @Override
-    public Iterator iterator() {
-      return instances.iterator();
+    public void accept(Iterable iterable) {
+        ((NetBeansLookupResult) iterable).reload();
     }
 
-    public void reload() {
-      this.instances = result.allInstances();
+    private static final class NetBeansLookupResult implements Iterable {
+
+        private final Lookup.Result result;
+        private Collection instances;
+
+        private NetBeansLookupResult(Class type) {
+            this.result = Lookup.getDefault().lookupResult(type);
+            this.instances = result.allInstances();
+        }
+
+        @Override
+        public Iterator iterator() {
+            return instances.iterator();
+        }
+
+        public void reload() {
+            this.instances = result.allInstances();
+        }
     }
-  }
 }
 ```
 
@@ -268,37 +250,37 @@ In some cases, it is better to clearly separate API from SPI. Here is an example
 ```java
 public final class FileType {
 
-  private FileType() {}
+    private FileType() {}
 
-  public static Optional<String> probeContentType(Path file) throws IOException {
-    for (FileTypeSpi probe : internal.FileTypeSpiLoader.get()) {
-      String result = probe.getContentTypeOrNull(file);
-      if (result != null) {
-        return Optional.of(result);
-      }
+    public static Optional<String> probeContentType(Path file) throws IOException {
+        for (FileTypeSpi probe : internal.FileTypeSpiLoader.get()) {
+            String result = probe.getContentTypeOrNull(file);
+            if (result != null) {
+                return Optional.of(result);
+            }
+        }
+        return Optional.empty();
     }
-    return Optional.empty();
-  }
 }
 
 @ServiceDefinition(
-  quantifier = Quantifier.MULTIPLE,
-  loaderName = "internal.FileTypeSpiLoader",
-  singleton = true
+    quantifier = Quantifier.MULTIPLE,
+    loaderName = "internal.FileTypeSpiLoader",
+    singleton = true
 )
 public interface FileTypeSpi {
 
-  enum Accuracy { HIGH, LOW }
+    enum Accuracy { HIGH, LOW }
 
-  String getContentTypeOrNull(Path file) throws IOException;
+    String getContentTypeOrNull(Path file) throws IOException;
 
-  @ServiceSorter
-  Accuracy getAccuracy();
+    @ServiceSorter
+    Accuracy getAccuracy();
 }
 
 String[] files = {"hello.csv", "stuff.txt"};
 for (String file : files) {
-  System.out.println(file + ": " + FileType.probeContentType(Paths.get(file)).orElse("?"));
+    System.out.println(file + ": " + FileType.probeContentType(Paths.get(file)).orElse("?"));
 }
 ```
 
