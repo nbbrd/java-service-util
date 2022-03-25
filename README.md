@@ -31,8 +31,8 @@ public interface SomeService {}
 @ServiceProvider
 public class InferredProvider implements HelloService {}
 
-@ServiceProvider(HelloService.class)
-@ServiceProvider(SomeService.class)
+@ServiceProvider ( HelloService.class )
+@ServiceProvider ( SomeService.class )
 public class MultiProvider implements HelloService, SomeService {}
 ```
 
@@ -43,12 +43,12 @@ It also improves documentation by declaring services explicitly.
 
 Current features:
 - generates a specialized service loader with the following properties:
-  - `quantifier`: optional, single or multiple service instances
-  - `preprocessing`: filter/map/sort operations 
-  - `mutability`: none, basic or concurrent access
-  - `singleton`: global or local scope
+  - [`quantifier`](#quantifier): optional, single or multiple service instances
+  - [`preprocessing`](#preprocessing): filter/map/sort operations 
+  - [`mutability`](#mutability): none, basic or concurrent access
+  - [`singleton`](#singleton): global or local scope
 - generates javadoc alongside code
-- allows use of custom service loader
+- allows use of [custom service loader](#custom-service-loader)
 - checks coherence of service use in modules if `module-info.java` is available
 
 Current limitations:
@@ -61,7 +61,7 @@ Examples can be found in the [examples project](https://github.com/nbbrd/java-se
 
 OPTIONAL: when a service is not guaranteed to be available such as OS-specific API
 ```java
-@ServiceDefinition( quantifier = Quantifier.OPTIONAL )
+@ServiceDefinition ( quantifier = Quantifier.OPTIONAL )
 public interface WinRegistry { 
     String readString(int hkey, String key, String valueName);
     int HKEY_LOCAL_MACHINE = 0;
@@ -73,7 +73,7 @@ optional.ifPresent(reg -> System.out.println(reg.readString(HKEY_LOCAL_MACHINE, 
 
 SINGLE: when exactly one service is guaranteed to be available
 ```java
-@ServiceDefinition( quantifier = Quantifier.SINGLE, fallback = FallbackLogger.class )
+@ServiceDefinition ( quantifier = Quantifier.SINGLE, fallback = FallbackLogger.class )
 public interface LoggerFinder {
     Consumer<String> getLogger(String name);
 }
@@ -91,7 +91,7 @@ single.getLogger("MyClass").accept("some message");
 
 MULTIPLE: when several instances of a service could be used at the same time
 ```java
-@ServiceDefinition( quantifier = Quantifier.MULTIPLE )
+@ServiceDefinition ( quantifier = Quantifier.MULTIPLE )
 public interface Translator {
     String translate(String text);
 }
@@ -113,7 +113,7 @@ It can be specified by using one of these two solutions:
 
 Map/Filter/sort example:
 ```java
-@ServiceDefinition( wrapper = FailSafeSearch.class )
+@ServiceDefinition ( wrapper = FailSafeSearch.class )
 public interface FileSearch {
 
     List<File> searchByName(String name);
@@ -147,7 +147,7 @@ FileSearchLoader.load().ifPresent(search -> search.searchByName(".xlsx").forEach
 
 BASIC example:
 ```java
-@ServiceDefinition( mutability = Mutability.BASIC )
+@ServiceDefinition ( mutability = Mutability.BASIC )
 public interface Messenger {
     void send(String message);
 }
@@ -169,7 +169,7 @@ loader.get().ifPresent(o -> o.send("Fourth"));
 
 Local example:
 ```java
-@ServiceDefinition( singleton = false )
+@ServiceDefinition ( singleton = false )
 public interface StatefulAlgorithm {
     void init(SecureRandom random);
     double compute(double... values);
@@ -188,7 +188,7 @@ Stream.of(algo1, algo2)
 
 Global example:
 ```java
-@ServiceDefinition( singleton = true )
+@ServiceDefinition ( singleton = true )
 public interface SystemSettings {
     String getDeviceName();
 }
@@ -202,7 +202,7 @@ It is possible to use a custom service loader such as [NetBeans Lookup](https://
 
 Example:
 ```java
-@ServiceDefinition( backend = NetBeansLookup.class, cleaner = NetBeansLookup.class )
+@ServiceDefinition ( backend = NetBeansLookup.class, cleaner = NetBeansLookup.class )
 public interface ColorScheme {
     List<Color> getColors();
 }
