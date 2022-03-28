@@ -19,9 +19,11 @@ package internal.nbbrd.service.definition;
 import com.google.common.truth.StringSubject;
 import com.google.testing.compile.Compilation;
 import com.google.testing.compile.JavaFileObjects;
+import internal.nbbrd.service.provider.ServiceProviderProcessor;
 import org.junit.jupiter.api.Test;
 
 import javax.tools.JavaFileObject;
+import javax.tools.StandardLocation;
 
 import static com.google.testing.compile.CompilationSubject.assertThat;
 
@@ -41,7 +43,7 @@ public class ServiceDefinitionProcessorTest {
         assertThat(compilation)
                 .generatedSourceFile("definition.NonNestedDefLoader")
                 .contentsAsUtf8String()
-                .contains("private final Iterable source = ServiceLoader.load(NonNestedDef.class);");
+                .contains("private final Iterable<NonNestedDef> source = ServiceLoader.load(NonNestedDef.class);");
     }
 
     @Test
@@ -456,7 +458,7 @@ public class ServiceDefinitionProcessorTest {
         assertThat(compilation)
                 .generatedSourceFile("definition.CustomBackendLoader")
                 .contentsAsUtf8String()
-                .contains("private final Iterable source = CustomBackend.NetBeansLookup.INSTANCE.apply(CustomBackend.class);");
+                .contains("private final Iterable<CustomBackend> source = CustomBackend.NetBeansLookup.INSTANCE.apply(CustomBackend.class);");
     }
 
     @Test
@@ -473,9 +475,63 @@ public class ServiceDefinitionProcessorTest {
                 .onLine(11);
     }
 
+    @Test
+    public void testNonNestedBatch() {
+        JavaFileObject file = JavaFileObjects.forResource("definition/NonNestedBatch.java");
+        Compilation compilation = compile(file);
+
+        assertThat(compilation)
+                .succeededWithoutWarnings();
+
+        StringSubject loader = assertThat(compilation)
+                .generatedSourceFile("definition.NonNestedBatchLoader")
+                .contentsAsUtf8String();
+
+        loader.contains("private final Iterable<NonNestedBatch> source = ServiceLoader.load(NonNestedBatch.class);");
+        loader.contains("private final Iterable<NonNestedBatchBatch> batch = ServiceLoader.load(NonNestedBatchBatch.class);");
+
+        assertThat(compilation)
+                .generatedSourceFile("definition.NonNestedBatchBatch")
+                .contentsAsUtf8String()
+                .contains("Stream<NonNestedBatch> getProviders();");
+
+//        StringSubject content
+//                = assertThat(compilation)
+//                .generatedFile(StandardLocation.CLASS_OUTPUT, "META-INF/services/NonNestedBatchBatch")
+//                .contentsAsUtf8String();
+//        content.contains("definition.NonNestedBatch$ABC");
+    }
+
+    @Test
+    public void testNestedBatch() {
+        JavaFileObject file = JavaFileObjects.forResource("definition/NestedBatch.java");
+        Compilation compilation = compile(file);
+
+        assertThat(compilation)
+                .succeededWithoutWarnings();
+
+        StringSubject loader = assertThat(compilation)
+                .generatedSourceFile("definition.NestedBatchLoader")
+                .contentsAsUtf8String();
+
+        loader.contains("private final Iterable<NestedBatch.HelloService> source = ServiceLoader.load(NestedBatch.HelloService.class);");
+        loader.contains("private final Iterable<NestedBatchBatch.HelloService> batch = ServiceLoader.load(NestedBatchBatch.HelloService.class);");
+
+        assertThat(compilation)
+                .generatedSourceFile("definition.NestedBatchBatch")
+                .contentsAsUtf8String()
+                .contains("Stream<NestedBatch.HelloService> getProviders();");
+
+//        StringSubject content
+//                = assertThat(compilation)
+//                .generatedFile(StandardLocation.CLASS_OUTPUT, "META-INF/services/NonNestedBatchBatch")
+//                .contentsAsUtf8String();
+//        content.contains("definition.NonNestedBatch$ABC");
+    }
+
     private Compilation compile(JavaFileObject file) {
         return com.google.testing.compile.Compiler.javac()
-                .withProcessors(new ServiceDefinitionProcessor())
+                .withProcessors(new ServiceDefinitionProcessor(), new ServiceProviderProcessor())
                 .compile(file);
     }
 }

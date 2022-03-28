@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Add Maven BOM [#125](https://github.com/nbbrd/java-service-util/issues/125)
+- Add batch loading of providers [#33](https://github.com/nbbrd/java-service-util/issues/33)
 
 ## [1.4.0] - 2021-05-20
 

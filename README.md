@@ -208,8 +208,8 @@ It is possible to use a custom service loader such as [NetBeans Lookup](https://
 Example:
 ```java
 @ServiceDefinition ( backend = NetBeansLookup.class, cleaner = NetBeansLookup.class )
-public interface ColorScheme {
-    List<Color> getColors();
+public interface IconProvider {
+    Icon getIconOrNull(CommonIcons icon);
 }
 
 public enum NetBeansLookup implements Function<Class, Iterable>, Consumer<Iterable> {
@@ -217,14 +217,10 @@ public enum NetBeansLookup implements Function<Class, Iterable>, Consumer<Iterab
     INSTANCE;
 
     @Override
-    public Iterable apply(Class type) {
-        return new NetBeansLookupResult(type);
-    }
+    public Iterable apply(Class type) { return new NetBeansLookupResult(type); }
 
     @Override
-    public void accept(Iterable iterable) {
-        ((NetBeansLookupResult) iterable).reload();
-    }
+    public void accept(Iterable iterable) { ((NetBeansLookupResult) iterable).reload(); }
 
     private static final class NetBeansLookupResult implements Iterable {
 
@@ -237,13 +233,9 @@ public enum NetBeansLookup implements Function<Class, Iterable>, Consumer<Iterab
         }
 
         @Override
-        public Iterator iterator() {
-            return instances.iterator();
-        }
+        public Iterator iterator() { return instances.iterator(); }
 
-        public void reload() {
-            this.instances = result.allInstances();
-        }
+        public void reload() { this.instances = result.allInstances(); }
     }
 }
 ```

@@ -63,17 +63,26 @@ class LoadDefinition {
     @lombok.NonNull
     Optional<TypeInstantiator> cleaner;
 
+    boolean batch;
+
+    @lombok.NonNull
+    String batchName;
+
     public @NonNull ClassName resolveLoaderName() {
-        return resolveLoaderName(loaderName, serviceType);
+        return resolveName(loaderName, serviceType, "Loader");
+    }
+
+    public @NonNull ClassName resolveBatchName() {
+        return resolveName(batchName, serviceType, "Batch");
     }
 
     // visible for testing
-    static ClassName resolveLoaderName(String loaderName, ClassName serviceType) {
-        if (!loaderName.isEmpty()) {
-            return ClassName.bestGuess(loaderName);
+    static ClassName resolveName(String fullyQualifiedName, ClassName serviceType, String defaultSuffix) {
+        if (!fullyQualifiedName.isEmpty()) {
+            return ClassName.bestGuess(fullyQualifiedName);
         }
         ClassName top = serviceType.topLevelClassName();
-        ClassName topLoader = ClassName.get(top.packageName(), top.simpleName() + "Loader");
+        ClassName topLoader = ClassName.get(top.packageName(), top.simpleName() + defaultSuffix);
         if (top.equals(serviceType)) {
             return topLoader;
         }
