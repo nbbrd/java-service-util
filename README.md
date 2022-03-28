@@ -2,58 +2,63 @@
 
 [![Download](https://img.shields.io/github/release/nbbrd/java-service-util.svg)](https://github.com/nbbrd/java-service-util/releases/latest)
 
-This library provides some utilities for [Java Service Providers](https://www.baeldung.com/java-spi).
+This library provides some **utilities for Java SPI** ([Service Provider Interface](https://www.baeldung.com/java-spi)).
 
-Key points:
-- ligthweight library with no dependency
+The Java SPI is a mechanism that decouples a service from its implementation(s).
+It allows the creation of extensible or replaceable modules/plugins.
+It is composed of four main components: a service, a service provider interface, at least one service provider and a service loader.
+If the service is a single interface then it is the same as a service provider interface.
+
+**Key points:**
+- lightweight library with no dependency
+- no dependency at runtime, all the work is done at compile-time
 - Java 8 minimum requirement
-- all the work is done at compile time
 - has an automatic module name that makes it compatible with [JPMS](https://www.baeldung.com/java-9-modularity) 
 
 ## @ServiceProvider
 The `@ServiceProvider` annotation **registers service providers** on classpath and modulepath.
 
-Current features:
+**Features:**
 - generates classpath files in `META-INF/services` folder
 - supports multiple registration of one class
 - can infer the service if the provider implements/extends exactly one interface/class
 - checks coherence between classpath and modulepath if `module-info.java` is available
 
-Current limitations:
+**Limitations:**
 - detects modulepath `public static provider()` method but doesn't generate a [workaround for classpath](https://github.com/nbbrd/java-service-util/issues/12)
 
 Example:
 ```java
-public interface HelloService {}
+public interface FooSPI {}
 
-public interface SomeService {}
+public interface BarSPI {}
 
 @ServiceProvider
-public class InferredProvider implements HelloService {}
+public class FooProvider implements FooSPI {}
 
-@ServiceProvider ( HelloService.class )
-@ServiceProvider ( SomeService.class )
-public class MultiProvider implements HelloService, SomeService {}
+@ServiceProvider ( FooSPI.class )
+@ServiceProvider ( BarSPI.class )
+public class FooBarProvider implements FooSPI, BarSPI {}
 ```
 
 ## @ServiceDefinition
-The `@ServiceDefinition` annotation **generates a specialized service loader** that enforces a specific usage.  
-It generates boilerplate code, thus reducing bugs and improving code coherence.  
-It also improves documentation by declaring services explicitly. 
+The `@ServiceDefinition` annotation **defines a service usage and generates a specialized service loader** that enforces that specific usage.  
 
-Current features:
-- generates a specialized service loader with the following properties:
-  - [`quantifier`](#quantifier): optional, single or multiple service instances
-  - [`preprocessing`](#preprocessing): filter/map/sort operations 
-  - [`mutability`](#mutability): none, basic or concurrent access
-  - [`singleton`](#singleton): global or local scope
-- generates javadoc alongside code
+**Features:**
+- generates boilerplate code, thus reducing bugs and improving code coherence
+- improves documentation by declaring services explicitly and generating javadoc
 - allows use of [custom service loader](#custom-service-loader)
 - checks coherence of service use in modules if `module-info.java` is available
 
-Current limitations:
+**Limitations:**
 - does not support [type inspection before instantiation](https://github.com/nbbrd/java-service-util/issues/13)
 - does not support [lazy instantiation](https://github.com/nbbrd/java-service-util/issues/6)
+
+The loading behavior is defined by the following properties:
+  - [`quantifier`](#quantifier): optional, single or multiple service instances
+  - [`preprocessing`](#preprocessing): filter/map/sort operations
+  - [`mutability`](#mutability): none, basic or concurrent access
+  - [`singleton`](#singleton): global or local scope
 
 Examples can be found in the [examples project](https://github.com/nbbrd/java-service-util/tree/develop/java-service-examples/src/main/java/nbbrd/service/examples).
 
