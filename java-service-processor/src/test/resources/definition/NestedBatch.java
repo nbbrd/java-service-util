@@ -1,6 +1,7 @@
 package definition;
 
 import nbbrd.service.ServiceDefinition;
+import nbbrd.service.ServiceProvider;
 
 import java.util.stream.Stream;
 
@@ -10,7 +11,7 @@ class NestedBatch {
     interface HelloService {
     }
 
-    //@ServiceProvider
+    @ServiceProvider
     public static class ABC implements NestedBatchBatch.HelloService {
         @Override
         public Stream<HelloService> getProviders() {

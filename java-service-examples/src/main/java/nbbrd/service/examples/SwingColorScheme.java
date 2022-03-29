@@ -27,7 +27,7 @@ public interface SwingColorScheme {
         }
     }
 
-    //    @ServiceProvider(SwingColorSchemeBatch.class)
+    @ServiceProvider(SwingColorSchemeBatch.class)
     final class Bridge implements SwingColorSchemeBatch {
 
         @Override

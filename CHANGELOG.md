@@ -10,6 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add Maven BOM [#125](https://github.com/nbbrd/java-service-util/issues/125)
 - Add batch loading of providers [#33](https://github.com/nbbrd/java-service-util/issues/33)
 
+### Fixed
+- Fix multi round processing of ServiceProvider
+
 ## [1.4.0] - 2021-05-20
 
 ### Added

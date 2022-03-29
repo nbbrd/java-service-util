@@ -495,11 +495,11 @@ public class ServiceDefinitionProcessorTest {
                 .contentsAsUtf8String()
                 .contains("Stream<NonNestedBatch> getProviders();");
 
-//        StringSubject content
-//                = assertThat(compilation)
-//                .generatedFile(StandardLocation.CLASS_OUTPUT, "META-INF/services/NonNestedBatchBatch")
-//                .contentsAsUtf8String();
-//        content.contains("definition.NonNestedBatch$ABC");
+        StringSubject content
+                = assertThat(compilation)
+                .generatedFile(StandardLocation.CLASS_OUTPUT, "META-INF/services/definition.NonNestedBatchBatch")
+                .contentsAsUtf8String();
+        content.contains("definition.NonNestedBatch$ABC");
     }
 
     @Test
@@ -522,11 +522,11 @@ public class ServiceDefinitionProcessorTest {
                 .contentsAsUtf8String()
                 .contains("Stream<NestedBatch.HelloService> getProviders();");
 
-//        StringSubject content
-//                = assertThat(compilation)
-//                .generatedFile(StandardLocation.CLASS_OUTPUT, "META-INF/services/NonNestedBatchBatch")
-//                .contentsAsUtf8String();
-//        content.contains("definition.NonNestedBatch$ABC");
+        StringSubject content
+                = assertThat(compilation)
+                .generatedFile(StandardLocation.CLASS_OUTPUT, "META-INF/services/definition.NestedBatchBatch$HelloService")
+                .contentsAsUtf8String();
+        content.contains("definition.NestedBatch$ABC");
     }
 
     private Compilation compile(JavaFileObject file) {

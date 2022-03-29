@@ -8,7 +8,7 @@ import java.util.stream.Stream;
 @ServiceDefinition(batch = true)
 class NonNestedBatch {
 
-//    @ServiceProvider
+    @ServiceProvider
     public static class ABC implements NonNestedBatchBatch {
         @Override
         public Stream<NonNestedBatch> getProviders() {
