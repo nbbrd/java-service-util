@@ -20,7 +20,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import org.antlr.v4.runtime.CharStreams;
 import static org.assertj.core.api.Assertions.*;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  *

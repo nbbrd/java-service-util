@@ -119,6 +119,8 @@ final class ServiceDefinitionCollector {
                 .loaderName(annotation.loaderName())
                 .backend(backend)
                 .cleaner(cleaner)
+                .batch(annotation.batch())
+                .batchName(annotation.batchName())
                 .build();
     }
 

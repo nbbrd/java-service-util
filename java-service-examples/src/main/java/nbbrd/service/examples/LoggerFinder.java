@@ -24,7 +24,10 @@ import nbbrd.service.ServiceDefinition;
  *
  * @author Philippe Charles
  */
-@ServiceDefinition(quantifier = Quantifier.SINGLE, fallback = LoggerFinder.FallbackLogger.class)
+@ServiceDefinition(
+        quantifier = Quantifier.SINGLE,
+        fallback = LoggerFinder.FallbackLogger.class
+)
 public interface LoggerFinder {
 
     Consumer<String> getLogger(String name);

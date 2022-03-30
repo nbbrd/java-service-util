@@ -24,7 +24,9 @@ import nbbrd.service.ServiceDefinition;
  *
  * @author Philippe Charles
  */
-@ServiceDefinition(quantifier = Quantifier.OPTIONAL)
+@ServiceDefinition(
+        quantifier = Quantifier.OPTIONAL
+)
 public interface WinRegistry {
 
     String readString(int hkey, String key, String valueName);

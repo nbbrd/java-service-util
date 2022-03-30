@@ -16,6 +16,8 @@
  */
 package internal.nbbrd.service;
 
+import org.checkerframework.checker.nullness.qual.NonNull;
+
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -85,13 +87,16 @@ public class Instantiator {
             }
         };
 
-        public abstract Stream<Element> parse(Types util, TypeElement service, TypeElement provider);
+        public abstract @NonNull Stream<Element> parse(@NonNull Types util, @NonNull TypeElement service, @NonNull TypeElement provider);
     }
 
+    @lombok.NonNull
     Kind kind;
+
+    @lombok.NonNull
     Element element;
 
-    public static List<Instantiator> allOf(Types util, TypeElement service, TypeElement provider) {
+    public static @NonNull List<Instantiator> allOf(@NonNull Types util, @NonNull TypeElement service, @NonNull TypeElement provider) {
         return Stream.of(Kind.values())
                 .flatMap(kind -> kind.parse(util, service, provider).map(element -> new Instantiator(kind, element)))
                 .collect(Collectors.toList());

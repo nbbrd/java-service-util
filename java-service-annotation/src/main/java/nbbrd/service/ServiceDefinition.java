@@ -166,6 +166,22 @@ public @interface ServiceDefinition {
      */
     Class<? extends Consumer<? extends Iterable>> cleaner() default DefaultCleaner.class;
 
+    /**
+     * Specifies if batch loading should be allowed.
+     *
+     * @return true if batch loading should be allowed, false otherwise
+     */
+    boolean batch() default false;
+
+    /**
+     * Specifies the fully qualified name of the batch loading. An empty value
+     * generates an automatic name.
+     *
+     * @return a fully qualified name
+     */
+    String batchName() default "";
+
+    @SuppressWarnings("rawtypes")
     final class NoProcessing implements UnaryOperator<Stream> {
 
         @Override
@@ -174,14 +190,17 @@ public @interface ServiceDefinition {
         }
     }
 
+    @SuppressWarnings("rawtypes")
     final class DefaultBackend implements Function<Class, Iterable> {
 
+        @SuppressWarnings("unchecked")
         @Override
         public Iterable apply(Class type) {
             return ServiceLoader.load(type);
         }
     }
 
+    @SuppressWarnings("rawtypes")
     final class DefaultCleaner implements Consumer<Iterable> {
 
         @Override

@@ -5,7 +5,7 @@
     <parent>
         <groupId>com.github.nbbrd.java-service-util</groupId>
         <artifactId>java-service-parent</artifactId>
-        <version>1.4.0</version>
+        <version>1.5.0</version>
     </parent>
     
     <artifactId>java-service-examples</artifactId>
@@ -32,8 +32,8 @@
 
         <!-- test only -->
         <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -62,7 +62,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-deploy-plugin</artifactId>
-                <version>3.0.0-M1</version>
+                <version>3.0.0-M2</version>
                 <configuration>
                     <skip>true</skip>
                 </configuration>

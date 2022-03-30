@@ -17,6 +17,9 @@
 package internal.nbbrd.service;
 
 import com.squareup.javapoet.ClassName;
+import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
+
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.TypeElement;
@@ -33,27 +36,30 @@ public final class ExtEnvironment implements ProcessingEnvironment {
     @lombok.experimental.Delegate
     private final ProcessingEnvironment delegate;
 
-    public TypeElement asTypeElement(String o) {
-        return delegate.getElementUtils().getTypeElement(o);
+    @Nullable
+    public TypeElement asTypeElement(@NonNull String canonicalName) {
+        return delegate.getElementUtils().getTypeElement(canonicalName);
     }
 
-    public TypeElement asTypeElement(Class<?> o) {
-        return delegate.getElementUtils().getTypeElement(o.getCanonicalName());
+    @Nullable
+    public TypeElement asTypeElement(@NonNull Class<?> type) {
+        return delegate.getElementUtils().getTypeElement(type.getCanonicalName());
     }
 
-    public TypeElement asTypeElement(ClassName o) {
-        return delegate.getElementUtils().getTypeElement(o.toString());
+    @Nullable
+    public TypeElement asTypeElement(@NonNull ClassName typeName) {
+        return delegate.getElementUtils().getTypeElement(typeName.toString());
     }
 
     public TypeElement asTypeElement(TypeMirror o) {
         return (TypeElement) delegate.getTypeUtils().asElement(o);
     }
 
-    public void error(Element annotatedElement, String message) {
+    public void error(@NonNull Element annotatedElement, @NonNull String message) {
         delegate.getMessager().printMessage(Diagnostic.Kind.ERROR, message, annotatedElement);
     }
 
-    public void warn(Element annotatedElement, String message) {
+    public void warn(@NonNull Element annotatedElement, @NonNull String message) {
         delegate.getMessager().printMessage(Diagnostic.Kind.WARNING, message, annotatedElement);
     }
 }
