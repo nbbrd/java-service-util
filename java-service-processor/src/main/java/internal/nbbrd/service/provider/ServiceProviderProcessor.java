@@ -25,6 +25,7 @@ import javax.annotation.processing.SupportedAnnotationTypes;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.Modifier;
+import javax.lang.model.element.Name;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
@@ -41,7 +42,9 @@ import java.util.stream.Stream;
 @SupportedAnnotationTypes({"nbbrd.service.ServiceProvider", "nbbrd.service.ServiceProvider.List"})
 public final class ServiceProviderProcessor extends AbstractProcessor {
 
-    final Set<TypeElement> pendingRefs = new HashSet<>();
+    // we store Name instead of TypeElement due to a bug(?) in JDK8
+    // that creates not-equivalent elements between rounds
+    private final Set<Name> pendingRefs = new HashSet<>();
 
     @Override
     public SourceVersion getSupportedSourceVersion() {
@@ -50,10 +53,10 @@ public final class ServiceProviderProcessor extends AbstractProcessor {
 
     @Override
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
-        List<ProviderRef> annotationRefs = new AnnotationRegistry(annotations, roundEnv).readAll();
+        pushPending(new AnnotationRegistry(annotations, roundEnv).readAll());
 
-        if (annotationRefs.isEmpty()) {
-            annotationRefs.addAll(popPending());
+        if (roundEnv.processingOver()) {
+            List<ProviderRef> annotationRefs = popPending();
 
             try {
                 checkRefs(annotationRefs);
@@ -61,27 +64,19 @@ public final class ServiceProviderProcessor extends AbstractProcessor {
             } catch (RefError ex) {
                 reportError(ex.ref, ex.getMessage());
             }
-
-            return false;
-        }
-
-        try {
-            checkRefs(annotationRefs);
-            writeRefs(annotationRefs);
-        } catch (RefError ex) {
-            pushPending(annotationRefs);
         }
 
         return false;
     }
 
     private void pushPending(List<ProviderRef> refs) {
-        refs.stream().map(ProviderRef::getProvider).forEach(pendingRefs::add);
+        refs.forEach(ref -> pendingRefs.add(ref.getProvider().getQualifiedName()));
     }
 
     private List<ProviderRef> popPending() {
         List<ProviderRef> result = pendingRefs
                 .stream()
+                .map(x -> processingEnv.getElementUtils().getTypeElement(x.toString()))
                 .flatMap(AnnotationRegistry::newRefs)
                 .collect(Collectors.toList());
         pendingRefs.clear();
