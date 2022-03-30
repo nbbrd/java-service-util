@@ -6,7 +6,7 @@ This library provides some **utilities for Java SPI** ([Service Provider Interfa
 
 The Java SPI is a mechanism that decouples a service from its implementation(s).
 It allows the creation of extensible or replaceable modules/plugins.
-It is composed of four main components: a service, a service provider interface, at least one service provider and a service loader.
+It is composed of four main components: service, service provider interface, service provider and service loader.
 If the service is a single interface then it is the same as a service provider interface.
 
 **Key points:**
@@ -47,18 +47,19 @@ The `@ServiceDefinition` annotation **defines a service usage and generates a sp
 **Features:**
 - generates boilerplate code, thus reducing bugs and improving code coherence
 - improves documentation by declaring services explicitly and generating javadoc
-- allows use of [custom service loader](#custom-service-loader)
 - checks coherence of service use in modules if `module-info.java` is available
+- allows use of [custom service loader](#custom-service-loader)
+- allows [batch loading](#batch-loading) of providers
 
 **Limitations:**
 - does not support [type inspection before instantiation](https://github.com/nbbrd/java-service-util/issues/13)
 - does not support [lazy instantiation](https://github.com/nbbrd/java-service-util/issues/6)
 
 The loading behavior is defined by the following properties:
-  - [`quantifier`](#quantifier): optional, single or multiple service instances
-  - [`preprocessing`](#preprocessing): filter/map/sort operations
-  - [`mutability`](#mutability): none, basic or concurrent access
-  - [`singleton`](#singleton): global or local scope
+- [`quantifier`](#quantifier): optional, single or multiple service instances
+- [`preprocessing`](#preprocessing): filter/map/sort operations
+- [`mutability`](#mutability): none, basic or concurrent access
+- [`singleton`](#singleton): global or local scope
 
 Examples can be found in the [examples project](https://github.com/nbbrd/java-service-util/tree/develop/java-service-examples/src/main/java/nbbrd/service/examples).
 
@@ -238,6 +239,51 @@ public enum NetBeansLookup implements Function<Class, Iterable>, Consumer<Iterab
         public void reload() { this.instances = result.allInstances(); }
     }
 }
+```
+
+### Batch loading
+
+Batch loading loads several providers at once. It can be used to **create a bridge between two services** or to **generate providers on the fly**.
+It is enabled by the `batch` property. 
+
+Example:
+```java
+@ServiceDefinition ( batch = true, quantifier = Quantifier.MULTIPLE )
+public interface SwingColorScheme {
+    List<Color> getColors();
+}
+
+@ServiceDefinition ( quantifier = Quantifier.MULTIPLE )
+public interface RgbColorScheme {
+    List<Integer> getColors();
+}
+
+@ServiceProvider
+public class RgbToSwingProvider implements SwingColorSchemeBatch {
+
+    @Override
+    public Stream<SwingColorScheme> getProviders() {
+        return RgbColorSchemeLoader.load().stream().map(this::convert);
+    }
+
+    private SwingColorScheme convert(RgbColorScheme colorScheme) {
+        return () -> colorScheme.getColors().stream().map(Color::new).collect(Collectors.toList());
+    }
+}
+
+@ServiceProvider
+public class SwingProvider implements SwingColorScheme {
+    @Override
+    public List<Color> getColors() { return Collections.singletonList(Color.BLACK); }
+}
+
+@ServiceProvider
+public class RgbProvider implements RgbColorScheme {
+    @Override
+    public List<Integer> getColors() { return Arrays.asList(-65536, -16711936, -16776961); }
+}
+
+SwingColorSchemeLoader.load().forEach(colorScheme -> System.out.println(colorScheme.getColors()));
 ```
 
 ### SPI pattern
