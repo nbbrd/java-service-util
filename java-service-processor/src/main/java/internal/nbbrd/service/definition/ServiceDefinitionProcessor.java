@@ -33,7 +33,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.stream.Collectors;
+
+import static java.util.stream.Collectors.*;
 
 /**
  * @author Philippe Charles
@@ -68,17 +69,17 @@ public final class ServiceDefinitionProcessor extends AbstractProcessor {
         Map<ClassName, List<LoadDefinition>> definitionsByTopLevel = data.getDefinitions()
                 .stream()
                 .filter(checker::checkDefinition)
-                .collect(Collectors.groupingBy(definition -> definition.getServiceType().topLevelClassName()));
+                .collect(groupingBy(definition -> definition.getServiceType().topLevelClassName()));
 
         Map<ClassName, List<LoadFilter>> filtersByService = data.getFilters()
                 .stream()
                 .filter(checker::checkFilter)
-                .collect(Collectors.groupingBy(filter -> filter.getServiceType().map(ClassName::get).orElseThrow(Unreachable::new)));
+                .collect(groupingBy(filter -> filter.getServiceType().map(ClassName::get).orElseThrow(Unreachable::new)));
 
         Map<ClassName, List<LoadSorter>> sortersByService = data.getSorters()
                 .stream()
                 .filter(checker::checkSorter)
-                .collect(Collectors.groupingBy(sorter -> sorter.getServiceType().map(ClassName::get).orElseThrow(Unreachable::new)));
+                .collect(groupingBy(sorter -> sorter.getServiceType().map(ClassName::get).orElseThrow(Unreachable::new)));
 
         definitionsByTopLevel.forEach((topLevel, definitions) -> generate(topLevel, ServiceDefinitionGenerator.allOf(definitions, filtersByService, sortersByService)));
 
@@ -98,24 +99,44 @@ public final class ServiceDefinitionProcessor extends AbstractProcessor {
     }
 
     private void generateNotNested(ServiceDefinitionGenerator generator) {
+        generateNotNestedLoader(generator);
+        generateNotNestedBatch(generator);
+    }
+
+    private void generateNotNestedLoader(ServiceDefinitionGenerator generator) {
         String loaderPackage = generator.getDefinition().resolveLoaderName().packageName();
         TypeSpec loaderClass = generator.generateLoader(false);
         writeFile(loaderPackage, loaderClass);
+    }
 
+    private void generateNotNestedBatch(ServiceDefinitionGenerator generator) {
         String batchPackage = generator.getDefinition().resolveBatchName().packageName();
         Optional<TypeSpec> batchClass = generator.generateBatch(false);
         batchClass.ifPresent(batchSpec -> writeFile(batchPackage, batchSpec));
     }
 
     private void generateNested(ClassName topLevel, List<ServiceDefinitionGenerator> generators) {
-        List<TypeSpec> nestedLoaders = generators.stream().map(o -> o.generateLoader(true)).collect(Collectors.toList());
-        TypeSpec loaderClass = TypeSpec.classBuilder(ClassName.bestGuess(topLevel.canonicalName() + "Loader"))
-                .addModifiers(Modifier.PUBLIC, Modifier.FINAL)
-                .addTypes(nestedLoaders)
-                .build();
-        writeFile(topLevel.packageName(), loaderClass);
+        generateNestedLoaders(topLevel, generators.stream().collect(partitioningBy(ServiceDefinitionGenerator::hasCustomLoaderName)));
+        generateNestedBatches(topLevel, generators.stream().collect(partitioningBy(ServiceDefinitionGenerator::hasCustomBatchName)));
+    }
 
-        List<TypeSpec> nestedBatches = generators.stream().map(o -> o.generateBatch(true)).filter(Optional::isPresent).map(Optional::get).collect(Collectors.toList());
+    private void generateNestedLoaders(ClassName topLevel, Map<Boolean, List<ServiceDefinitionGenerator>> loadersByHasCustomName) {
+        loadersByHasCustomName.get(true).forEach(this::generateNotNestedLoader);
+
+        List<TypeSpec> nestedLoaders = loadersByHasCustomName.get(false).stream().map(o -> o.generateLoader(true)).collect(toList());
+        if (!nestedLoaders.isEmpty()) {
+            TypeSpec loaderClass = TypeSpec.classBuilder(ClassName.bestGuess(topLevel.canonicalName() + "Loader"))
+                    .addModifiers(Modifier.PUBLIC, Modifier.FINAL)
+                    .addTypes(nestedLoaders)
+                    .build();
+            writeFile(topLevel.packageName(), loaderClass);
+        }
+    }
+
+    private void generateNestedBatches(ClassName topLevel, Map<Boolean, List<ServiceDefinitionGenerator>> batchesByHasCustomName) {
+        batchesByHasCustomName.get(true).forEach(this::generateNotNestedBatch);
+
+        List<TypeSpec> nestedBatches = batchesByHasCustomName.get(false).stream().map(o -> o.generateBatch(true)).filter(Optional::isPresent).map(Optional::get).collect(toList());
         if (!nestedBatches.isEmpty()) {
             TypeSpec batchClass = TypeSpec.classBuilder(ClassName.bestGuess(topLevel.canonicalName() + "Batch"))
                     .addModifiers(Modifier.PUBLIC, Modifier.FINAL)

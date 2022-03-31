@@ -65,6 +65,14 @@ class ServiceDefinitionGenerator {
     @lombok.NonNull
     List<LoadSorter> sorters;
 
+    public boolean hasCustomLoaderName() {
+        return !definition.getLoaderName().isEmpty();
+    }
+
+    public boolean hasCustomBatchName() {
+        return !definition.getBatchName().isEmpty();
+    }
+
     public TypeSpec generateLoader(boolean nested) {
         String className = definition.resolveLoaderName().simpleName();
 

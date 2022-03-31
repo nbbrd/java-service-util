@@ -20,12 +20,25 @@ import com.google.common.truth.StringSubject;
 import com.google.testing.compile.Compilation;
 import com.google.testing.compile.JavaFileObjects;
 import internal.nbbrd.service.provider.ServiceProviderProcessor;
+import org.assertj.core.api.Assertions;
+import org.assertj.core.api.Condition;
+import org.assertj.core.api.HamcrestCondition;
+import org.assertj.core.api.ListAssert;
 import org.junit.jupiter.api.Test;
 
+import javax.tools.JavaFileManager;
 import javax.tools.JavaFileObject;
 import javax.tools.StandardLocation;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
+import static com.google.common.truth.Truth.assertAbout;
 import static com.google.testing.compile.CompilationSubject.assertThat;
+import static com.google.testing.compile.JavaSourceSubjectFactory.javaSource;
+import static javax.tools.StandardLocation.SOURCE_OUTPUT;
+import static org.assertj.core.condition.MappedCondition.mappedCondition;
+import static org.hamcrest.core.IsEqual.equalTo;
 
 /**
  * @author Philippe Charles
@@ -529,9 +542,80 @@ public class ServiceDefinitionProcessorTest {
         content.contains("definition.NestedBatch$ABC");
     }
 
-    private Compilation compile(JavaFileObject file) {
+    @Test
+    public void testAlternateNames() {
+        JavaFileObject file = JavaFileObjects.forResource("definition/AlternateNames.java");
+
+        assertAbout(javaSource())
+                .that(file)
+                .processedWith(new ServiceDefinitionProcessor())
+                .compilesWithoutWarnings()
+                .and().generatesFileNamed(SOURCE_OUTPUT, "definition", "AlternateNamesLoader.java")
+                .and().generatesFileNamed(SOURCE_OUTPUT, "definition", "AlternateNamesBatch.java")
+                .and().generatesFileNamed(SOURCE_OUTPUT, "internal", "FooLoader.java")
+                .and().generatesFileNamed(SOURCE_OUTPUT, "internal", "BarBatch.java")
+        ;
+
+        assertGeneratedSources(file)
+                .hasSize(4);
+
+        assertGeneratedSources(nested("@ServiceDefinition ( )"))
+                .hasSize(1)
+                .areAtLeastOne(named("definition", "NestedLoader.java"));
+
+        assertGeneratedSources(nested("@ServiceDefinition ( loaderName = \"internal.LOADER\" )"))
+                .hasSize(1)
+                .areAtLeastOne(named("internal", "LOADER.java"));
+
+        assertGeneratedSources(nested("@ServiceDefinition ( batch = true )"))
+                .hasSize(2)
+                .areAtLeastOne(named("definition", "NestedLoader.java"))
+                .areAtLeastOne(named("definition", "NestedBatch.java"));
+
+        assertGeneratedSources(nested("@ServiceDefinition ( batch = true, batchName = \"internal.BATCH\" )"))
+                .hasSize(2)
+                .areAtLeastOne(named("definition", "NestedLoader.java"))
+                .areAtLeastOne(named("internal", "BATCH.java"));
+
+        assertGeneratedSources(nested("@ServiceDefinition ( batch = true, loaderName = \"internal.LOADER\" )"))
+                .hasSize(2)
+                .areAtLeastOne(named("internal", "LOADER.java"))
+                .areAtLeastOne(named("definition", "NestedBatch.java"));
+
+        assertGeneratedSources(nested("@ServiceDefinition ( batch = true, loaderName = \"internal.LOADER\", batchName = \"internal.BATCH\" )"))
+                .hasSize(2)
+                .areAtLeastOne(named("internal", "LOADER.java"))
+                .areAtLeastOne(named("internal", "BATCH.java"));
+    }
+
+    private static Compilation compile(JavaFileObject file) {
         return com.google.testing.compile.Compiler.javac()
                 .withProcessors(new ServiceDefinitionProcessor(), new ServiceProviderProcessor())
                 .compile(file);
+    }
+
+    private static JavaFileObject nested(String line) {
+        List<String> content = new ArrayList<>();
+        content.add("package definition;");
+        content.add("import nbbrd.service.ServiceDefinition;");
+        content.add("public class Nested {");
+        content.addAll(Arrays.asList(line));
+        content.add("public interface Foo {}");
+        content.add("}");
+        return JavaFileObjects.forSourceLines("definition.Nested", content);
+    }
+
+    private static ListAssert<JavaFileObject> assertGeneratedSources(JavaFileObject file) {
+        return Assertions.assertThat(compile(file).generatedSourceFiles());
+    }
+
+    private static Condition<JavaFileObject> named(String packageName, String relativeName) {
+        String expected = getFileName(SOURCE_OUTPUT, packageName, relativeName);
+        return mappedCondition(JavaFileObject::getName, new HamcrestCondition<>(equalTo(expected)));
+    }
+
+    private static String getFileName(JavaFileManager.Location location, String packageName, String relativeName) {
+        String path = packageName.isEmpty() ? relativeName : packageName.replace('.', '/') + '/' + relativeName;
+        return String.format("/%s/%s", location.getName(), path);
     }
 }
