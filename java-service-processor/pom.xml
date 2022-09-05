@@ -17,7 +17,7 @@
     <url>https://github.com/nbbrd/java-service-util</url>
 
     <properties>
-        <antlr4-runtime.version>4.9.3</antlr4-runtime.version>
+        <antlr4-runtime.version>4.11.1</antlr4-runtime.version>
     </properties>
 
     <dependencies>
