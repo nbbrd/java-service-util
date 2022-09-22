@@ -11,6 +11,7 @@
     <name>java-service</name>
     <description>Java service utilities</description>
     <url>https://github.com/nbbrd/java-service-util</url>
+    <inceptionYear>2019</inceptionYear>
 
     <licenses>
         <license>
