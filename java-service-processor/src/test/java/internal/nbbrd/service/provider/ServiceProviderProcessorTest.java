@@ -39,8 +39,8 @@ import java.util.List;
 import java.util.ServiceLoader;
 
 import static com.google.testing.compile.CompilationSubject.assertThat;
-import static internal.nbbrd.service.provider.ServiceProviderProcessor.getMissingEntries;
-import static internal.nbbrd.service.provider.ServiceProviderProcessor.getMissingRefs;
+import static internal.nbbrd.service.provider.ServiceProviderChecker.getMissingEntries;
+import static internal.nbbrd.service.provider.ServiceProviderChecker.getMissingRefs;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
 
@@ -264,19 +264,19 @@ public class ServiceProviderProcessorTest {
     @Test
     public void testMerge() {
         Assertions
-                .assertThat(ServiceProviderProcessor.merge(asList("a", "b"), asList("c", "d")))
+                .assertThat(ServiceProviderGenerator.merge(asList("a", "b"), asList("c", "d")))
                 .containsExactly("a", "b", "c", "d");
 
         Assertions
-                .assertThat(ServiceProviderProcessor.merge(asList("a", "b"), asList("a", "d")))
+                .assertThat(ServiceProviderGenerator.merge(asList("a", "b"), asList("a", "d")))
                 .containsExactly("a", "b", "d");
 
         Assertions
-                .assertThat(ServiceProviderProcessor.merge(asList("a", "b"), asList("c", "a")))
+                .assertThat(ServiceProviderGenerator.merge(asList("a", "b"), asList("c", "a")))
                 .containsExactly("a", "b", "c");
 
         Assertions
-                .assertThat(ServiceProviderProcessor.merge(asList("a", "b"), asList("c", "c")))
+                .assertThat(ServiceProviderGenerator.merge(asList("a", "b"), asList("c", "c")))
                 .containsExactly("a", "b", "c");
     }
 
