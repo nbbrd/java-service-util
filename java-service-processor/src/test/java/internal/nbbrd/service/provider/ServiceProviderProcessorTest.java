@@ -25,8 +25,8 @@ import org.junit.Assume;
 import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.jupiter.api.Disabled;
 
+import javax.annotation.processing.Processor;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.TypeElement;
 import javax.tools.JavaFileObject;
@@ -36,6 +36,7 @@ import java.net.URL;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.ServiceLoader;
 
 import static com.google.testing.compile.CompilationSubject.assertThat;
 import static internal.nbbrd.service.provider.ServiceProviderProcessor.getMissingEntries;
@@ -48,6 +49,12 @@ import static java.util.Collections.emptyList;
  * @author Philippe Charles
  */
 public class ServiceProviderProcessorTest {
+
+    @Test
+    public void testRegistration() {
+        Assertions.assertThat(ServiceLoader.load(Processor.class))
+                .hasAtLeastOneElementOfType(ServiceProviderProcessor.class);
+    }
 
     @Rule
     public CompilationRule compilationRule = new CompilationRule();

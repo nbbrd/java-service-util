@@ -39,7 +39,10 @@ import java.util.stream.Stream;
  * @author Philippe Charles
  */
 @org.openide.util.lookup.ServiceProvider(service = Processor.class)
-@SupportedAnnotationTypes({"nbbrd.service.ServiceProvider", "nbbrd.service.ServiceProvider.List"})
+@SupportedAnnotationTypes({
+        "nbbrd.service.ServiceProvider",
+        "nbbrd.service.ServiceProvider.List"
+})
 public final class ServiceProviderProcessor extends AbstractProcessor {
 
     // we store Name instead of TypeElement due to a bug(?) in JDK8
@@ -176,7 +179,7 @@ public final class ServiceProviderProcessor extends AbstractProcessor {
 
             getMissingRefs(annotationRefs, modulePathEntries)
                     .forEachOrdered(ref -> {
-                        throw new RefError(ref, "Missing module-info.java 'provides' directive for '" + ref + "'");
+                        throw new RefError(ref, "Missing module-info directive 'provides " + ref.getService() + " with " + ref.getProvider() + "'");
                     });
 
 //            System.out.println(Arrays.toString(annotationRefs.toArray()));

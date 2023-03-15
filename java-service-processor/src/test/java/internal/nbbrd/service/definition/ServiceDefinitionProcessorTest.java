@@ -26,12 +26,14 @@ import org.assertj.core.api.HamcrestCondition;
 import org.assertj.core.api.ListAssert;
 import org.junit.jupiter.api.Test;
 
+import javax.annotation.processing.Processor;
 import javax.tools.JavaFileManager;
 import javax.tools.JavaFileObject;
 import javax.tools.StandardLocation;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.ServiceLoader;
 
 import static com.google.common.truth.Truth.assertAbout;
 import static com.google.testing.compile.CompilationSubject.assertThat;
@@ -44,6 +46,12 @@ import static org.hamcrest.core.IsEqual.equalTo;
  * @author Philippe Charles
  */
 public class ServiceDefinitionProcessorTest {
+
+    @Test
+    public void testRegistration() {
+        Assertions.assertThat(ServiceLoader.load(Processor.class))
+                .hasAtLeastOneElementOfType(ServiceDefinitionProcessor.class);
+    }
 
     @Test
     public void testNonNestedDef() {
