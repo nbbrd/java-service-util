@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Improve error messages on missing directives in module-info [#205](https://github.com/nbbrd/java-service-util/issues/205)
+- Reduce verbosity of logging [#209](https://github.com/nbbrd/java-service-util/issues/209)
 
 ## [1.5.2] - 2022-10-28
 

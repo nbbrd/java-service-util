@@ -6,7 +6,6 @@ import internal.nbbrd.service.ProcessorTool;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.util.Types;
-import javax.tools.Diagnostic;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -23,12 +22,7 @@ final class ServiceProviderGenerator extends ProcessorTool {
     }
 
     public void generate(List<ProviderRef> annotationRefs) throws IOException {
-        annotationRefs.forEach(ref -> log("Annotation", ref));
         registerClassPath(annotationRefs, new ClassPathRegistry(getEnv()));
-    }
-
-    private void log(String key, Object value) {
-        getEnv().getMessager().printMessage(Diagnostic.Kind.NOTE, String.format("%1$s: %2$s", key, value));
     }
 
     private void registerClassPath(List<ProviderRef> annotationRefs, ClassPathRegistry classPath) throws IOException {
@@ -39,9 +33,6 @@ final class ServiceProviderGenerator extends ProcessorTool {
 
     private void registerClassPath(TypeElement service, List<ProviderRef> refs, ClassPathRegistry classPath) throws IOException {
         List<String> oldLines = classPath.readLinesByService(service);
-        List<ProviderEntry> entries = classPath.parseAll(service, oldLines);
-        entries.forEach(entry -> log("ClassPath", entry));
-
         List<String> newLines = classPath.formatAll(service, generateDelegates(refs));
         classPath.writeLinesByService(merge(oldLines, newLines), service);
     }

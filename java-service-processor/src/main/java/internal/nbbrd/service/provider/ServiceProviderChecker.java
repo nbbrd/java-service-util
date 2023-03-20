@@ -93,7 +93,6 @@ final class ServiceProviderChecker extends ProcessorTool {
     }
 
     private boolean checkModulePath(List<ProviderRef> annotationRefs, List<ProviderEntry> modulePathEntries) {
-        logEntries("ModulePath", modulePathEntries);
         return checkMissingRefs(annotationRefs, modulePathEntries)
                 && checkMissingEntries(annotationRefs, modulePathEntries);
     }
@@ -121,10 +120,6 @@ final class ServiceProviderChecker extends ProcessorTool {
         } else {
             getEnv().getMessager().printMessage(Diagnostic.Kind.ERROR, message);
         }
-    }
-
-    private void logEntries(String id, List<ProviderEntry> entries) {
-        entries.forEach(entry -> getEnv().getMessager().printMessage(Diagnostic.Kind.NOTE, String.format("%1$s: %2$s", id, entry)));
     }
 
     static Stream<ProviderRef> getMissingRefs(List<ProviderRef> annotationRefs, List<ProviderEntry> modulePathEntries) {
