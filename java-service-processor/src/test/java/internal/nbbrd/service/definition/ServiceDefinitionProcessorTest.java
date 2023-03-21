@@ -596,6 +596,19 @@ public class ServiceDefinitionProcessorTest {
                 .areAtLeastOne(named("internal", "BATCH.java"));
     }
 
+    @Test
+    public void testMultiRoundProcessing() {
+        JavaFileObject file = JavaFileObjects.forResource("definition/MultiRoundProcessing.java");
+
+        assertAbout(javaSource())
+                .that(file)
+                .processedWith(new ServiceDefinitionProcessor())
+                .compilesWithoutWarnings()
+                .and().generatesFileNamed(SOURCE_OUTPUT, "internal", "FirstLoader.java")
+                .and().generatesFileNamed(SOURCE_OUTPUT, "internal", "SecondLoader.java")
+        ;
+    }
+
     private static Compilation compile(JavaFileObject file) {
         return com.google.testing.compile.Compiler.javac()
                 .withProcessors(new ServiceDefinitionProcessor(), new ServiceProviderProcessor())
