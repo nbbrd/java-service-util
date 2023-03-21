@@ -59,6 +59,10 @@ public final class ExtEnvironment implements ProcessingEnvironment {
         delegate.getMessager().printMessage(Diagnostic.Kind.ERROR, message, annotatedElement);
     }
 
+    public void error(@NonNull HasPositionHint source, @NonNull String message) {
+        delegate.getMessager().printMessage(Diagnostic.Kind.ERROR, message, source.getPositionHint());
+    }
+
     public void warn(@NonNull Element annotatedElement, @NonNull String message) {
         delegate.getMessager().printMessage(Diagnostic.Kind.WARNING, message, annotatedElement);
     }

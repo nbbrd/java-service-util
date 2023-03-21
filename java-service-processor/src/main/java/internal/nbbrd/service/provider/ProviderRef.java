@@ -16,6 +16,9 @@
  */
 package internal.nbbrd.service.provider;
 
+import internal.nbbrd.service.HasPositionHint;
+
+import javax.lang.model.element.Element;
 import javax.lang.model.element.TypeElement;
 import java.util.Collection;
 import java.util.Collections;
@@ -26,13 +29,18 @@ import java.util.stream.Collectors;
  * @author Philippe Charles
  */
 @lombok.Value
-class ProviderRef {
+class ProviderRef implements HasPositionHint {
 
     @lombok.NonNull
     TypeElement service;
 
     @lombok.NonNull
     TypeElement provider;
+
+    @Override
+    public Element getPositionHint() {
+        return provider;
+    }
 
     @Override
     public String toString() {

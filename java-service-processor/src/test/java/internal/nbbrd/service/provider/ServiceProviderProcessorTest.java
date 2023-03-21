@@ -1,17 +1,17 @@
 /*
  * Copyright 2019 National Bank of Belgium
- * 
- * Licensed under the EUPL, Version 1.1 or - as soon they will be approved 
+ *
+ * Licensed under the EUPL, Version 1.1 or - as soon they will be approved
  * by the European Commission - subsequent versions of the EUPL (the "Licence");
  * You may not use this work except in compliance with the Licence.
  * You may obtain a copy of the Licence at:
- * 
+ *
  * http://ec.europa.eu/idabc/eupl
- * 
- * Unless required by applicable law or agreed to in writing, software 
+ *
+ * Unless required by applicable law or agreed to in writing, software
  * distributed under the Licence is distributed on an "AS IS" basis,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the Licence for the specific language governing permissions and 
+ * See the Licence for the specific language governing permissions and
  * limitations under the Licence.
  */
 package internal.nbbrd.service.provider;
@@ -19,31 +19,42 @@ package internal.nbbrd.service.provider;
 import com.google.common.truth.StringSubject;
 import com.google.testing.compile.Compilation;
 import com.google.testing.compile.CompilationRule;
-import static com.google.testing.compile.CompilationSubject.assertThat;
 import com.google.testing.compile.JavaFileObjects;
-import static internal.nbbrd.service.provider.ServiceProviderProcessor.getMissingEntries;
-import static internal.nbbrd.service.provider.ServiceProviderProcessor.getMissingRefs;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.nio.file.Paths;
-import java.util.ArrayList;
-import static java.util.Arrays.asList;
-import static java.util.Collections.emptyList;
-import java.util.List;
+import org.assertj.core.api.Assertions;
+import org.junit.Assume;
+import org.junit.Ignore;
+import org.junit.Rule;
+import org.junit.Test;
+
+import javax.annotation.processing.Processor;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.TypeElement;
 import javax.tools.JavaFileObject;
 import javax.tools.StandardLocation;
-import org.assertj.core.api.Assertions;
-import org.junit.Assume;
-import org.junit.Rule;
-import org.junit.Test;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.ServiceLoader;
+
+import static com.google.testing.compile.CompilationSubject.assertThat;
+import static internal.nbbrd.service.provider.ServiceProviderChecker.getMissingEntries;
+import static internal.nbbrd.service.provider.ServiceProviderChecker.getMissingRefs;
+import static java.util.Arrays.asList;
+import static java.util.Collections.emptyList;
 
 /**
  *
  * @author Philippe Charles
  */
 public class ServiceProviderProcessorTest {
+
+    @Test
+    public void testRegistration() {
+        Assertions.assertThat(ServiceLoader.load(Processor.class))
+                .hasAtLeastOneElementOfType(ServiceProviderProcessor.class);
+    }
 
     @Rule
     public CompilationRule compilationRule = new CompilationRule();
@@ -253,22 +264,23 @@ public class ServiceProviderProcessorTest {
     @Test
     public void testMerge() {
         Assertions
-                .assertThat(ServiceProviderProcessor.merge(asList("a", "b"), asList("c", "d")))
+                .assertThat(ServiceProviderGenerator.merge(asList("a", "b"), asList("c", "d")))
                 .containsExactly("a", "b", "c", "d");
 
         Assertions
-                .assertThat(ServiceProviderProcessor.merge(asList("a", "b"), asList("a", "d")))
+                .assertThat(ServiceProviderGenerator.merge(asList("a", "b"), asList("a", "d")))
                 .containsExactly("a", "b", "d");
 
         Assertions
-                .assertThat(ServiceProviderProcessor.merge(asList("a", "b"), asList("c", "a")))
+                .assertThat(ServiceProviderGenerator.merge(asList("a", "b"), asList("c", "a")))
                 .containsExactly("a", "b", "c");
 
         Assertions
-                .assertThat(ServiceProviderProcessor.merge(asList("a", "b"), asList("c", "c")))
+                .assertThat(ServiceProviderGenerator.merge(asList("a", "b"), asList("c", "c")))
                 .containsExactly("a", "b", "c");
     }
 
+    @Ignore("https://github.com/google/compile-testing/issues/335#issuecomment-1269011171")
     @Test
     public void testModuleInfoWithoutAnnotation() {
         assumeAtLeastJava9();
@@ -286,6 +298,7 @@ public class ServiceProviderProcessorTest {
                 .succeededWithoutWarnings();
     }
 
+    @Ignore("https://github.com/google/compile-testing/issues/335#issuecomment-1269011171")
     @Test
     public void testModuleInfoWithAnnotation() {
         assumeAtLeastJava9();

@@ -33,7 +33,6 @@ import javax.tools.Diagnostic;
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 /**
  * @author Philippe Charles
@@ -49,31 +48,22 @@ final class ServiceDefinitionChecker {
     }
 
     public void checkModuleInfo(List<LoadDefinition> definitions) {
-        List<String> serviceTypes = definitions.stream()
-                .map(definition -> definition.getServiceType().toString())
-                .collect(Collectors.toList());
-
         try {
-            Optional<ModuleInfoEntries> entries = ModuleInfoEntries.parse(env.getFiler());
-
-            entries.map(ModuleInfoEntries::getUsages).ifPresent(usages -> {
-                serviceTypes
-                        .stream()
-                        .filter(serviceType -> (!usages.contains(serviceType)))
-                        .map(env::asTypeElement)
-                        .forEachOrdered(ref -> env.error(ref, "Missing module-info.java 'uses' directive for '" + ref + "'"));
-
-//                uses
-//                        .stream()
-//                        .filter(use -> (!serviceTypes.contains(use)))
-//                        .map(this::asTypeElement)
-//                        .forEachOrdered(ref -> error(ref, "Missing annotation for '" + ref + "'"));
-            });
-
+            ModuleInfoEntries.parse(env.getFiler())
+                    .map(ModuleInfoEntries::getUsages)
+                    .ifPresent(usages -> checkModuleInfoUsages(usages, definitions));
         } catch (IOException ex) {
             String msg = ex.getClass().getSimpleName() + ": " + ex.getMessage();
             env.getMessager().printMessage(Diagnostic.Kind.ERROR, msg);
         }
+    }
+
+    private void checkModuleInfoUsages(List<String> usages, List<LoadDefinition> definitions) {
+        definitions.stream()
+                .map(definition -> definition.getServiceType().toString())
+                .filter(serviceType -> (!usages.contains(serviceType)))
+                .map(env::asTypeElement)
+                .forEachOrdered(ref -> env.error(ref, "Missing module-info directive 'uses " + ref + "'"));
     }
 
     public boolean checkFilter(LoadFilter filter) {
