@@ -25,7 +25,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * @author Philippe Charles
  */
-public class SpecializedLoaderTest {
+public class LoadDefinitionTest {
 
     @Test
     public void testResolveNameForNonNestedService() {
