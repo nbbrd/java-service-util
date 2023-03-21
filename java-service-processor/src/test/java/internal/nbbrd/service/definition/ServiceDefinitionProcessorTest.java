@@ -21,13 +21,10 @@ import com.google.testing.compile.Compilation;
 import com.google.testing.compile.JavaFileObjects;
 import internal.nbbrd.service.provider.ServiceProviderProcessor;
 import org.assertj.core.api.Assertions;
-import org.assertj.core.api.Condition;
-import org.assertj.core.api.HamcrestCondition;
 import org.assertj.core.api.ListAssert;
 import org.junit.jupiter.api.Test;
 
 import javax.annotation.processing.Processor;
-import javax.tools.JavaFileManager;
 import javax.tools.JavaFileObject;
 import javax.tools.StandardLocation;
 import java.util.ArrayList;
@@ -35,12 +32,16 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.ServiceLoader;
 
+import static _test.CompilationConditions.generatedSourceFile;
+import static _test.CompilationConditions.succeededWithoutWarnings;
+import static _test.JavaFileObjectConditions.fileNamed;
+import static _test.JavaFileObjectConditions.sourceEquivalentTo;
 import static com.google.common.truth.Truth.assertAbout;
 import static com.google.testing.compile.CompilationSubject.assertThat;
+import static com.google.testing.compile.Compiler.javac;
+import static com.google.testing.compile.JavaFileObjects.forResource;
 import static com.google.testing.compile.JavaSourceSubjectFactory.javaSource;
 import static javax.tools.StandardLocation.SOURCE_OUTPUT;
-import static org.assertj.core.condition.MappedCondition.mappedCondition;
-import static org.hamcrest.core.IsEqual.equalTo;
 
 /**
  * @author Philippe Charles
@@ -55,21 +56,21 @@ public class ServiceDefinitionProcessorTest {
 
     @Test
     public void testNonNestedDef() {
-        JavaFileObject file = JavaFileObjects.forResource("definition/NonNestedDef.java");
-        Compilation compilation = compile(file);
+        Compilation compilation = javac()
+                .withProcessors(new ServiceDefinitionProcessor())
+                .compile(forResource("definition/TestNonNestedDef.java"));
 
-        assertThat(compilation)
-                .succeededWithoutWarnings();
-
-        assertThat(compilation)
-                .generatedSourceFile("definition.NonNestedDefLoader")
-                .contentsAsUtf8String()
-                .contains("private final Iterable<NonNestedDef> source = ServiceLoader.load(NonNestedDef.class);");
+        Assertions.assertThat(compilation)
+                .has(succeededWithoutWarnings())
+                .has(generatedSourceFile(
+                        "definition.TestNonNestedDefLoader",
+                        sourceEquivalentTo(forResource("definition/expected/TestNonNestedDefLoader.java")))
+                );
     }
 
     @Test
     public void testNestedDef() {
-        JavaFileObject file = JavaFileObjects.forResource("definition/NestedDef.java");
+        JavaFileObject file = forResource("definition/NestedDef.java");
         Compilation compilation = compile(file);
 
         assertThat(compilation)
@@ -83,7 +84,7 @@ public class ServiceDefinitionProcessorTest {
 
     @Test
     public void testSingleDef() {
-        JavaFileObject file = JavaFileObjects.forResource("definition/SingleDef.java");
+        JavaFileObject file = forResource("definition/SingleDef.java");
         Compilation compilation = compile(file);
 
         assertThat(compilation)
@@ -113,7 +114,7 @@ public class ServiceDefinitionProcessorTest {
 
     @Test
     public void testOptionalDef() {
-        JavaFileObject file = JavaFileObjects.forResource("definition/OptionalDef.java");
+        JavaFileObject file = forResource("definition/OptionalDef.java");
         Compilation compilation = compile(file);
 
         assertThat(compilation)
@@ -143,7 +144,7 @@ public class ServiceDefinitionProcessorTest {
 
     @Test
     public void testMultipleDef() {
-        JavaFileObject file = JavaFileObjects.forResource("definition/MultipleDef.java");
+        JavaFileObject file = forResource("definition/MultipleDef.java");
         Compilation compilation = compile(file);
 
         assertThat(compilation)
@@ -173,7 +174,7 @@ public class ServiceDefinitionProcessorTest {
 
     @Test
     public void testAlternateFactories() {
-        JavaFileObject file = JavaFileObjects.forResource("definition/AlternateFactories.java");
+        JavaFileObject file = forResource("definition/AlternateFactories.java");
         Compilation compilation = compile(file);
 
         assertThat(compilation)
@@ -182,7 +183,7 @@ public class ServiceDefinitionProcessorTest {
 
     @Test
     public void testNonInstantiableFallback() {
-        JavaFileObject file = JavaFileObjects.forResource("definition/NonInstantiableFallback.java");
+        JavaFileObject file = forResource("definition/NonInstantiableFallback.java");
         Compilation compilation = compile(file);
 
         assertThat(compilation)
@@ -196,7 +197,7 @@ public class ServiceDefinitionProcessorTest {
 
     @Test
     public void testNonInstantiableWrapper() {
-        JavaFileObject file = JavaFileObjects.forResource("definition/NonInstantiableWrapper.java");
+        JavaFileObject file = forResource("definition/NonInstantiableWrapper.java");
         Compilation compilation = compile(file);
 
         assertThat(compilation)
@@ -225,7 +226,7 @@ public class ServiceDefinitionProcessorTest {
 
     @Test
     public void testNonInstantiablePreprocessor() {
-        JavaFileObject file = JavaFileObjects.forResource("definition/NonInstantiablePreprocessor.java");
+        JavaFileObject file = forResource("definition/NonInstantiablePreprocessor.java");
         Compilation compilation = compile(file);
 
         assertThat(compilation)
@@ -239,7 +240,7 @@ public class ServiceDefinitionProcessorTest {
 
     @Test
     public void testNonAssignableFallback() {
-        JavaFileObject file = JavaFileObjects.forResource("definition/NonAssignableFallback.java");
+        JavaFileObject file = forResource("definition/NonAssignableFallback.java");
         Compilation compilation = compile(file);
 
         assertThat(compilation)
@@ -253,7 +254,7 @@ public class ServiceDefinitionProcessorTest {
 
     @Test
     public void testNonAssignablePreprocessor() {
-        JavaFileObject file = JavaFileObjects.forResource("definition/NonAssignablePreprocessor.java");
+        JavaFileObject file = forResource("definition/NonAssignablePreprocessor.java");
         Compilation compilation = compile(file);
 
         assertThat(compilation)
@@ -267,7 +268,7 @@ public class ServiceDefinitionProcessorTest {
 
     @Test
     public void testNonAssignableWrapper() {
-        JavaFileObject file = JavaFileObjects.forResource("definition/NonAssignableWrapper.java");
+        JavaFileObject file = forResource("definition/NonAssignableWrapper.java");
         Compilation compilation = compile(file);
 
         assertThat(compilation)
@@ -281,7 +282,7 @@ public class ServiceDefinitionProcessorTest {
 
     @Test
     public void testFilters() {
-        JavaFileObject file = JavaFileObjects.forResource("definition/Filters.java");
+        JavaFileObject file = forResource("definition/Filters.java");
         Compilation compilation = compile(file);
 
         assertThat(compilation)
@@ -306,7 +307,7 @@ public class ServiceDefinitionProcessorTest {
 
     @Test
     public void testNoArgFilter() {
-        JavaFileObject file = JavaFileObjects.forResource("definition/NoArgFilter.java");
+        JavaFileObject file = forResource("definition/NoArgFilter.java");
         Compilation compilation = compile(file);
 
         assertThat(compilation)
@@ -318,7 +319,7 @@ public class ServiceDefinitionProcessorTest {
 
     @Test
     public void testStaticFilter() {
-        JavaFileObject file = JavaFileObjects.forResource("definition/StaticFilter.java");
+        JavaFileObject file = forResource("definition/StaticFilter.java");
         Compilation compilation = compile(file);
 
         assertThat(compilation)
@@ -332,7 +333,7 @@ public class ServiceDefinitionProcessorTest {
 
     @Test
     public void testLostFilter() {
-        JavaFileObject file = JavaFileObjects.forResource("definition/LostFilter.java");
+        JavaFileObject file = forResource("definition/LostFilter.java");
         Compilation compilation = compile(file);
 
         assertThat(compilation)
@@ -346,7 +347,7 @@ public class ServiceDefinitionProcessorTest {
 
     @Test
     public void testNonBooleanFilter() {
-        JavaFileObject file = JavaFileObjects.forResource("definition/NonBooleanFilter.java");
+        JavaFileObject file = forResource("definition/NonBooleanFilter.java");
         Compilation compilation = compile(file);
 
         assertThat(compilation)
@@ -360,7 +361,7 @@ public class ServiceDefinitionProcessorTest {
 
     @Test
     public void testWrappers() {
-        JavaFileObject file = JavaFileObjects.forResource("definition/Wrappers.java");
+        JavaFileObject file = forResource("definition/Wrappers.java");
         Compilation compilation = compile(file);
 
         assertThat(compilation)
@@ -382,7 +383,7 @@ public class ServiceDefinitionProcessorTest {
 
     @Test
     public void testSorters() {
-        JavaFileObject file = JavaFileObjects.forResource("definition/Sorters.java");
+        JavaFileObject file = forResource("definition/Sorters.java");
         Compilation compilation = compile(file);
 
         assertThat(compilation)
@@ -416,7 +417,7 @@ public class ServiceDefinitionProcessorTest {
 
     @Test
     public void testNoArgSorter() {
-        JavaFileObject file = JavaFileObjects.forResource("definition/NoArgSorter.java");
+        JavaFileObject file = forResource("definition/NoArgSorter.java");
         Compilation compilation = compile(file);
 
         assertThat(compilation)
@@ -428,7 +429,7 @@ public class ServiceDefinitionProcessorTest {
 
     @Test
     public void testStaticSorter() {
-        JavaFileObject file = JavaFileObjects.forResource("definition/StaticSorter.java");
+        JavaFileObject file = forResource("definition/StaticSorter.java");
         Compilation compilation = compile(file);
 
         assertThat(compilation)
@@ -442,7 +443,7 @@ public class ServiceDefinitionProcessorTest {
 
     @Test
     public void testLostSorter() {
-        JavaFileObject file = JavaFileObjects.forResource("definition/LostSorter.java");
+        JavaFileObject file = forResource("definition/LostSorter.java");
         Compilation compilation = compile(file);
 
         assertThat(compilation)
@@ -456,7 +457,7 @@ public class ServiceDefinitionProcessorTest {
 
     @Test
     public void testNonComparableSorter() {
-        JavaFileObject file = JavaFileObjects.forResource("definition/NonComparableSorter.java");
+        JavaFileObject file = forResource("definition/NonComparableSorter.java");
         Compilation compilation = compile(file);
 
         assertThat(compilation)
@@ -470,7 +471,7 @@ public class ServiceDefinitionProcessorTest {
 
     @Test
     public void testCustomBackend() {
-        JavaFileObject file = JavaFileObjects.forResource("definition/CustomBackend.java");
+        JavaFileObject file = forResource("definition/CustomBackend.java");
         Compilation compilation = compile(file);
 
         assertThat(compilation)
@@ -484,7 +485,7 @@ public class ServiceDefinitionProcessorTest {
 
     @Test
     public void testNonAssignableBackend() {
-        JavaFileObject file = JavaFileObjects.forResource("definition/NonAssignableBackend.java");
+        JavaFileObject file = forResource("definition/NonAssignableBackend.java");
         Compilation compilation = compile(file);
 
         assertThat(compilation)
@@ -498,7 +499,7 @@ public class ServiceDefinitionProcessorTest {
 
     @Test
     public void testNonNestedBatch() {
-        JavaFileObject file = JavaFileObjects.forResource("definition/NonNestedBatch.java");
+        JavaFileObject file = forResource("definition/NonNestedBatch.java");
         Compilation compilation = compile(file);
 
         assertThat(compilation)
@@ -525,7 +526,7 @@ public class ServiceDefinitionProcessorTest {
 
     @Test
     public void testNestedBatch() {
-        JavaFileObject file = JavaFileObjects.forResource("definition/NestedBatch.java");
+        JavaFileObject file = forResource("definition/NestedBatch.java");
         Compilation compilation = compile(file);
 
         assertThat(compilation)
@@ -552,7 +553,7 @@ public class ServiceDefinitionProcessorTest {
 
     @Test
     public void testAlternateNames() {
-        JavaFileObject file = JavaFileObjects.forResource("definition/AlternateNames.java");
+        JavaFileObject file = forResource("definition/AlternateNames.java");
 
         assertAbout(javaSource())
                 .that(file)
@@ -569,39 +570,37 @@ public class ServiceDefinitionProcessorTest {
 
         assertGeneratedSources(nested("@ServiceDefinition ( )"))
                 .hasSize(1)
-                .areAtLeastOne(named("definition", "NestedLoader.java"));
+                .areAtLeastOne(fileNamed("definition", "NestedLoader.java"));
 
         assertGeneratedSources(nested("@ServiceDefinition ( loaderName = \"internal.LOADER\" )"))
                 .hasSize(1)
-                .areAtLeastOne(named("internal", "LOADER.java"));
+                .areAtLeastOne(fileNamed("internal", "LOADER.java"));
 
         assertGeneratedSources(nested("@ServiceDefinition ( batch = true )"))
                 .hasSize(2)
-                .areAtLeastOne(named("definition", "NestedLoader.java"))
-                .areAtLeastOne(named("definition", "NestedBatch.java"));
+                .areAtLeastOne(fileNamed("definition", "NestedLoader.java"))
+                .areAtLeastOne(fileNamed("definition", "NestedBatch.java"));
 
         assertGeneratedSources(nested("@ServiceDefinition ( batch = true, batchName = \"internal.BATCH\" )"))
                 .hasSize(2)
-                .areAtLeastOne(named("definition", "NestedLoader.java"))
-                .areAtLeastOne(named("internal", "BATCH.java"));
+                .areAtLeastOne(fileNamed("definition", "NestedLoader.java"))
+                .areAtLeastOne(fileNamed("internal", "BATCH.java"));
 
         assertGeneratedSources(nested("@ServiceDefinition ( batch = true, loaderName = \"internal.LOADER\" )"))
                 .hasSize(2)
-                .areAtLeastOne(named("internal", "LOADER.java"))
-                .areAtLeastOne(named("definition", "NestedBatch.java"));
+                .areAtLeastOne(fileNamed("internal", "LOADER.java"))
+                .areAtLeastOne(fileNamed("definition", "NestedBatch.java"));
 
         assertGeneratedSources(nested("@ServiceDefinition ( batch = true, loaderName = \"internal.LOADER\", batchName = \"internal.BATCH\" )"))
                 .hasSize(2)
-                .areAtLeastOne(named("internal", "LOADER.java"))
-                .areAtLeastOne(named("internal", "BATCH.java"));
+                .areAtLeastOne(fileNamed("internal", "LOADER.java"))
+                .areAtLeastOne(fileNamed("internal", "BATCH.java"));
     }
 
     @Test
     public void testMultiRoundProcessing() {
-        JavaFileObject file = JavaFileObjects.forResource("definition/MultiRoundProcessing.java");
-
         assertAbout(javaSource())
-                .that(file)
+                .that(forResource("definition/TestMultiRoundProcessing.java"))
                 .processedWith(new ServiceDefinitionProcessor())
                 .compilesWithoutWarnings()
                 .and().generatesFileNamed(SOURCE_OUTPUT, "internal", "FirstLoader.java")
@@ -610,7 +609,7 @@ public class ServiceDefinitionProcessorTest {
     }
 
     private static Compilation compile(JavaFileObject file) {
-        return com.google.testing.compile.Compiler.javac()
+        return javac()
                 .withProcessors(new ServiceDefinitionProcessor(), new ServiceProviderProcessor())
                 .compile(file);
     }
@@ -628,15 +627,5 @@ public class ServiceDefinitionProcessorTest {
 
     private static ListAssert<JavaFileObject> assertGeneratedSources(JavaFileObject file) {
         return Assertions.assertThat(compile(file).generatedSourceFiles());
-    }
-
-    private static Condition<JavaFileObject> named(String packageName, String relativeName) {
-        String expected = getFileName(SOURCE_OUTPUT, packageName, relativeName);
-        return mappedCondition(JavaFileObject::getName, new HamcrestCondition<>(equalTo(expected)));
-    }
-
-    private static String getFileName(JavaFileManager.Location location, String packageName, String relativeName) {
-        String path = packageName.isEmpty() ? relativeName : packageName.replace('.', '/') + '/' + relativeName;
-        return String.format("/%s/%s", location.getName(), path);
     }
 }
