@@ -113,7 +113,7 @@ final class ServiceDefinitionChecker {
         Types types = env.getTypeUtils();
         TypeElement service = env.asTypeElement(definition.getServiceType());
 
-        if (!checkFallback(definition.getQuantifier(), definition.getFallback(), service, types)) {
+        if (!checkFallback(definition.getQuantifier(), definition.getFallback(), definition.isNoFallback(), service, types)) {
             return false;
         }
         if (!checkWrapper(definition.getWrapper(), service, types)) {
@@ -134,10 +134,10 @@ final class ServiceDefinitionChecker {
         return true;
     }
 
-    private boolean checkFallback(Quantifier quantifier, Optional<TypeInstantiator> fallback, TypeElement service, Types types) {
+    private boolean checkFallback(Quantifier quantifier, Optional<TypeInstantiator> fallback, boolean noFallback, TypeElement service, Types types) {
         switch (quantifier) {
             case SINGLE:
-                if (!fallback.isPresent()) {
+                if (!fallback.isPresent() && !noFallback) {
                     env.warn(service, String.format("Missing fallback for service '%1$s'", service));
                 }
                 break;

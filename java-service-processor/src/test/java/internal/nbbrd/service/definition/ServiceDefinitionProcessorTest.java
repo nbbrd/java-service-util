@@ -665,6 +665,42 @@ public class ServiceDefinitionProcessorTest {
                 .isEqualToIgnoringNewLines(contentsAsUtf8String(forResource("definition/expected/TestBatchReloadingLoader.java")));
     }
 
+    @Test
+    public void testMissingFallback() {
+        JavaFileObject file = forResource("definition/MissingFallback.java");
+        Compilation compilation = compile(file);
+
+        assertThat(compilation)
+                .has(succeeded());
+
+        assertThat(compilation)
+                .extracting(Compilation::warnings, DIAGNOSTICS)
+                .hasSize(1)
+                .extracting(Compilations::getDefaultMessage, Diagnostic::getSource, Diagnostic::getLineNumber)
+                .containsOnly(
+                        tuple("Missing fallback for service 'definition.MissingFallback'", file, 8L)
+                );
+
+        assertThat(compilation)
+                .extracting(Compilation::generatedSourceFiles, JAVA_FILE_OBJECTS)
+                .singleElement()
+                .has(sourceFileNamed("definition", "MissingFallbackLoader.java"));
+    }
+
+    @Test
+    public void testNoFallback() {
+        JavaFileObject file = forResource("definition/TestNoFallback.java");
+        Compilation compilation = compile(file);
+
+        assertThat(compilation)
+                .has(succeededWithoutWarnings());
+
+        assertThat(compilation)
+                .extracting(Compilation::generatedSourceFiles, JAVA_FILE_OBJECTS)
+                .singleElement()
+                .has(sourceFileNamed("definition", "TestNoFallbackLoader.java"));
+    }
+
     private static Compilation compile(JavaFileObject file) {
         return Compiler.javac()
                 .withProcessors(new ServiceDefinitionProcessor(), new ServiceProviderProcessor())

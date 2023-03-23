@@ -48,6 +48,8 @@ class LoadDefinition {
     @lombok.NonNull
     Optional<TypeInstantiator> fallback;
 
+    boolean noFallback;
+
     @lombok.NonNull
     Optional<TypeWrapper> wrapper;
 

@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Add property to disable warning on missing fallback [#208](https://github.com/nbbrd/java-service-util/issues/208)
+
 ### Fixed
 
 - Fix batch reloading [#129](https://github.com/nbbrd/java-service-util/issues/129)
