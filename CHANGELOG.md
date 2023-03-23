@@ -6,6 +6,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.6.0] - 2023-03-23
+
+### Added
+
+- Add property to disable warning on missing fallback [#208](https://github.com/nbbrd/java-service-util/issues/208)
+
+### Fixed
+
+- Fix batch reloading [#129](https://github.com/nbbrd/java-service-util/issues/129)
+
 ## [1.5.3] - 2023-03-21
 
 ### Changed
@@ -109,7 +119,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial release
 
-[Unreleased]: https://github.com/nbbrd/java-service-util/compare/v1.5.3...HEAD
+[Unreleased]: https://github.com/nbbrd/java-service-util/compare/v1.6.0...HEAD
+[1.6.0]: https://github.com/nbbrd/java-service-util/compare/v1.5.3...v1.6.0
 [1.5.3]: https://github.com/nbbrd/java-service-util/compare/v1.5.2...v1.5.3
 [1.5.2]: https://github.com/nbbrd/java-service-util/compare/v1.5.1...v1.5.2
 [1.5.1]: https://github.com/nbbrd/java-service-util/compare/v1.5.0...v1.5.1

@@ -109,7 +109,7 @@ class ServiceDefinitionGenerator {
             FieldSpec cleanerField = newCleanerField();
             result.addField(cleanerField);
             result.addMethod(newSetMethod(resourceField, quantifierType));
-            result.addMethod(newReloadMethod(sourceField, cleanerField, doLoadMethod));
+            result.addMethod(newReloadMethod(sourceField, batchField, cleanerField, doLoadMethod));
             result.addMethod(newResetMethod(sourceField, doLoadMethod));
         }
 
@@ -507,7 +507,12 @@ class ServiceDefinitionGenerator {
                 : CodeBlock.of("$N = $T.requireNonNull(newValue)", resourceField, Objects.class);
     }
 
-    private MethodSpec newReloadMethod(FieldSpec sourceField, FieldSpec cleanerField, MethodSpec loaderMethod) {
+    private MethodSpec newReloadMethod(
+            FieldSpec sourceField,
+            @SuppressWarnings("OptionalUsedAsFieldOrParameterType") Optional<FieldSpec> batchField,
+            FieldSpec cleanerField,
+            MethodSpec loaderMethod
+    ) {
         MethodSpec.Builder result = MethodSpec
                 .methodBuilder("reload")
                 .addJavadoc(CodeBlock
@@ -524,6 +529,7 @@ class ServiceDefinitionGenerator {
         }
 
         result.addStatement("$N.accept($N)", cleanerField, sourceField);
+        batchField.ifPresent(fieldSpec -> result.addStatement("$N.accept($N)", cleanerField, fieldSpec));
         result.addStatement("set($N())", loaderMethod);
 
         if (definition.getLifecycle().isAtomicReference()) {

@@ -114,6 +114,7 @@ final class ServiceDefinitionCollector {
                 .lifecycle(Lifecycle.of(annotation.mutability(), annotation.singleton()))
                 .serviceType(ClassName.get(serviceType))
                 .fallback(fallback)
+                .noFallback(annotation.noFallback())
                 .wrapper(wrapper)
                 .preprocessor(preprocessor)
                 .loaderName(annotation.loaderName())

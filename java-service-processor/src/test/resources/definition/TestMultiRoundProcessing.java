@@ -2,7 +2,7 @@ package definition;
 
 import nbbrd.service.ServiceDefinition;
 
-public class MultiRoundProcessing {
+public class TestMultiRoundProcessing {
 
     @ServiceDefinition(loaderName = "internal.FirstLoader")
     public interface FirstService {

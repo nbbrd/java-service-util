@@ -16,278 +16,288 @@
  */
 package internal.nbbrd.service.provider;
 
-import com.google.common.truth.StringSubject;
+import _test.Compilations;
 import com.google.testing.compile.Compilation;
-import com.google.testing.compile.CompilationRule;
-import com.google.testing.compile.JavaFileObjects;
-import org.assertj.core.api.Assertions;
-import org.junit.Assume;
-import org.junit.Ignore;
-import org.junit.Rule;
-import org.junit.Test;
+import com.google.testing.compile.Compiler;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledOnJre;
+import org.junit.jupiter.api.condition.JRE;
 
 import javax.annotation.processing.Processor;
-import javax.lang.model.SourceVersion;
-import javax.lang.model.element.TypeElement;
+import javax.tools.Diagnostic;
 import javax.tools.JavaFileObject;
-import javax.tools.StandardLocation;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.ServiceLoader;
 
-import static com.google.testing.compile.CompilationSubject.assertThat;
-import static internal.nbbrd.service.provider.ServiceProviderChecker.getMissingEntries;
-import static internal.nbbrd.service.provider.ServiceProviderChecker.getMissingRefs;
-import static java.util.Arrays.asList;
-import static java.util.Collections.emptyList;
+import static _test.Compilations.*;
+import static com.google.testing.compile.JavaFileObjects.forResource;
+import static com.google.testing.compile.JavaFileObjects.forSourceLines;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.InstanceOfAssertFactories.STRING;
+import static org.assertj.core.groups.Tuple.tuple;
 
 /**
- *
  * @author Philippe Charles
  */
 public class ServiceProviderProcessorTest {
 
     @Test
     public void testRegistration() {
-        Assertions.assertThat(ServiceLoader.load(Processor.class))
+        assertThat(ServiceLoader.load(Processor.class))
                 .hasAtLeastOneElementOfType(ServiceProviderProcessor.class);
     }
 
-    @Rule
-    public CompilationRule compilationRule = new CompilationRule();
-
     @Test
     public void testWithoutAnnotation() {
-        Compilation compilation = compile(JavaFileObjects.forResource("provider/WithoutAnnotation.java"));
+        Compilation compilation = compile(forResource("provider/WithoutAnnotation.java"));
 
         assertThat(compilation)
-                .succeeded();
+                .has(succeeded());
     }
 
     @Test
     public void testWithAnnotation() {
-        Compilation compilation = compile(JavaFileObjects.forResource("provider/WithAnnotation.java"));
+        Compilation compilation = compile(forResource("provider/WithAnnotation.java"));
 
         assertThat(compilation)
-                .succeeded();
+                .has(succeeded());
 
-        StringSubject content
-                = assertThat(compilation)
-                        .generatedFile(StandardLocation.CLASS_OUTPUT, "META-INF/services/provider.WithAnnotation$HelloService")
-                        .contentsAsUtf8String();
-        content.contains("provider.WithAnnotation$Provider1");
-        content.contains("provider.WithAnnotation$Provider2");
+        assertThat(compilation)
+                .extracting(Compilation::generatedFiles, JAVA_FILE_OBJECTS)
+                .filteredOn(fileNamed("/CLASS_OUTPUT/META-INF/services/provider.WithAnnotation$HelloService"))
+                .singleElement()
+                .extracting(Compilations::contentsAsUtf8String, STRING)
+                .contains(
+                        "provider.WithAnnotation$Provider1",
+                        "provider.WithAnnotation$Provider2"
+                );
     }
 
     @Test
     public void testWithRepeatedAnnotation() {
-        Compilation compilation = compile(JavaFileObjects.forResource("provider/WithRepeatedAnnotation.java"));
+        Compilation compilation = compile(forResource("provider/WithRepeatedAnnotation.java"));
 
         assertThat(compilation)
-                .succeeded();
+                .has(succeeded());
 
-        StringSubject c1
-                = assertThat(compilation)
-                        .generatedFile(StandardLocation.CLASS_OUTPUT, "META-INF/services/WithRepeatedAnnotation$HelloService")
-                        .contentsAsUtf8String();
-        c1.contains("WithRepeatedAnnotation$SimpleProvider");
-        c1.contains("WithRepeatedAnnotation$MultiProvider");
+        assertThat(compilation)
+                .extracting(Compilation::generatedFiles, JAVA_FILE_OBJECTS)
+                .filteredOn(fileNamed("/CLASS_OUTPUT/META-INF/services/WithRepeatedAnnotation$HelloService"))
+                .singleElement()
+                .extracting(Compilations::contentsAsUtf8String, STRING)
+                .contains(
+                        "WithRepeatedAnnotation$SimpleProvider",
+                        "WithRepeatedAnnotation$MultiProvider"
+                );
 
-        StringSubject c2
-                = assertThat(compilation)
-                        .generatedFile(StandardLocation.CLASS_OUTPUT, "META-INF/services/WithRepeatedAnnotation$SomeService")
-                        .contentsAsUtf8String();
-        c2.contains("WithRepeatedAnnotation$MultiProvider");
-        c2.doesNotContain("WithRepeatedAnnotation$SimpleProvider");
+        assertThat(compilation)
+                .extracting(Compilation::generatedFiles, JAVA_FILE_OBJECTS)
+                .filteredOn(fileNamed("/CLASS_OUTPUT/META-INF/services/WithRepeatedAnnotation$SomeService"))
+                .singleElement()
+                .extracting(Compilations::contentsAsUtf8String, STRING)
+                .contains("WithRepeatedAnnotation$MultiProvider")
+                .doesNotContain("WithRepeatedAnnotation$SimpleProvider");
     }
 
     @Test
     public void testMissingImplementation() {
-        JavaFileObject file = JavaFileObjects.forResource("provider/MissingImplementation.java");
+        JavaFileObject file = forResource("provider/MissingImplementation.java");
         Compilation compilation = compile(file);
 
         assertThat(compilation)
-                .failed();
+                .has(failed());
 
         assertThat(compilation)
-                .hadErrorContaining("doesn't extend nor implement service")
-                .inFile(file)
-                .onLine(14);
+                .extracting(Compilation::errors, DIAGNOSTICS)
+                .hasSize(1)
+                .extracting(Compilations::getDefaultMessage, Diagnostic::getSource, Diagnostic::getLineNumber)
+                .containsOnly(
+                        tuple("Provider 'MissingImplementation.Provider2' doesn't extend nor implement service 'MissingImplementation.HelloService'", file, 14L)
+                );
     }
 
     @Test
     public void testStaticInnerClass() {
-        JavaFileObject file = JavaFileObjects.forResource("provider/StaticInnerClass.java");
+        JavaFileObject file = forResource("provider/StaticInnerClass.java");
         Compilation compilation = compile(file);
 
         assertThat(compilation)
-                .failed();
+                .has(failed());
 
         assertThat(compilation)
-                .hadErrorContaining("must be static inner class")
-                .inFile(file)
-                .onLine(14);
+                .extracting(Compilation::errors, DIAGNOSTICS)
+                .hasSize(1)
+                .extracting(Compilations::getDefaultMessage, Diagnostic::getSource, Diagnostic::getLineNumber)
+                .containsOnly(
+                        tuple("Provider 'StaticInnerClass.Provider2' must be static inner class", file, 14L)
+                );
     }
 
     @Test
     public void testAbstractClass() {
-        JavaFileObject file = JavaFileObjects.forResource("provider/AbstractClass.java");
+        JavaFileObject file = forResource("provider/AbstractClass.java");
         Compilation compilation = compile(file);
 
         assertThat(compilation)
-                .failed();
+                .has(failed());
 
         assertThat(compilation)
-                .hadErrorContaining("must not be abstract")
-                .inFile(file)
-                .onLine(14);
+                .extracting(Compilation::errors, DIAGNOSTICS)
+                .hasSize(1)
+                .extracting(Compilations::getDefaultMessage, Diagnostic::getSource, Diagnostic::getLineNumber)
+                .containsOnly(
+                        tuple("Provider 'AbstractClass.Provider2' must not be abstract", file, 14L)
+                );
     }
 
     @Test
     public void testPublicNoArgumentConstructor() {
-        JavaFileObject file = JavaFileObjects.forResource("provider/PublicNoArgumentConstructor.java");
+        JavaFileObject file = forResource("provider/PublicNoArgumentConstructor.java");
         Compilation compilation = compile(file);
 
         assertThat(compilation)
-                .failed();
+                .has(failed());
 
         assertThat(compilation)
-                .hadErrorContaining("must have a public no-argument constructor")
-                .inFile(file)
-                .onLine(14);
+                .extracting(Compilation::errors, DIAGNOSTICS)
+                .hasSize(1)
+                .extracting(Compilations::getDefaultMessage, Diagnostic::getSource, Diagnostic::getLineNumber)
+                .containsOnly(
+                        tuple("Provider 'PublicNoArgumentConstructor.Provider2' must have a public no-argument constructor", file, 14L)
+                );
     }
 
     @Test
     public void testStaticProviderMethod() {
-        JavaFileObject file = JavaFileObjects.forResource("provider/StaticProviderMethod.java");
+        JavaFileObject file = forResource("provider/StaticProviderMethod.java");
         Compilation compilation = compile(file);
 
         assertThat(compilation)
-                .failed();
+                .has(failed());
 
         assertThat(compilation)
-                .hadErrorContaining("not implemented yet")
-                .inFile(file)
-                .onLine(10);
+                .extracting(Compilation::errors, DIAGNOSTICS)
+                .hasSize(2)
+                .extracting(Compilations::getDefaultMessage, Diagnostic::getSource, Diagnostic::getLineNumber)
+                .containsOnly(
+                        tuple("Static method support not implemented yet", file, 10L),
+                        tuple("Static method support not implemented yet", file, 21L)
+                );
     }
 
     @Test
     public void testStaticNoProviderMethod() {
-        JavaFileObject file = JavaFileObjects.forResource("provider/StaticNoProviderMethod.java");
+        JavaFileObject file = forResource("provider/StaticNoProviderMethod.java");
         Compilation compilation = compile(file);
 
         assertThat(compilation)
-                .failed();
+                .has(failed());
 
         assertThat(compilation)
-                .hadErrorContaining("must have a public no-argument constructor")
-                .inFile(file)
-                .onLine(10);
+                .extracting(Compilation::errors, DIAGNOSTICS)
+                .hasSize(1)
+                .extracting(Compilations::getDefaultMessage, Diagnostic::getSource, Diagnostic::getLineNumber)
+                .containsOnly(
+                        tuple("Provider 'StaticNoProviderMethod.Provider' must have a public no-argument constructor", file, 10L)
+                );
     }
 
     @Test
     public void testStaticMultiProviderMethod() {
-        JavaFileObject file = JavaFileObjects.forResource("provider/StaticMultiProviderMethod.java");
+        JavaFileObject file = forResource("provider/StaticMultiProviderMethod.java");
         Compilation compilation = compile(file);
 
         assertThat(compilation)
-                .failed();
+                .has(failed());
 
         assertThat(compilation)
-                .hadErrorContaining("not implemented yet")
-                .inFile(file)
-                .onLine(10);
+                .extracting(Compilation::errors, DIAGNOSTICS)
+                .hasSize(1)
+                .extracting(Compilations::getDefaultMessage, Diagnostic::getSource, Diagnostic::getLineNumber)
+                .containsOnly(
+                        tuple("Static method support not implemented yet", file, 10L)
+                );
     }
 
     @Test
     public void testDuplicatedAnnotation() {
-        JavaFileObject file = JavaFileObjects.forResource("provider/DuplicatedAnnotation.java");
+        JavaFileObject file = forResource("provider/DuplicatedAnnotation.java");
         Compilation compilation = compile(file);
 
         assertThat(compilation)
-                .failed();
+                .has(failed());
 
         assertThat(compilation)
-                .hadErrorContaining("Duplicated provider")
-                .inFile(file)
-                .onLine(11);
+                .extracting(Compilation::errors, DIAGNOSTICS)
+                .hasSize(1)
+                .extracting(Compilations::getDefaultMessage, Diagnostic::getSource, Diagnostic::getLineNumber)
+                .containsOnly(
+                        tuple("Duplicated provider: 'DuplicatedAnnotation.Provider1'", file, 11L)
+                );
     }
 
     @Test
     public void testWithGenerics() {
-        JavaFileObject file = JavaFileObjects.forResource("provider/WithGenerics.java");
+        JavaFileObject file = forResource("provider/WithGenerics.java");
         Compilation compilation = compile(file);
 
         assertThat(compilation)
-                .succeeded();
+                .has(succeeded());
 
-        StringSubject content
-                = assertThat(compilation)
-                        .generatedFile(StandardLocation.CLASS_OUTPUT, "META-INF/services/WithGenerics$HelloService")
-                        .contentsAsUtf8String();
-        content.contains("WithGenerics$Provider1");
-        content.contains("WithGenerics$Provider2");
+        assertThat(compilation)
+                .extracting(Compilation::generatedFiles, JAVA_FILE_OBJECTS)
+                .filteredOn(fileNamed("/CLASS_OUTPUT/META-INF/services/WithGenerics$HelloService"))
+                .singleElement()
+                .extracting(Compilations::contentsAsUtf8String, STRING)
+                .contains(
+                        "WithGenerics$Provider1",
+                        "WithGenerics$Provider2"
+                );
     }
 
     @Test
     public void testInferredService() {
-        JavaFileObject file = JavaFileObjects.forResource("provider/InferredService.java");
+        JavaFileObject file = forResource("provider/InferredService.java");
         Compilation compilation = compile(file);
 
         assertThat(compilation)
-                .succeeded();
+                .has(succeeded());
 
-        StringSubject content
-                = assertThat(compilation)
-                        .generatedFile(StandardLocation.CLASS_OUTPUT, "META-INF/services/InferredService$HelloService")
-                        .contentsAsUtf8String();
-        content.contains("InferredService$Provider1");
+        assertThat(compilation)
+                .extracting(Compilation::generatedFiles, JAVA_FILE_OBJECTS)
+                .filteredOn(fileNamed("/CLASS_OUTPUT/META-INF/services/InferredService$HelloService"))
+                .singleElement()
+                .extracting(Compilations::contentsAsUtf8String, STRING)
+                .contains("InferredService$Provider1");
     }
 
     @Test
     public void testVoidService() {
-        JavaFileObject file = JavaFileObjects.forResource("provider/VoidService.java");
+        JavaFileObject file = forResource("provider/VoidService.java");
         Compilation compilation = compile(file);
 
         assertThat(compilation)
-                .failed();
+                .has(failed());
 
         assertThat(compilation)
-                .hadErrorContaining("Cannot infer service")
-                .inFile(file)
-                .onLine(11);
+                .extracting(Compilation::errors, DIAGNOSTICS)
+                .hasSize(1)
+                .extracting(Compilations::getDefaultMessage, Diagnostic::getSource, Diagnostic::getLineNumber)
+                .containsOnly(
+                        tuple("Cannot infer service from provider ", file, 11L)
+                );
     }
 
     @Test
-    public void testMerge() {
-        Assertions
-                .assertThat(ServiceProviderGenerator.merge(asList("a", "b"), asList("c", "d")))
-                .containsExactly("a", "b", "c", "d");
-
-        Assertions
-                .assertThat(ServiceProviderGenerator.merge(asList("a", "b"), asList("a", "d")))
-                .containsExactly("a", "b", "d");
-
-        Assertions
-                .assertThat(ServiceProviderGenerator.merge(asList("a", "b"), asList("c", "a")))
-                .containsExactly("a", "b", "c");
-
-        Assertions
-                .assertThat(ServiceProviderGenerator.merge(asList("a", "b"), asList("c", "c")))
-                .containsExactly("a", "b", "c");
-    }
-
-    @Ignore("https://github.com/google/compile-testing/issues/335#issuecomment-1269011171")
-    @Test
+    @DisabledOnJre(JRE.JAVA_8)
+    @Disabled("https://github.com/google/compile-testing/issues/335#issuecomment-1269011171")
     public void testModuleInfoWithoutAnnotation() {
-        assumeAtLeastJava9();
-
         Compilation compilation = compile(
-                JavaFileObjects.forResource("provider/WithoutAnnotation.java"),
-                JavaFileObjects.forSourceLines("module-info",
+                forResource("provider/WithoutAnnotation.java"),
+                forSourceLines("module-info",
                         "module xxx {",
                         "  exports provider;",
                         "  provides provider.WithoutAnnotation.HelloService with provider.WithoutAnnotation.Provider1;",
@@ -295,82 +305,25 @@ public class ServiceProviderProcessorTest {
                 ));
 
         assertThat(compilation)
-                .succeededWithoutWarnings();
+                .has(succeededWithoutWarnings());
     }
 
-    @Ignore("https://github.com/google/compile-testing/issues/335#issuecomment-1269011171")
     @Test
+    @DisabledOnJre(JRE.JAVA_8)
+    @Disabled("https://github.com/google/compile-testing/issues/335#issuecomment-1269011171")
     public void testModuleInfoWithAnnotation() {
-        assumeAtLeastJava9();
-
-        Compilation compilation = com.google.testing.compile.Compiler.javac()
-                .withProcessors(new ServiceProviderProcessor())
-                .compile(
-                        JavaFileObjects.forResource(fixPackageNotVisible()),
-                        JavaFileObjects.forResource("provider/WithAnnotation.java"),
-                        JavaFileObjects.forSourceLines("module-info",
-                                "module xxx {",
-                                "  exports provider;",
-                                "  provides provider.WithAnnotation.HelloService with provider.WithAnnotation.Provider1;",
-                                "}"
-                        ));
+        Compilation compilation = compile(
+                forResource(fixPackageNotVisible()),
+                forResource("provider/WithAnnotation.java"),
+                forSourceLines("module-info",
+                        "module xxx {",
+                        "  exports provider;",
+                        "  provides provider.WithAnnotation.HelloService with provider.WithAnnotation.Provider1;",
+                        "}"
+                ));
 
         assertThat(compilation)
-                .succeededWithoutWarnings();
-    }
-
-    @Test
-    public void testGetMissingRefs() {
-        ProviderRef charRef = ref(CharSequence.class, String.class);
-        ProviderEntry charEntry = entry(CharSequence.class, String.class);
-
-        ProviderRef listRef = ref(List.class, ArrayList.class);
-        ProviderEntry listEntry = entry(List.class, ArrayList.class);
-
-        Assertions.assertThat(getMissingRefs(emptyList(), emptyList()))
-                .isEmpty();
-
-        Assertions.assertThat(getMissingRefs(emptyList(), asList(charEntry, listEntry)))
-                .isEmpty();
-
-        Assertions.assertThat(getMissingRefs(asList(charRef), asList(charEntry, listEntry)))
-                .isEmpty();
-
-        Assertions.assertThat(getMissingRefs(asList(listRef), asList(charEntry, listEntry)))
-                .isEmpty();
-
-        Assertions.assertThat(getMissingRefs(asList(charRef), asList(listEntry)))
-                .containsExactly(charRef);
-
-        Assertions.assertThat(getMissingRefs(asList(charRef), emptyList()))
-                .containsExactly(charRef);
-    }
-
-    @Test
-    public void testGetMissingEntries() {
-        ProviderRef charRef = ref(CharSequence.class, String.class);
-        ProviderEntry charEntry = entry(CharSequence.class, String.class);
-
-        ProviderRef listRef = ref(List.class, ArrayList.class);
-        ProviderEntry listEntry = entry(List.class, ArrayList.class);
-
-        Assertions.assertThat(getMissingEntries(emptyList(), emptyList()))
-                .isEmpty();
-
-        Assertions.assertThat(getMissingEntries(emptyList(), asList(charEntry, listEntry)))
-                .containsExactly(charEntry, listEntry);
-
-        Assertions.assertThat(getMissingEntries(asList(charRef), asList(charEntry, listEntry)))
-                .containsExactly(listEntry);
-
-        Assertions.assertThat(getMissingEntries(asList(listRef), asList(charEntry, listEntry)))
-                .containsExactly(charEntry);
-
-        Assertions.assertThat(getMissingEntries(asList(charRef), asList(listEntry)))
-                .containsExactly(listEntry);
-
-        Assertions.assertThat(getMissingEntries(asList(charRef), emptyList()))
-                .isEmpty();
+                .has(succeededWithoutWarnings());
     }
 
     private URL fixPackageNotVisible() {
@@ -391,24 +344,8 @@ public class ServiceProviderProcessorTest {
     }
 
     private Compilation compile(JavaFileObject... files) {
-        return com.google.testing.compile.Compiler.javac()
+        return Compiler.javac()
                 .withProcessors(new ServiceProviderProcessor())
                 .compile(files);
-    }
-
-    private void assumeAtLeastJava9() {
-        Assume.assumeTrue(SourceVersion.latestSupported().compareTo(SourceVersion.RELEASE_8) > 0);
-    }
-
-    private TypeElement getTypeElement(Class<?> type) {
-        return compilationRule.getElements().getTypeElement(type.getName());
-    }
-
-    private <T> ProviderRef ref(Class<T> service, Class<? extends T> provider) {
-        return new ProviderRef(getTypeElement(service), getTypeElement(provider));
-    }
-
-    private <T> ProviderEntry entry(Class<T> service, Class<? extends T> provider) {
-        return new ProviderEntry(service.getName(), provider.getName());
     }
 }

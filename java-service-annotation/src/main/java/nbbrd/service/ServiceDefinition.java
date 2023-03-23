@@ -96,6 +96,13 @@ public @interface ServiceDefinition {
     Class<?> fallback() default Void.class;
 
     /**
+     * Specifies if fallback class is unexpected.
+     *
+     * @return true if fallback class is expected, false otherwise
+     */
+    boolean noFallback() default false;
+
+    /**
      * Specifies the wrapper class to be used in basic preprocessing.
      * <p>
      * Requirements:
