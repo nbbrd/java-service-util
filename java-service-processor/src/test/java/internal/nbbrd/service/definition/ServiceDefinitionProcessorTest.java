@@ -650,6 +650,21 @@ public class ServiceDefinitionProcessorTest {
                 .haveAtLeastOne(sourceFileNamed("internal", "SecondLoader.java"));
     }
 
+    @Test
+    public void testBatchReloading() {
+        Compilation compilation = compile(forResource("definition/BatchReloading.java"));
+
+        assertThat(compilation)
+                .has(succeeded());
+
+        assertThat(compilation)
+                .extracting(Compilation::generatedSourceFiles, JAVA_FILE_OBJECTS)
+                .filteredOn(sourceFileNamed("definition", "BatchReloadingLoader.java"))
+                .singleElement()
+                .extracting(Compilations::contentsAsUtf8String, STRING)
+                .isEqualToIgnoringNewLines(contentsAsUtf8String(forResource("definition/expected/TestBatchReloadingLoader.java")));
+    }
+
     private static Compilation compile(JavaFileObject file) {
         return Compiler.javac()
                 .withProcessors(new ServiceDefinitionProcessor(), new ServiceProviderProcessor())

@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Fix batch reloading [#129](https://github.com/nbbrd/java-service-util/issues/129)
+
 ## [1.5.3] - 2023-03-21
 
 ### Changed
