@@ -119,7 +119,7 @@ public class Experiment4 {
         boolean singleton() default false;
     }
 
-    static class Demo {
+    static class Example {
 
         @OptionalService
         interface WinRegistry {
@@ -151,114 +151,73 @@ public class Experiment4 {
         public interface Messenger {
             void send(String message);
         }
-
-
-        public static void main(String[] args) {
-            // Normal usage
-            {
-                WinRegistryLoader optionalLoader = WinRegistryLoader.ofServiceLoader();
-                Optional<WinRegistry> optional = optionalLoader.get();
-                optional.ifPresent(Demo::printWindowsVersion);
-                optionalLoader.reload();
-
-                ConfigurationLoader singleLoader = ConfigurationLoader.ofServiceLoader();
-                Configuration single = singleLoader.get();
-                printProperties(single);
-                singleLoader.reload();
-
-                SwingColorSchemeLoader multipleLoader = SwingColorSchemeLoader.ofServiceLoader();
-                List<SwingColorScheme> multiple = multipleLoader.get();
-                multiple.forEach(Demo::printColors);
-                multipleLoader.reload();
-            }
-
-            // Fluent usage
-            {
-                WinRegistryLoader.ofServiceLoader().get().ifPresent(Demo::printWindowsVersion);
-
-                printProperties(ConfigurationLoader.ofServiceLoader().get());
-
-                SwingColorSchemeLoader.ofServiceLoader().get().forEach(Demo::printColors);
-            }
-
-            // Convenient shortcut
-            {
-                WinRegistryLoader.load().ifPresent(Demo::printWindowsVersion);
-
-                printProperties(ConfigurationLoader.load());
-
-                SwingColorSchemeLoader.load().forEach(Demo::printColors);
-            }
-
-            // NetBeans Lookup backend
-            {
-                WinRegistryLoader.of(Lookup.getDefault()::lookupResult, Lookup.Result::allInstances, Demo::doNothing)
-                        .get().ifPresent(Demo::printWindowsVersion);
-            }
-
-            // Custom ClassLoader backend
-            {
-                WinRegistryLoader.of(service -> ServiceLoader.load(service, Thread.currentThread().getContextClassLoader()), backend -> backend, ServiceLoader::reload)
-                        .get().ifPresent(Demo::printWindowsVersion);
-            }
-
-            // @ServiceDefinition adapter
-            {
-                MessengerLoader optionalAdapter = new MessengerLoader();
-                optionalAdapter.set(Optional.empty());
-                optionalAdapter.reload();
-                optionalAdapter.reset();
-                optionalAdapter.get();
-            }
-        }
-
-        private static void printWindowsVersion(WinRegistry reg) {
-            System.out.println(reg.readString(WinRegistry.HKEY_LOCAL_MACHINE, "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion", "ProductName"));
-        }
-
-        private static void printProperties(Configuration configuration) {
-            configuration.getProperties().forEach((k, v) -> System.out.println(k + "=" + v));
-        }
-
-        private static void printColors(SwingColorScheme colorScheme) {
-            System.out.println(colorScheme.getColors());
-        }
-
-        private static void doNothing(Object o) {
-
-        }
     }
 
     static class Generated {
 
         static final class WinRegistryLoader {
 
-            public static Optional<Demo.WinRegistry> load() {
-                return ofServiceLoader().get();
+            public static Optional<Example.WinRegistry> load() {
+                return builder().build().get();
             }
 
-            public static WinRegistryLoader ofServiceLoader() {
-                return of(ServiceLoader::load, backend -> backend, ServiceLoader::reload);
+            public static Builder<ServiceLoader<?>> builder() {
+                return new Builder<ServiceLoader<?>>(ServiceLoader::load)
+                        .streamerOfIterable(backend -> backend)
+                        .reloader(ServiceLoader::reload);
             }
 
-            public static <BACKEND> WinRegistryLoader of(
-                    Function<Class<?>, BACKEND> factory,
-                    Function<BACKEND, ? extends Iterable<?>> streamer,
-                    Consumer<BACKEND> reloader
-            ) {
-                return new WinRegistryLoader(
-                        factory.apply(Demo.WinRegistry.class),
-                        backend -> StreamSupport.stream(streamer.apply((BACKEND) backend).spliterator(), false),
-                        backend -> reloader.accept((BACKEND) backend)
-                );
+            public static Builder<ServiceLoader<?>> builder(ClassLoader classLoader) {
+                return new Builder<ServiceLoader<?>>(service -> ServiceLoader.load(service, classLoader))
+                        .streamerOfIterable(backend -> backend)
+                        .reloader(ServiceLoader::reload);
             }
 
-            public Optional<Demo.WinRegistry> get() {
+            public static <BACKEND> Builder<BACKEND> builder(Function<Class<?>, BACKEND> factory) {
+                return new Builder<>(factory);
+            }
+
+            public static final class Builder<BACKEND> {
+
+                private final Function<Class<?>, BACKEND> factory;
+                private Function<BACKEND, Stream<?>> streamer;
+                private Consumer<BACKEND> reloader;
+
+                private Builder(Function<Class<?>, BACKEND> factory) {
+                    this.factory = factory;
+                }
+
+                public Builder<BACKEND> streamerOfIterable(Function<BACKEND, ? extends Iterable<?>> extractor) {
+                    return streamer(backend -> StreamSupport.stream(extractor.apply(backend).spliterator(), false));
+                }
+
+                public Builder<BACKEND> streamer(Function<BACKEND, Stream<?>> streamer) {
+                    this.streamer = streamer;
+                    return this;
+                }
+
+                public Builder<BACKEND> reloader(Consumer<BACKEND> reloader) {
+                    this.reloader = reloader;
+                    return this;
+                }
+
+                public WinRegistryLoader build() {
+                    Objects.requireNonNull(factory);
+                    Objects.requireNonNull(streamer);
+                    Objects.requireNonNull(reloader);
+                    return new WinRegistryLoader(
+                            factory.apply(Example.WinRegistry.class),
+                            backend -> streamer.apply((BACKEND) backend),
+                            backend -> reloader.accept((BACKEND) backend));
+                }
+            }
+
+            public Optional<Example.WinRegistry> get() {
                 return rawStream().findFirst();
             }
 
-            private Stream<Demo.WinRegistry> rawStream() {
-                return streamer.apply(source).map(Demo.WinRegistry.class::cast);
+            private Stream<Example.WinRegistry> rawStream() {
+                return streamer.apply(source).map(Example.WinRegistry.class::cast);
             }
 
             public void reload() {
@@ -278,64 +237,153 @@ public class Experiment4 {
 
         static final class ConfigurationLoader {
 
-            public static Demo.Configuration load() {
-                return ofServiceLoader().get();
+            public static Example.Configuration load() {
+                return builder().build().get();
             }
 
-            public static ConfigurationLoader ofServiceLoader() {
-                return of(ServiceLoader::load, ServiceLoader::reload);
+
+            public static Builder<ServiceLoader<?>> builder() {
+                return new Builder<ServiceLoader<?>>(ServiceLoader::load)
+                        .streamerOfIterable(backend -> backend)
+                        .reloader(ServiceLoader::reload);
             }
 
-            public static <BACKEND extends Iterable<?>> ConfigurationLoader of(Function<Class<?>, BACKEND> backend, Consumer<BACKEND> reloader) {
-                throw new UnsupportedOperationException();
+            public static Builder<ServiceLoader<?>> builder(ClassLoader classLoader) {
+                return new Builder<ServiceLoader<?>>(service -> ServiceLoader.load(service, classLoader))
+                        .streamerOfIterable(backend -> backend)
+                        .reloader(ServiceLoader::reload);
             }
 
-            public Demo.Configuration get() {
-                throw new UnsupportedOperationException();
+            public static <BACKEND> Builder<BACKEND> builder(Function<Class<?>, BACKEND> factory) {
+                return new Builder<>(factory);
+            }
+
+            public static final class Builder<BACKEND> {
+
+                private final Function<Class<?>, BACKEND> factory;
+                private Function<BACKEND, Stream<?>> streamer;
+                private Consumer<BACKEND> reloader;
+
+                private Builder(Function<Class<?>, BACKEND> factory) {
+                    this.factory = factory;
+                }
+
+                public Builder<BACKEND> streamerOfIterable(Function<BACKEND, ? extends Iterable<?>> extractor) {
+                    return streamer(backend -> StreamSupport.stream(extractor.apply(backend).spliterator(), false));
+                }
+
+                public Builder<BACKEND> streamer(Function<BACKEND, Stream<?>> streamer) {
+                    this.streamer = streamer;
+                    return this;
+                }
+
+                public Builder<BACKEND> reloader(Consumer<BACKEND> reloader) {
+                    this.reloader = reloader;
+                    return this;
+                }
+
+                public ConfigurationLoader build() {
+                    Objects.requireNonNull(factory);
+                    Objects.requireNonNull(streamer);
+                    Objects.requireNonNull(reloader);
+                    return new ConfigurationLoader(
+                            factory.apply(Example.Configuration.class),
+                            backend -> streamer.apply((BACKEND) backend),
+                            backend -> reloader.accept((BACKEND) backend));
+                }
+            }
+
+            public Example.Configuration get() {
+                return rawStream().findFirst().orElseThrow(RuntimeException::new);
+            }
+
+            private Stream<Example.Configuration> rawStream() {
+                return streamer.apply(source).map(Example.Configuration.class::cast);
             }
 
             public void reload() {
-                throw new UnsupportedOperationException();
+                reloader.accept(source);
             }
 
-            private ConfigurationLoader() {
-                throw new UnsupportedOperationException();
+            private final Object source;
+            private final Function<Object, Stream<?>> streamer;
+            private final Consumer<Object> reloader;
+
+            private ConfigurationLoader(Object source, Function<Object, Stream<?>> streamer, Consumer<Object> reloader) {
+                this.source = source;
+                this.streamer = streamer;
+                this.reloader = reloader;
             }
         }
 
         interface SwingColorSchemeBatch {
-            Stream<Demo.SwingColorScheme> getProviders();
+            Stream<Example.SwingColorScheme> getProviders();
         }
 
         static final class SwingColorSchemeLoader {
 
-            public static List<Demo.SwingColorScheme> load() {
-                return ofServiceLoader().get();
+            public static List<Example.SwingColorScheme> load() {
+                return builder().build().get();
             }
 
-            public static SwingColorSchemeLoader ofServiceLoader() {
-                return of(ServiceLoader::load, backend -> backend, ServiceLoader::reload);
+            public static Builder<ServiceLoader<?>> builder() {
+                return new Builder<ServiceLoader<?>>(ServiceLoader::load)
+                        .streamerOfIterable(backend -> backend)
+                        .reloader(ServiceLoader::reload);
             }
 
-            public static <BACKEND> SwingColorSchemeLoader of(
-                    Function<Class<?>, BACKEND> factory,
-                    Function<BACKEND, ? extends Iterable<?>> streamer,
-                    Consumer<BACKEND> reloader
-            ) {
-                return new SwingColorSchemeLoader(
-                        factory.apply(Demo.WinRegistry.class), factory.apply(SwingColorSchemeBatch.class),
-                        backend -> StreamSupport.stream(streamer.apply((BACKEND) backend).spliterator(), false),
-                        backend -> reloader.accept((BACKEND) backend)
-                );
+            public static Builder<ServiceLoader<?>> builder(ClassLoader classLoader) {
+                return new Builder<ServiceLoader<?>>(service -> ServiceLoader.load(service, classLoader))
+                        .streamerOfIterable(backend -> backend)
+                        .reloader(ServiceLoader::reload);
             }
 
-            public List<Demo.SwingColorScheme> get() {
+            public static <BACKEND> Builder<BACKEND> builder(Function<Class<?>, BACKEND> factory) {
+                return new Builder<>(factory);
+            }
+
+            public static final class Builder<BACKEND> {
+
+                private final Function<Class<?>, BACKEND> factory;
+                private Function<BACKEND, Stream<?>> streamer;
+                private Consumer<BACKEND> reloader;
+
+                private Builder(Function<Class<?>, BACKEND> factory) {
+                    this.factory = factory;
+                }
+
+                public Builder<BACKEND> streamerOfIterable(Function<BACKEND, ? extends Iterable<?>> extractor) {
+                    return streamer(backend -> StreamSupport.stream(extractor.apply(backend).spliterator(), false));
+                }
+
+                public Builder<BACKEND> streamer(Function<BACKEND, Stream<?>> streamer) {
+                    this.streamer = streamer;
+                    return this;
+                }
+
+                public Builder<BACKEND> reloader(Consumer<BACKEND> reloader) {
+                    this.reloader = reloader;
+                    return this;
+                }
+
+                public SwingColorSchemeLoader build() {
+                    Objects.requireNonNull(factory);
+                    Objects.requireNonNull(streamer);
+                    Objects.requireNonNull(reloader);
+                    return new SwingColorSchemeLoader(
+                            factory.apply(Example.SwingColorScheme.class), factory.apply(SwingColorSchemeBatch.class),
+                            backend -> streamer.apply((BACKEND) backend),
+                            backend -> reloader.accept((BACKEND) backend));
+                }
+            }
+
+            public List<Example.SwingColorScheme> get() {
                 return rawStream().collect(Collectors.toList());
             }
 
-            private Stream<Demo.SwingColorScheme> rawStream() {
+            private Stream<Example.SwingColorScheme> rawStream() {
                 return Stream.concat(
-                        streamer.apply(source).map(Demo.SwingColorScheme.class::cast),
+                        streamer.apply(source).map(Example.SwingColorScheme.class::cast),
                         streamer.apply(batch).map(SwingColorSchemeBatch.class::cast).flatMap(SwingColorSchemeBatch::getProviders)
                 );
             }
@@ -360,7 +408,7 @@ public class Experiment4 {
 
         static final class MessengerService {
 
-            public static Optional<Demo.Messenger> load() {
+            public static Optional<Example.Messenger> load() {
                 return ofServiceLoader().get();
             }
 
@@ -376,7 +424,7 @@ public class Experiment4 {
                 throw new UnsupportedOperationException();
             }
 
-            public Optional<Demo.Messenger> get() {
+            public Optional<Example.Messenger> get() {
                 throw new UnsupportedOperationException();
             }
 
@@ -394,13 +442,13 @@ public class Experiment4 {
 
             private final MessengerService delegate = MessengerService.ofServiceLoader();
 
-            private final AtomicReference<Optional<Demo.Messenger>> resource = new AtomicReference<>(delegate.get());
+            private final AtomicReference<Optional<Example.Messenger>> resource = new AtomicReference<>(delegate.get());
 
-            public Optional<Demo.Messenger> get() {
+            public Optional<Example.Messenger> get() {
                 return resource.get();
             }
 
-            public void set(Optional<Demo.Messenger> newValue) {
+            public void set(Optional<Example.Messenger> newValue) {
                 resource.set(Objects.requireNonNull(newValue));
             }
 
@@ -416,6 +464,112 @@ public class Experiment4 {
                     set(delegate.get());
                 }
             }
+        }
+    }
+
+    static class Demo {
+
+        public static void main(String[] args) {
+            normalUsage();
+            fluentUsage();
+            convenientShortcut();
+            netBeansLookupBackend();
+            customClassLoaderBackend();
+            serviceDefinitionAdapter();
+        }
+
+        private static void normalUsage() {
+            WinRegistryLoader optionalLoader = WinRegistryLoader.builder().build();
+            Optional<Example.WinRegistry> optional = optionalLoader.get();
+            optional.ifPresent(Demo::printWindowsVersion);
+            optionalLoader.reload();
+
+            ConfigurationLoader singleLoader = ConfigurationLoader.builder().build();
+            Example.Configuration single = singleLoader.get();
+            printProperties(single);
+            singleLoader.reload();
+
+            SwingColorSchemeLoader multipleLoader = SwingColorSchemeLoader.builder().build();
+            List<Example.SwingColorScheme> multiple = multipleLoader.get();
+            multiple.forEach(Demo::printColors);
+            multipleLoader.reload();
+        }
+
+        private static void fluentUsage() {
+            WinRegistryLoader.builder().build().get().ifPresent(Demo::printWindowsVersion);
+
+            printProperties(ConfigurationLoader.builder().build().get());
+
+            SwingColorSchemeLoader.builder().build().get().forEach(Demo::printColors);
+        }
+
+        private static void convenientShortcut() {
+            WinRegistryLoader.load().ifPresent(Demo::printWindowsVersion);
+
+            printProperties(ConfigurationLoader.load());
+
+            SwingColorSchemeLoader.load().forEach(Demo::printColors);
+        }
+
+        private static void netBeansLookupBackend() {
+            WinRegistryLoader
+                    .builder(Lookup.getDefault()::lookupResult)
+                    .streamerOfIterable(Lookup.Result::allInstances)
+                    .build()
+                    .get().ifPresent(Demo::printWindowsVersion);
+
+            printProperties(
+                    ConfigurationLoader
+                            .builder(Lookup.getDefault()::lookupResult)
+                            .streamerOfIterable(Lookup.Result::allInstances)
+                            .build()
+                            .get()
+            );
+
+            SwingColorSchemeLoader
+                    .builder(Lookup.getDefault()::lookupResult)
+                    .streamerOfIterable(Lookup.Result::allInstances)
+                    .build()
+                    .get().forEach(Demo::printColors);
+        }
+
+        private static void customClassLoaderBackend() {
+            WinRegistryLoader
+                    .builder(Thread.currentThread().getContextClassLoader())
+                    .build()
+                    .get().ifPresent(Demo::printWindowsVersion);
+
+            printProperties(
+                    ConfigurationLoader
+                            .builder(Thread.currentThread().getContextClassLoader())
+                            .build()
+                            .get()
+            );
+
+            SwingColorSchemeLoader
+                    .builder(Thread.currentThread().getContextClassLoader())
+                    .build()
+                    .get().forEach(Demo::printColors);
+        }
+
+        private static void serviceDefinitionAdapter() {
+            MessengerLoader optionalAdapter = new MessengerLoader();
+            optionalAdapter.set(Optional.empty());
+            optionalAdapter.reload();
+            optionalAdapter.reset();
+            optionalAdapter.get();
+        }
+
+        private static void printWindowsVersion(Example.WinRegistry reg) {
+            System.out.println(reg.readString(Example.WinRegistry.HKEY_LOCAL_MACHINE, "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion", "ProductName"));
+        }
+
+        private static void printProperties(Example.Configuration configuration) {
+            configuration.getProperties().forEach((k, v) -> System.out.println(k + "=" + v));
+        }
+
+        private static void printColors(Example.SwingColorScheme colorScheme) {
+            System.out.println(colorScheme.getColors());
         }
     }
 }
