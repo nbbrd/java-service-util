@@ -7,10 +7,11 @@ import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.util.Types;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static java.util.stream.Collectors.groupingBy;
 
@@ -56,10 +57,9 @@ final class ServiceProviderGenerator extends ProcessorTool {
     }
 
     static List<String> merge(List<String> first, List<String> second) {
-        List<String> result = new ArrayList<>(first);
-        second.stream()
-                .filter(element -> !result.contains(element))
-                .forEach(result::add);
-        return result;
+        return Stream.concat(first.stream(), second.stream())
+                .distinct()
+                .sorted()
+                .collect(Collectors.toList());
     }
 }
