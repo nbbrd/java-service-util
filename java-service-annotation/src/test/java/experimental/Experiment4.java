@@ -83,19 +83,19 @@ public class Experiment4 {
         ClassName loaderName() default @ClassName;
 
         /**
-         * Specifies the name of the batch loading. An empty value
-         * generates an automatic name.
+         * Specifies the batch class to use during loading.
+         * Void class disables batch loading.
+         * <p>
+         * Requirements:
+         * <ul>
+         * <li>must be assignable to the service type
+         * <li>must be instantiable either by constructor, static method, enum field
+         * or static final field
+         * </ul>
          *
          * @return a class name
          */
-        ClassName batchName() default @ClassName;
-
-        /**
-         * Specifies if batch loading is disabled.
-         *
-         * @return true if batch loading is disabled, false otherwise
-         */
-        boolean noBatch() default false;
+        Class<?> batch();
     }
 
     @Documented
@@ -148,12 +148,16 @@ public class Experiment4 {
             }
         }
 
-        @MultipleService
+        @MultipleService(batch = SwingColorSchemeBatch.class)
         interface SwingColorScheme {
             List<Color> getColors();
         }
 
-        @MultipleService
+        interface SwingColorSchemeBatch {
+            Stream<Example.SwingColorScheme> getProviders();
+        }
+
+        @MultipleService(batch = Void.class)
         @ServiceDefinitionAdapter(
                 adapterName = @ClassName(simpleName = "internal.FileTypeSpiLoader"),
                 mutability = Mutability.CONCURRENT,
@@ -396,11 +400,7 @@ public class Experiment4 {
             }
         }
 
-        interface SwingColorSchemeBatch {
-            Stream<Example.SwingColorScheme> getProviders();
-        }
-
-        static final class SwingColorSchemeLoader extends MultipleTemplate<Example.SwingColorScheme, SwingColorSchemeBatch> {
+        static final class SwingColorSchemeLoader extends MultipleTemplate<Example.SwingColorScheme, Example.SwingColorSchemeBatch> {
 
             public static List<Example.SwingColorScheme> load() {
                 return builder().build().get();
@@ -423,8 +423,8 @@ public class Experiment4 {
             }
 
             private SwingColorSchemeLoader(Iterable<Example.SwingColorScheme> source, Runnable sourceReloader,
-                                           Iterable<SwingColorSchemeBatch> batch, Runnable batchReloader,
-                                           Function<SwingColorSchemeBatch, Iterable<Example.SwingColorScheme>> mapper,
+                                           Iterable<Example.SwingColorSchemeBatch> batch, Runnable batchReloader,
+                                           Function<Example.SwingColorSchemeBatch, Iterable<Example.SwingColorScheme>> mapper,
                                            Consumer<Throwable> onUnexpectedError) {
                 super(source, sourceReloader, batch, batchReloader, mapper, onUnexpectedError);
             }
@@ -437,24 +437,20 @@ public class Experiment4 {
 
                 public SwingColorSchemeLoader build() {
                     BACKEND sourceBackend = factory.apply(Example.SwingColorScheme.class);
-                    BACKEND batchBackend = factory.apply(SwingColorSchemeBatch.class);
+                    BACKEND batchBackend = factory.apply(Example.SwingColorSchemeBatch.class);
                     return new SwingColorSchemeLoader(
                             asLoader(Example.SwingColorScheme.class, sourceBackend),
                             asReloader(sourceBackend),
-                            asLoader(SwingColorSchemeBatch.class, batchBackend),
+                            asLoader(Example.SwingColorSchemeBatch.class, batchBackend),
                             asReloader(batchBackend),
-                            asMapper(SwingColorSchemeBatch::getProviders),
+                            asMapper(Example.SwingColorSchemeBatch::getProviders),
                             onUnexpectedError
                     );
                 }
             }
         }
 
-        interface FileTypeSpiBatch {
-            Stream<Example.FileTypeSpi> getProviders();
-        }
-
-        static final class FileTypeSpiLoader extends MultipleTemplate<Example.FileTypeSpi, FileTypeSpiBatch> {
+        static final class FileTypeSpiLoader extends MultipleTemplate<Example.FileTypeSpi, Void> {
 
             public static List<Example.FileTypeSpi> load() {
                 return builder().build().get();
@@ -473,8 +469,8 @@ public class Experiment4 {
             }
 
             private FileTypeSpiLoader(Iterable<Example.FileTypeSpi> source, Runnable sourceReloader,
-                                      Iterable<FileTypeSpiBatch> batch, Runnable batchReloader,
-                                      Function<FileTypeSpiBatch, Iterable<Example.FileTypeSpi>> mapper,
+                                      Iterable<Void> batch, Runnable batchReloader,
+                                      Function<Void, Iterable<Example.FileTypeSpi>> mapper,
                                       Consumer<Throwable> onUnexpectedError) {
                 super(source, sourceReloader, batch, batchReloader, mapper, onUnexpectedError);
             }
@@ -486,14 +482,13 @@ public class Experiment4 {
                 }
 
                 public FileTypeSpiLoader build() {
-                    BACKEND sourceBackend = factory.apply(Example.SwingColorScheme.class);
-                    BACKEND batchBackend = factory.apply(SwingColorSchemeBatch.class);
+                    BACKEND sourceBackend = factory.apply(Example.FileTypeSpi.class);
                     return new FileTypeSpiLoader(
                             asLoader(Example.FileTypeSpi.class, sourceBackend),
                             asReloader(sourceBackend),
-                            asLoader(FileTypeSpiBatch.class, batchBackend),
-                            asReloader(batchBackend),
-                            asMapper(FileTypeSpiBatch::getProviders),
+                            noLoad(),
+                            noReload(),
+                            noMapping(),
                             onUnexpectedError
                     );
                 }
