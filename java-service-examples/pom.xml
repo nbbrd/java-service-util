@@ -50,11 +50,11 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <configuration>
                     <annotationProcessorPaths>
-                        <path>
-                            <groupId>com.github.nbbrd.java-service-util</groupId>
-                            <artifactId>java-service-processor</artifactId>
-                            <version>${project.version}</version>
-                        </path>
+<!--                        <path>-->
+<!--                            <groupId>com.github.nbbrd.java-service-util</groupId>-->
+<!--                            <artifactId>java-service-processor</artifactId>-->
+<!--                            <version>${project.version}</version>-->
+<!--                        </path>-->
                     </annotationProcessorPaths>
                 </configuration>
             </plugin>
