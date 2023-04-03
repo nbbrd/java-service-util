@@ -1,7 +1,7 @@
 package nbbrd.service.examples;
 
 import nbbrd.service.ServiceDefinition;
-import nbbrd.service.ServiceFilter;
+import nbbrd.service.ServiceProvider;
 
 import javax.swing.*;
 import javax.swing.plaf.metal.MetalIconFactory;
@@ -16,36 +16,12 @@ public interface IconProvider {
 
     Icon getIconOrNull(CommonIcons icon);
 
-    @ServiceFilter
-    boolean isAvailable();
-
-    @nbbrd.service.ServiceProvider
+    @ServiceProvider
     final class MetalIconProvider implements IconProvider {
 
         @Override
         public Icon getIconOrNull(CommonIcons icon) {
             return icon == CommonIcons.HOME_FOLDER ? MetalIconFactory.getFileChooserHomeFolderIcon() : null;
-        }
-
-        @Override
-        public boolean isAvailable() {
-            return true;
-        }
-    }
-
-    // FIXME: should play nice together instead we have
-    //  "javax.annotation.processing.FilerException: Attempt to reopen a file for path"
-//    @org.openide.util.lookup.ServiceProvider(service = IconProvider.class)
-    final class NullProvider implements IconProvider {
-
-        @Override
-        public Icon getIconOrNull(CommonIcons icon) {
-            return null;
-        }
-
-        @Override
-        public boolean isAvailable() {
-            return false;
         }
     }
 
