@@ -326,6 +326,22 @@ public class ServiceProviderProcessorTest {
                 .has(succeededWithoutWarnings());
     }
 
+    @Test
+    public void testClassPathOrder() {
+        JavaFileObject file = forResource("provider/ClassPathOrder.java");
+        Compilation compilation = compile(file);
+
+        assertThat(compilation)
+                .has(succeeded());
+
+        assertThat(compilation)
+                .extracting(Compilation::generatedFiles, JAVA_FILE_OBJECTS)
+                .filteredOn(fileNamed("/CLASS_OUTPUT/META-INF/services/ClassPathOrder$HelloService"))
+                .singleElement()
+                .extracting(Compilations::contentsAsUtf8String, STRING)
+                .isEqualToIgnoringNewLines("ClassPathOrder$AClassPathOrder$BClassPathOrder$C");
+    }
+
     private URL fixPackageNotVisible() {
         try {
             return Paths.get(System.getProperty("user.dir"))

@@ -31,6 +31,7 @@ import java.nio.file.NoSuchFileException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
@@ -42,8 +43,8 @@ final class ClassPathRegistry implements ProviderRegistry {
     @lombok.NonNull
     private final ProcessingEnvironment env;
 
-    public List<String> readLinesByService(TypeElement service) throws IOException {
-        FileObject src = env.getFiler().getResource(StandardLocation.CLASS_OUTPUT, "", getRelativeName(service));
+    public List<ProviderConfigurationFileLine> readLinesByService(TypeElement service) throws IOException {
+        FileObject src = env.getFiler().getResource(StandardLocation.CLASS_OUTPUT, "", getFileRelativeName(service));
         try (BufferedReader reader = new BufferedReader(src.openReader(false))) {
             return readLinesByService(reader, service, src.toUri());
         } catch (FileNotFoundException | NoSuchFileException | FilerException ex) {
@@ -52,14 +53,13 @@ final class ClassPathRegistry implements ProviderRegistry {
         }
     }
 
-    private static List<String> readLinesByService(BufferedReader reader, TypeElement service, URI uri) throws IOException {
-        List<String> result = new ArrayList<>();
+    private static List<ProviderConfigurationFileLine> readLinesByService(BufferedReader reader, TypeElement service, URI uri) throws IOException {
+        List<ProviderConfigurationFileLine> result = new ArrayList<>();
         int lineNumber = 0;
         String line;
         while ((line = reader.readLine()) != null) {
             try {
-                ClassPathRef.parse(line);
-                result.add(line);
+                result.add(ProviderConfigurationFileLine.parse(line));
             } catch (IllegalArgumentException ex) {
                 throw new IOException(service.getQualifiedName() + ": " + (uri + ":" + lineNumber + ": " + ex.getMessage()));
             }
@@ -68,43 +68,37 @@ final class ClassPathRegistry implements ProviderRegistry {
         return result;
     }
 
-    public void writeLinesByService(List<String> lines, TypeElement service) throws IOException {
-        FileObject dst = env.getFiler().createResource(StandardLocation.CLASS_OUTPUT, "", getRelativeName(service));
+    public void writeLinesByService(List<ProviderConfigurationFileLine> lines, TypeElement service) throws IOException {
+        FileObject dst = env.getFiler().createResource(StandardLocation.CLASS_OUTPUT, "", getFileRelativeName(service));
         try (BufferedWriter writer = new BufferedWriter(dst.openWriter())) {
-            for (String line : lines) {
-                writer.write(line);
+            for (ProviderConfigurationFileLine line : lines) {
+                writer.write(line.toString());
                 writer.newLine();
             }
         }
     }
 
-    public List<ProviderEntry> parseAll(TypeElement service, List<String> lines) {
+    public List<ProviderEntry> parseAll(TypeElement service, List<ProviderConfigurationFileLine> lines) {
         String serviceName = service.getQualifiedName().toString();
         return lines
                 .stream()
-                .map(line -> parse(serviceName, line))
+                .map(ProviderConfigurationFileLine::getProviderBinaryName)
+                .filter(Objects::nonNull)
+                .map(providerName -> new ProviderEntry(serviceName, providerName))
                 .collect(Collectors.toList());
     }
 
-    public List<String> formatAll(TypeElement service, List<ProviderRef> refs) {
+    public List<ProviderConfigurationFileLine> formatAll(TypeElement service, List<ProviderRef> refs) {
         Elements util = env.getElementUtils();
         return refs
                 .stream()
                 .filter(ref -> ref.getService().equals(service))
-                .map(ref -> util.getBinaryName(ref.getProvider()).toString())
+                .map(ref -> util.getBinaryName(ref.getProvider()))
+                .map(ProviderConfigurationFileLine::ofProviderBinaryName)
                 .collect(Collectors.toList());
     }
 
-    static ProviderEntry parse(String service, String line) {
-        int commentIndex = line.indexOf('#');
-        if (commentIndex != -1) {
-            line = line.substring(0, commentIndex);
-        }
-        line = line.trim();
-        return new ProviderEntry(service, line);
-    }
-
-    private String getRelativeName(TypeElement service) {
-        return "META-INF/services/" + env.getElementUtils().getBinaryName(service);
+    private String getFileRelativeName(TypeElement service) {
+        return ProviderConfigurationFileLine.getFileRelativeName(env.getElementUtils().getBinaryName(service));
     }
 }

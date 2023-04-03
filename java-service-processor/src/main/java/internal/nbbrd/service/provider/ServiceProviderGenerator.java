@@ -7,6 +7,7 @@ import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.util.Types;
 import java.io.IOException;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
@@ -33,9 +34,12 @@ final class ServiceProviderGenerator extends ProcessorTool {
     }
 
     private void registerClassPath(TypeElement service, List<ProviderRef> refs, ClassPathRegistry classPath) throws IOException {
-        List<String> oldLines = classPath.readLinesByService(service);
-        List<String> newLines = classPath.formatAll(service, generateDelegates(refs));
-        classPath.writeLinesByService(merge(oldLines, newLines), service);
+        List<ProviderRef> providerRefs = generateDelegates(refs);
+        providerRefs.sort(BY_PROVIDER_NAME);
+
+        List<ProviderConfigurationFileLine> oldLines = classPath.readLinesByService(service);
+        List<ProviderConfigurationFileLine> newLines = classPath.formatAll(service, providerRefs);
+        classPath.writeLinesByService(concat(oldLines, newLines), service);
     }
 
     private List<ProviderRef> generateDelegates(List<ProviderRef> refs) {
@@ -56,10 +60,9 @@ final class ServiceProviderGenerator extends ProcessorTool {
         return annotationRefs.stream().collect(groupingBy(ProviderRef::getService));
     }
 
-    static List<String> merge(List<String> first, List<String> second) {
-        return Stream.concat(first.stream(), second.stream())
-                .distinct()
-                .sorted()
-                .collect(Collectors.toList());
+    static List<ProviderConfigurationFileLine> concat(List<ProviderConfigurationFileLine> first, List<ProviderConfigurationFileLine> second) {
+        return Stream.concat(first.stream(), second.stream()).collect(Collectors.toList());
     }
+
+    private static final Comparator<ProviderRef> BY_PROVIDER_NAME = Comparator.comparing(ref -> ref.getProvider().getQualifiedName().toString());
 }

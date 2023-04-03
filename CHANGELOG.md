@@ -6,13 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
-
-- Add validation of providers in ClassPath
-
 ### Changed
 
-- Force providers ordering in ClassPath to simplify debugging
+- Order providers in ClassPath to simplify debugging [#218](https://github.com/nbbrd/java-service-util/issues/218)
+- Validate providers in ClassPath to raise problems at compile time instead of runtime [#219](https://github.com/nbbrd/java-service-util/issues/219)
 
 ## [1.6.0] - 2023-03-23
 
