@@ -1,35 +1,36 @@
 /*
  * Copyright 2019 National Bank of Belgium
- * 
- * Licensed under the EUPL, Version 1.1 or - as soon they will be approved 
+ *
+ * Licensed under the EUPL, Version 1.1 or - as soon they will be approved
  * by the European Commission - subsequent versions of the EUPL (the "Licence");
  * You may not use this work except in compliance with the Licence.
  * You may obtain a copy of the Licence at:
- * 
+ *
  * http://ec.europa.eu/idabc/eupl
- * 
- * Unless required by applicable law or agreed to in writing, software 
+ *
+ * Unless required by applicable law or agreed to in writing, software
  * distributed under the Licence is distributed on an "AS IS" basis,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the Licence for the specific language governing permissions and 
+ * See the Licence for the specific language governing permissions and
  * limitations under the Licence.
  */
 package internal.nbbrd.service;
 
-import java.io.IOException;
-import java.io.InputStream;
-import org.antlr.v4.runtime.CharStreams;
-import static org.assertj.core.api.Assertions.*;
+import org.assertj.core.util.URLs;
 import org.junit.jupiter.api.Test;
 
+import java.io.IOException;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.assertj.core.api.Assertions.assertThat;
+
 /**
- *
  * @author Philippe Charles
  */
 public class ModuleInfoEntriesTest {
 
     @Test
-    public void testParseAll() throws IOException {
+    public void testParseAll() {
         String content;
 
         assertThat(ModuleInfoEntries.parse(""))
@@ -89,14 +90,12 @@ public class ModuleInfoEntriesTest {
                         .build()
                 );
 
-        try (InputStream stream = ModuleInfoEntriesTest.class.getResourceAsStream("/provider/somemodule-info.java")) {
-            assertThat(ModuleInfoEntries.parse(CharStreams.fromStream(stream)))
-                    .isEqualTo(ModuleInfoEntries
-                            .builder()
-                            .provision("java.util.spi.LocaleServiceProvider", "internal.pac.modern.lib.NewModernService")
-                            .provision("java.util.spi.LocaleServiceProvider", "internal.pac.modern.lib.OldModernService")
-                            .build()
-                    );
-        }
+        assertThat(ModuleInfoEntries.parse(URLs.contentOf(ModuleInfoEntriesTest.class.getResource("/provider/somemodule-info.java"), UTF_8)))
+                .isEqualTo(ModuleInfoEntries
+                        .builder()
+                        .provision("java.util.spi.LocaleServiceProvider", "internal.pac.modern.lib.NewModernService")
+                        .provision("java.util.spi.LocaleServiceProvider", "internal.pac.modern.lib.OldModernService")
+                        .build()
+                );
     }
 }
