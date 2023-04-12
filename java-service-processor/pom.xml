@@ -105,6 +105,18 @@
             <version>31.1-jre</version>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>io.toolisticon.cute</groupId>
+            <artifactId>cute</artifactId>
+            <version>0.12.1</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.toolisticon.cute</groupId>
+            <artifactId>extension-junit5</artifactId>
+            <version>0.12.1</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
