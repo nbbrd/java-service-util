@@ -100,7 +100,10 @@ public interface FileTypeSpi {
                 try (InputStream stream = Files.newInputStream(file)) {
                     byte[] bytes = new byte[maxBytes];
                     int n = stream.read(bytes);
-                    return IntStream.range(0, n).mapToObj(i -> String.format("%02x", bytes[i])).collect(Collectors.joining()).toUpperCase();
+                    return IntStream.range(0, n)
+                            .mapToObj(i -> String.format(Locale.ROOT, "%02x", bytes[i]))
+                            .collect(Collectors.joining())
+                            .toUpperCase(Locale.ROOT);
                 }
             }
             return "";

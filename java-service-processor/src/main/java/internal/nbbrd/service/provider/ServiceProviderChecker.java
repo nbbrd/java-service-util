@@ -12,6 +12,7 @@ import javax.lang.model.util.Types;
 import javax.tools.Diagnostic;
 import java.io.IOException;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -33,7 +34,7 @@ final class ServiceProviderChecker extends ProcessorTool {
     private boolean checkDuplicatedRefs(List<ProviderRef> refs) {
         Set<ProviderRef> duplicates = ProviderRef.getDuplicates(refs);
         for (ProviderRef ref : duplicates) {
-            getEnv().error(ref, String.format("Duplicated provider: '%1$s'", ref.getProvider()));
+            getEnv().error(ref, String.format(Locale.ROOT, "Duplicated provider: '%1$s'", ref.getProvider()));
         }
         return duplicates.isEmpty();
     }
@@ -52,22 +53,22 @@ final class ServiceProviderChecker extends ProcessorTool {
         }
 
         if (!types.isAssignable(ref.getProvider().asType(), types.erasure(ref.getService().asType()))) {
-            getEnv().error(ref, String.format("Provider '%1$s' doesn't extend nor implement service '%2$s'", ref.getProvider(), ref.getService()));
+            getEnv().error(ref, String.format(Locale.ROOT, "Provider '%1$s' doesn't extend nor implement service '%2$s'", ref.getProvider(), ref.getService()));
             return false;
         }
 
         if (ref.getProvider().getEnclosingElement().getKind() == ElementKind.CLASS && !ref.getProvider().getModifiers().contains(Modifier.STATIC)) {
-            getEnv().error(ref, String.format("Provider '%1$s' must be static inner class", ref.getProvider()));
+            getEnv().error(ref, String.format(Locale.ROOT, "Provider '%1$s' must be static inner class", ref.getProvider()));
             return false;
         }
 
         if (ref.getProvider().getModifiers().contains(Modifier.ABSTRACT)) {
-            getEnv().error(ref, String.format("Provider '%1$s' must not be abstract", ref.getProvider()));
+            getEnv().error(ref, String.format(Locale.ROOT, "Provider '%1$s' must not be abstract", ref.getProvider()));
             return false;
         }
 
         if (Instantiator.allOf(types, ref.getService(), ref.getProvider()).stream().noneMatch(this::isValidInstantiator)) {
-            getEnv().error(ref, String.format("Provider '%1$s' must have a public no-argument constructor", ref.getProvider()));
+            getEnv().error(ref, String.format(Locale.ROOT, "Provider '%1$s' must have a public no-argument constructor", ref.getProvider()));
             return false;
         }
 

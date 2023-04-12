@@ -32,6 +32,7 @@ import javax.lang.model.util.Types;
 import javax.tools.Diagnostic;
 import java.io.IOException;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 
 /**
@@ -138,13 +139,13 @@ final class ServiceDefinitionChecker {
         switch (quantifier) {
             case SINGLE:
                 if (!fallback.isPresent() && !noFallback) {
-                    env.warn(service, String.format("Missing fallback for service '%1$s'", service));
+                    env.warn(service, String.format(Locale.ROOT, "Missing fallback for service '%1$s'", service));
                 }
                 break;
             case MULTIPLE:
             case OPTIONAL:
                 if (fallback.isPresent()) {
-                    env.warn(service, String.format("Useless fallback for service '%1$s'", service));
+                    env.warn(service, String.format(Locale.ROOT, "Useless fallback for service '%1$s'", service));
                 }
                 break;
         }
@@ -160,7 +161,7 @@ final class ServiceDefinitionChecker {
 
     private boolean checkFallbackTypeHandler(TypeInstantiator handler, TypeElement service, Types types) {
         if (!types.isAssignable(handler.getType(), types.erasure(service.asType()))) {
-            env.error(service, String.format("Fallback '%1$s' doesn't extend nor implement service '%2$s'", handler.getType(), service));
+            env.error(service, String.format(Locale.ROOT, "Fallback '%1$s' doesn't extend nor implement service '%2$s'", handler.getType(), service));
             return false;
         }
 
@@ -181,7 +182,7 @@ final class ServiceDefinitionChecker {
 
     private boolean checkWrapperTypeHandler(TypeWrapper handler, TypeElement service, Types types) {
         if (!types.isAssignable(handler.getType(), types.erasure(service.asType()))) {
-            env.error(service, String.format("Wrapper '%1$s' doesn't extend nor implement service '%2$s'", handler.getType(), service));
+            env.error(service, String.format(Locale.ROOT, "Wrapper '%1$s' doesn't extend nor implement service '%2$s'", handler.getType(), service));
             return false;
         }
 
@@ -203,7 +204,7 @@ final class ServiceDefinitionChecker {
     private boolean checkPreprocessorTypeHandler(TypeInstantiator handler, TypeElement service, Types types) {
         TypeMirror expectedType = LoadDefinition.getPreprocessorType(env, service.asType());
         if (!types.isAssignable(handler.getType(), expectedType)) {
-            env.error(service, String.format("Preprocessor '%1$s' doesn't extend nor implement '%2$s'", handler.getType(), expectedType));
+            env.error(service, String.format(Locale.ROOT, "Preprocessor '%1$s' doesn't extend nor implement '%2$s'", handler.getType(), expectedType));
             return false;
         }
 
@@ -225,7 +226,7 @@ final class ServiceDefinitionChecker {
     private boolean checkBackendTypeHandler(TypeInstantiator handler, TypeElement service, Types types) {
         TypeMirror expectedType = LoadDefinition.getBackendType(env, service.asType());
         if (!types.isAssignable(handler.getType(), expectedType)) {
-            env.error(service, String.format("Backend '%1$s' doesn't extend nor implement '%2$s'", handler.getType(), expectedType));
+            env.error(service, String.format(Locale.ROOT, "Backend '%1$s' doesn't extend nor implement '%2$s'", handler.getType(), expectedType));
             return false;
         }
 
@@ -247,7 +248,7 @@ final class ServiceDefinitionChecker {
     private boolean checkCleanerTypeHandler(TypeInstantiator handler, TypeElement service, Types types) {
         TypeMirror expectedType = LoadDefinition.getCleanerType(env, service.asType());
         if (!types.isAssignable(handler.getType(), expectedType)) {
-            env.error(service, String.format("Cleaner '%1$s' doesn't extend nor implement '%2$s'", handler.getType(), expectedType));
+            env.error(service, String.format(Locale.ROOT, "Cleaner '%1$s' doesn't extend nor implement '%2$s'", handler.getType(), expectedType));
             return false;
         }
 
@@ -259,14 +260,14 @@ final class ServiceDefinitionChecker {
 
     private boolean checkMutability(LoadDefinition definition, TypeElement service, Types types) {
         if (definition.getLifecycle() == Lifecycle.UNSAFE_MUTABLE) {
-            env.warn(service, String.format("Thread-unsafe singleton for '%1$s'", service));
+            env.warn(service, String.format(Locale.ROOT, "Thread-unsafe singleton for '%1$s'", service));
         }
         return true;
     }
 
     private boolean checkInstanceFactories(TypeElement annotatedElement, TypeMirror type, TypeInstantiator instance) {
         if (!instance.select().isPresent()) {
-            env.error(annotatedElement, String.format("Don't know how to instantiate '%1$s'", type));
+            env.error(annotatedElement, String.format(Locale.ROOT, "Don't know how to instantiate '%1$s'", type));
             return false;
         }
         return true;
@@ -274,7 +275,7 @@ final class ServiceDefinitionChecker {
 
     private boolean checkWrapperFactories(TypeElement annotatedElement, TypeMirror type, TypeWrapper instance) {
         if (!instance.select().isPresent()) {
-            env.error(annotatedElement, String.format("Don't know how to wrap '%1$s'", type));
+            env.error(annotatedElement, String.format(Locale.ROOT, "Don't know how to wrap '%1$s'", type));
             return false;
         }
         return true;
