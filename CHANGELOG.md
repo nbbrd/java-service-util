@@ -12,6 +12,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Validate providers in ClassPath to raise problems at compile time instead of runtime [#219](https://github.com/nbbrd/java-service-util/issues/219)
 - Replace antlr4 with javaparser to handle module-info content
 
+### Fixed
+
+- Fix parsing of imports that end with asterisk [#223](https://github.com/nbbrd/java-service-util/issues/223)
+
 ## [1.6.0] - 2023-03-23
 
 ### Added

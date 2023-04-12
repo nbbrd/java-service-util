@@ -36,7 +36,7 @@ final class ModulePathRegistry implements ProviderRegistry {
     private final ProcessingEnvironment env;
 
     public Optional<List<ProviderEntry>> readAll() throws IOException {
-        return ModuleInfoEntries.parse(env.getFiler())
+        return ModuleInfoEntries.parse(env.getFiler(), env.getElementUtils())
                 .map(ModulePathRegistry::parseAll);
     }
 

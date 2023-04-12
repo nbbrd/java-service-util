@@ -16,10 +16,11 @@
  */
 package internal.nbbrd.service;
 
+import io.toolisticon.cute.CompileTestBuilder;
 import org.assertj.core.util.URLs;
 import org.junit.jupiter.api.Test;
 
-import java.io.IOException;
+import java.util.stream.Stream;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -33,15 +34,15 @@ public class ModuleInfoEntriesTest {
     public void testParseAll() {
         String content;
 
-        assertThat(ModuleInfoEntries.parse(""))
-                .isEqualTo(ModuleInfoEntries.builder().build());
+        assertThat(ModuleInfoEntries.parse("", noOpExpander()))
+                .isEmpty();
 
         content = "module hello {\n"
                 + "    provides lib.HelloService with internal.lib.OldHelloService;\n"
                 + "    uses lib.HelloService;\n"
                 + "}\n";
-        assertThat(ModuleInfoEntries.parse(content))
-                .isEqualTo(ModuleInfoEntries
+        assertThat(ModuleInfoEntries.parse(content, noOpExpander()))
+                .hasValue(ModuleInfoEntries
                         .builder()
                         .provision("lib.HelloService", "internal.lib.OldHelloService")
                         .usage("lib.HelloService")
@@ -52,8 +53,8 @@ public class ModuleInfoEntriesTest {
                 + "    provides lib.HelloService\n"
                 + "            with internal.lib.NewHelloService;\n"
                 + "}\n";
-        assertThat(ModuleInfoEntries.parse(content))
-                .isEqualTo(ModuleInfoEntries
+        assertThat(ModuleInfoEntries.parse(content, noOpExpander()))
+                .hasValue(ModuleInfoEntries
                         .builder()
                         .provision("lib.HelloService", "internal.lib.NewHelloService")
                         .build()
@@ -64,8 +65,8 @@ public class ModuleInfoEntriesTest {
                 + "            internal.lib.NewHelloService,\n"
                 + "            internal.lib.OldHelloService, abc.xyz.Ab;\n"
                 + "}\n";
-        assertThat(ModuleInfoEntries.parse(content))
-                .isEqualTo(ModuleInfoEntries
+        assertThat(ModuleInfoEntries.parse(content, noOpExpander()))
+                .hasValue(ModuleInfoEntries
                         .builder()
                         .provision("lib.HelloService", "internal.lib.NewHelloService")
                         .provision("lib.HelloService", "internal.lib.OldHelloService")
@@ -81,8 +82,8 @@ public class ModuleInfoEntriesTest {
                 + "    uses HelloService;\n"
                 + "    uses Logging.LoggerSpi;\n"
                 + "}\n";
-        assertThat(ModuleInfoEntries.parse(content))
-                .isEqualTo(ModuleInfoEntries
+        assertThat(ModuleInfoEntries.parse(content, noOpExpander()))
+                .hasValue(ModuleInfoEntries
                         .builder()
                         .provision("lib.HelloService", "internal.lib.NewHelloService")
                         .usage("lib.HelloService")
@@ -90,12 +91,54 @@ public class ModuleInfoEntriesTest {
                         .build()
                 );
 
-        assertThat(ModuleInfoEntries.parse(URLs.contentOf(ModuleInfoEntriesTest.class.getResource("/provider/somemodule-info.java"), UTF_8)))
-                .isEqualTo(ModuleInfoEntries
+        content = URLs.contentOf(ModuleInfoEntriesTest.class.getResource("/provider/somemodule-info.java"), UTF_8);
+        assertThat(ModuleInfoEntries.parse(content, noOpExpander()))
+                .hasValue(ModuleInfoEntries
                         .builder()
                         .provision("java.util.spi.LocaleServiceProvider", "internal.pac.modern.lib.NewModernService")
                         .provision("java.util.spi.LocaleServiceProvider", "internal.pac.modern.lib.OldModernService")
                         .build()
                 );
+    }
+
+    @Test
+    public void testImportsThatEndWithAsterisk() {
+        String content
+                = "import lib.HelloService;\n"
+                + "import internal.lib.*;\n"
+                + "import sandbox.samples.Logging;\n"
+                + "module mymodule {\n"
+                + "    provides lib.HelloService with NewHelloService;\n"
+                + "    uses HelloService;\n"
+                + "    uses Logging.LoggerSpi;\n"
+                + "}\n";
+
+        assertThat(ModuleInfoEntries.parse(content, packageName -> Stream.of("internal.lib.NewHelloService")))
+                .hasValue(ModuleInfoEntries
+                        .builder()
+                        .provision("lib.HelloService", "internal.lib.NewHelloService")
+                        .usage("lib.HelloService")
+                        .usage("sandbox.samples.Logging.LoggerSpi")
+                        .build()
+                );
+    }
+
+    @Test
+    public void testPackageExpanderOfElements() {
+        CompileTestBuilder.unitTest()
+                .defineTest((env, element) -> {
+                    ModuleInfoEntries.PackageExpander expander = ModuleInfoEntries.PackageExpander.of(env.getElementUtils());
+
+                    assertThat(expander.getEnclosedTypeNames("java.util"))
+                            .contains("java.util.Deque");
+
+                    assertThat(expander.getEnclosedTypeNames("missing.package"))
+                            .isEmpty();
+                })
+                .executeTest();
+    }
+
+    private static ModuleInfoEntries.PackageExpander noOpExpander() {
+        return ignore -> Stream.empty();
     }
 }

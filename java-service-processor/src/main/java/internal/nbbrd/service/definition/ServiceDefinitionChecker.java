@@ -50,7 +50,7 @@ final class ServiceDefinitionChecker {
 
     public void checkModuleInfo(List<LoadDefinition> definitions) {
         try {
-            ModuleInfoEntries.parse(env.getFiler())
+            ModuleInfoEntries.parse(env.getFiler(), env.getElementUtils())
                     .map(ModuleInfoEntries::getUsages)
                     .ifPresent(usages -> checkModuleInfoUsages(usages, definitions));
         } catch (IOException ex) {
