@@ -13,6 +13,7 @@ import javax.tools.JavaFileManager;
 import javax.tools.JavaFileObject;
 import java.io.IOException;
 import java.util.List;
+import java.util.Locale;
 
 import static javax.tools.StandardLocation.SOURCE_OUTPUT;
 import static org.assertj.core.api.HamcrestCondition.matching;
@@ -75,7 +76,7 @@ public final class Compilations {
 
     private static String getFileName(JavaFileManager.Location location, String packageName, String relativeName) {
         String path = packageName.isEmpty() ? relativeName : packageName.replace('.', '/') + '/' + relativeName;
-        return String.format("/%s/%s", location.getName(), path);
+        return String.format(Locale.ROOT, "/%s/%s", location.getName(), path);
     }
 
     public static String contentsAsUtf8String(JavaFileObject file) {

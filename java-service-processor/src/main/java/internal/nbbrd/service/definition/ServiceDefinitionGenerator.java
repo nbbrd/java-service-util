@@ -591,7 +591,7 @@ class ServiceDefinitionGenerator {
     }
 
     private String fieldName(String name) {
-        return definition.getLifecycle().isSingleton() ? name.toUpperCase() : name;
+        return definition.getLifecycle().isSingleton() ? name.toUpperCase(Locale.ROOT) : name;
     }
 
     private CodeBlock getThreadSafetyComment() {

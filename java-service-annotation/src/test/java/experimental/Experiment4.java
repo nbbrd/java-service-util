@@ -1,15 +1,30 @@
 package experimental;
 
+import experimental.Experiment4.Generated.ConfigurationLoader;
+import experimental.Experiment4.Generated.SwingColorSchemeLoader;
+import experimental.Experiment4.Generated.WinRegistryLoader;
+import nbbrd.service.Mutability;
+import nbbrd.service.ServiceFilter;
+import nbbrd.service.ServiceSorter;
+import org.openide.util.Lookup;
+
 import java.awt.*;
+import java.io.IOException;
 import java.lang.annotation.*;
+import java.nio.file.Path;
 import java.util.List;
-import java.util.Optional;
-import java.util.Properties;
-import java.util.ServiceLoader;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static java.util.Collections.emptyList;
+
+@SuppressWarnings("unused")
 public class Experiment4 {
 
     @Documented
@@ -68,22 +83,50 @@ public class Experiment4 {
         ClassName loaderName() default @ClassName;
 
         /**
-         * Specifies the name of the batch loading. An empty value
+         * Specifies the batch class to use during loading.
+         * Void class disables batch loading.
+         * <p>
+         * Requirements:
+         * <ul>
+         * <li>must be assignable to the service type
+         * <li>must be instantiable either by constructor, static method, enum field
+         * or static final field
+         * </ul>
+         *
+         * @return a class name
+         */
+        Class<?> batch();
+    }
+
+    @Documented
+    @Target({ElementType.TYPE})
+    @Retention(RetentionPolicy.SOURCE)
+    public @interface ServiceDefinitionAdapter {
+
+        /**
+         * Specifies the name of the adapter. An empty value
          * generates an automatic name.
          *
          * @return a class name
          */
-        ClassName batchName() default @ClassName;
+        ClassName adapterName() default @ClassName;
 
         /**
-         * Specifies if batch loading is disabled.
+         * Specifies the mutability of the adapter.
          *
-         * @return true if batch loading is disabled, false otherwise
+         * @return a non-null mutability
          */
-        boolean noBatch() default false;
+        Mutability mutability() default Mutability.NONE;
+
+        /**
+         * Specifies if the adapter must be a singleton.
+         *
+         * @return true if the loader is a singleton, false otherwise
+         */
+        boolean singleton() default false;
     }
 
-    static class Demo {
+    static class Example {
 
         @OptionalService
         interface WinRegistry {
@@ -92,106 +135,509 @@ public class Experiment4 {
             int HKEY_LOCAL_MACHINE = 0;
         }
 
-        @SingleService(fallback = SystemProperties.class)
+        @SingleService(fallback = Configuration.SystemProperties.class)
         interface Configuration {
             Properties getProperties();
-        }
 
-        static class SystemProperties implements Configuration {
+            class SystemProperties implements Configuration {
 
-            @Override
-            public Properties getProperties() {
-                return System.getProperties();
+                @Override
+                public Properties getProperties() {
+                    return System.getProperties();
+                }
             }
         }
 
-        @MultipleService
+        @MultipleService(batch = SwingColorSchemeBatch.class)
         interface SwingColorScheme {
             List<Color> getColors();
         }
 
-        public static void main(String[] args) {
-            Optional<WinRegistry> winRegistry = Generated.WinRegistryLoader.ofServiceLoader().get();
-            winRegistry.ifPresent(reg -> System.out.println(reg.readString(WinRegistry.HKEY_LOCAL_MACHINE, "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion", "ProductName")));
+        interface SwingColorSchemeBatch {
+            Stream<Example.SwingColorScheme> getProviders();
+        }
 
-            Configuration configuration = Generated.ConfigurationLoader.ofServiceLoader().get();
-            configuration.getProperties().forEach((k, v) -> System.out.println(k + "=" + v));
+        @MultipleService(batch = Void.class)
+        @ServiceDefinitionAdapter(
+                adapterName = @ClassName(simpleName = "internal.FileTypeSpiLoader"),
+                mutability = Mutability.CONCURRENT,
+                singleton = true
+        )
+        public interface FileTypeSpi {
 
-            List<SwingColorScheme> swingColorSchemes = Generated.SwingColorSchemeLoader.ofServiceLoader().get();
-            swingColorSchemes.forEach(colorScheme -> System.out.println(colorScheme.getColors()));
+            enum Accuracy {HIGH, LOW}
+
+            String getContentTypeOrNull(Path file) throws IOException;
+
+            @ServiceSorter
+            Accuracy getAccuracy();
+
+            @ServiceFilter
+            boolean isAvailable();
         }
     }
 
     static class Generated {
 
-        static final class WinRegistryLoader {
+        static abstract class LoaderTemplate<T, B> {
 
-            public static WinRegistryLoader ofServiceLoader() {
-                return ofServiceLoader(Thread.currentThread().getContextClassLoader());
+            protected final Iterable<T> source;
+
+            protected final Runnable sourceReloader;
+
+            protected final Iterable<B> batch;
+
+            protected final Runnable batchReloader;
+
+            protected final Function<B, Iterable<T>> mapper;
+
+            protected final Consumer<Throwable> onUnexpectedError;
+
+            protected LoaderTemplate(
+                    Iterable<T> source, Runnable sourceReloader,
+                    Iterable<B> batch, Runnable batchReloader,
+                    Function<B, Iterable<T>> mapper,
+                    Consumer<Throwable> onUnexpectedError
+            ) {
+                this.source = source;
+                this.sourceReloader = sourceReloader;
+                this.batch = batch;
+                this.batchReloader = batchReloader;
+                this.mapper = mapper;
+                this.onUnexpectedError = onUnexpectedError;
             }
 
-            public static WinRegistryLoader ofServiceLoader(ClassLoader classLoader) {
-                return of(service -> ServiceLoader.load(service, classLoader), ServiceLoader::reload);
-            }
-
-            public static <BACKEND extends Iterable<?>> WinRegistryLoader of(Function<Class<?>, BACKEND> backend, Consumer<BACKEND> reloader) {
-                throw new UnsupportedOperationException();
-            }
-
-            public Optional<Demo.WinRegistry> get() {
-                throw new UnsupportedOperationException();
-            }
-
-            public void reload() {
-            }
-        }
-
-        static final class ConfigurationLoader {
-
-            public static ConfigurationLoader ofServiceLoader() {
-                return ofServiceLoader(Thread.currentThread().getContextClassLoader());
-            }
-
-            public static ConfigurationLoader ofServiceLoader(ClassLoader classLoader) {
-                return of(service -> ServiceLoader.load(service, classLoader), ServiceLoader::reload);
-            }
-
-            public static <BACKEND extends Iterable<?>> ConfigurationLoader of(Function<Class<?>, BACKEND> backend, Consumer<BACKEND> reloader) {
-                throw new UnsupportedOperationException();
-            }
-
-            public Demo.Configuration get() {
-                throw new UnsupportedOperationException();
+            protected Stream<T> getAll() {
+                return Stream.concat(
+                        new SafeIterable<>(source, onUnexpectedError).asStream(),
+                        new SafeIterable<>(batch, onUnexpectedError).asStream()
+                                .flatMap(value -> new SafeIterable<>(mapper.apply(value), onUnexpectedError).asStream()));
             }
 
             public void reload() {
+                sourceReloader.run();
+                batchReloader.run();
+            }
+
+            public static <X> Iterable<X> noLoad() {
+                return emptyList();
+            }
+
+            public static Runnable noReload() {
+                return () -> {
+                };
+            }
+
+            public static <B, T> Function<B, Iterable<T>> noMapping() {
+                return ignore -> emptyList();
             }
         }
 
-        interface SwingColorSchemeBatch {
-            Stream<Demo.SwingColorScheme> getProviders();
+        static abstract class OptionalTemplate<T> extends LoaderTemplate<T, Void> {
+
+            protected OptionalTemplate(Iterable<T> source, Runnable sourceReloader, Consumer<Throwable> onUnexpectedError) {
+                super(source, sourceReloader, noLoad(), noReload(), noMapping(), onUnexpectedError);
+            }
+
+            public Optional<T> get() {
+                return getAll().findFirst();
+            }
         }
 
-        static final class SwingColorSchemeLoader {
+        static abstract class SingleTemplate<T> extends LoaderTemplate<T, Void> {
 
-            public static SwingColorSchemeLoader ofServiceLoader() {
-                return ofServiceLoader(Thread.currentThread().getContextClassLoader());
+            protected SingleTemplate(Iterable<T> source, Runnable sourceReloader, Consumer<Throwable> onUnexpectedError) {
+                super(source, sourceReloader, noLoad(), noReload(), noMapping(), onUnexpectedError);
             }
 
-            public static SwingColorSchemeLoader ofServiceLoader(ClassLoader classLoader) {
-                return of(service -> ServiceLoader.load(service, classLoader), ServiceLoader::reload);
+            public T get() {
+                return getAll().findFirst().orElseThrow(RuntimeException::new);
+            }
+        }
+
+        static abstract class MultipleTemplate<T, B> extends LoaderTemplate<T, B> {
+
+            protected MultipleTemplate(
+                    Iterable<T> source, Runnable sourceReloader,
+                    Iterable<B> batch, Runnable batchReloader,
+                    Function<B, Iterable<T>> mapper,
+                    Consumer<Throwable> onUnexpectedError
+            ) {
+                super(source, sourceReloader, batch, batchReloader, mapper, onUnexpectedError);
             }
 
-            public static <BACKEND extends Iterable<?>> SwingColorSchemeLoader of(Function<Class<?>, BACKEND> backend, Consumer<BACKEND> reloader) {
-                throw new UnsupportedOperationException();
+            public List<T> get() {
+                return getAll().collect(Collectors.toList());
+            }
+        }
+
+        @SuppressWarnings("unchecked")
+        static abstract class BuilderTemplate<BACKEND, BUILDER extends BuilderTemplate<BACKEND, BUILDER>> {
+
+            protected final Function<Class<?>, BACKEND> factory;
+            protected Function<BACKEND, Iterable<?>> streamer;
+            protected Consumer<BACKEND> reloader;
+            protected Consumer<Throwable> onUnexpectedError = Throwable::printStackTrace;
+
+            protected BuilderTemplate(Function<Class<?>, BACKEND> factory) {
+                this.factory = factory;
             }
 
-            public List<Demo.SwingColorScheme> get() {
-                throw new UnsupportedOperationException();
+            public BUILDER streamer(Function<BACKEND, Iterable<?>> streamer) {
+                this.streamer = streamer;
+                return (BUILDER) this;
+            }
+
+            public BUILDER reloader(Consumer<BACKEND> reloader) {
+                this.reloader = reloader;
+                return (BUILDER) this;
+            }
+
+            public BUILDER onUnexpectedError(Consumer<Throwable> onUnexpectedError) {
+                this.onUnexpectedError = onUnexpectedError;
+                return (BUILDER) this;
+            }
+
+            protected <X> Iterable<X> asLoader(Class<X> type, BACKEND backend) {
+                return (Iterable<X>) streamer.apply(backend);
+            }
+
+            protected Runnable asReloader(BACKEND backend) {
+                return () -> reloader.accept(backend);
+            }
+
+            protected <B, T> Function<B, Iterable<T>> asMapper(Function<B, Stream<T>> mapper) {
+                return mapper.andThen(o -> o::iterator);
+            }
+
+            abstract public Object build();
+        }
+
+        static final class WinRegistryLoader extends OptionalTemplate<Example.WinRegistry> {
+
+            public static Optional<Example.WinRegistry> load() {
+                return builder().build().get();
+            }
+
+            public static Builder<ServiceLoader<?>> builder() {
+                return new Builder<ServiceLoader<?>>(ServiceLoader::load)
+                        .streamer(backend -> backend)
+                        .reloader(ServiceLoader::reload);
+            }
+
+            public static Builder<ServiceLoader<?>> builder(ClassLoader classLoader) {
+                return new Builder<ServiceLoader<?>>(service -> ServiceLoader.load(service, classLoader))
+                        .streamer(backend -> backend)
+                        .reloader(ServiceLoader::reload);
+            }
+
+            public static <BACKEND> Builder<BACKEND> builder(Function<Class<?>, BACKEND> factory) {
+                return new Builder<>(factory);
+            }
+
+            private WinRegistryLoader(Iterable<Example.WinRegistry> source, Runnable sourceReloader, Consumer<Throwable> onUnexpectedError) {
+                super(source, sourceReloader, onUnexpectedError);
+            }
+
+            public static final class Builder<BACKEND> extends BuilderTemplate<BACKEND, Builder<BACKEND>> {
+
+                private Builder(Function<Class<?>, BACKEND> factory) {
+                    super(factory);
+                }
+
+                public WinRegistryLoader build() {
+                    BACKEND sourceBackend = factory.apply(Example.WinRegistry.class);
+                    return new WinRegistryLoader(
+                            asLoader(Example.WinRegistry.class, sourceBackend),
+                            asReloader(sourceBackend),
+                            onUnexpectedError
+                    );
+                }
+            }
+        }
+
+        static final class ConfigurationLoader extends SingleTemplate<Example.Configuration> {
+
+            public static Example.Configuration load() {
+                return builder().build().get();
+            }
+
+
+            public static Builder<ServiceLoader<?>> builder() {
+                return new Builder<ServiceLoader<?>>(ServiceLoader::load)
+                        .streamer(backend -> backend)
+                        .reloader(ServiceLoader::reload);
+            }
+
+            public static Builder<ServiceLoader<?>> builder(ClassLoader classLoader) {
+                return new Builder<ServiceLoader<?>>(service -> ServiceLoader.load(service, classLoader))
+                        .streamer(backend -> backend)
+                        .reloader(ServiceLoader::reload);
+            }
+
+            public static <BACKEND> Builder<BACKEND> builder(Function<Class<?>, BACKEND> factory) {
+                return new Builder<>(factory);
+            }
+
+            private ConfigurationLoader(Iterable<Example.Configuration> source, Runnable sourceReloader, Consumer<Throwable> onUnexpectedError) {
+                super(source, sourceReloader, onUnexpectedError);
+            }
+
+            public static final class Builder<BACKEND> extends BuilderTemplate<BACKEND, Builder<BACKEND>> {
+
+                private Builder(Function<Class<?>, BACKEND> factory) {
+                    super(factory);
+                }
+
+                public ConfigurationLoader build() {
+                    BACKEND sourceBackend = factory.apply(Example.Configuration.class);
+                    return new ConfigurationLoader(
+                            asLoader(Example.Configuration.class, sourceBackend),
+                            asReloader(sourceBackend),
+                            onUnexpectedError
+                    );
+                }
+            }
+        }
+
+        static final class SwingColorSchemeLoader extends MultipleTemplate<Example.SwingColorScheme, Example.SwingColorSchemeBatch> {
+
+            public static List<Example.SwingColorScheme> load() {
+                return builder().build().get();
+            }
+
+            public static Builder<ServiceLoader<?>> builder() {
+                return new Builder<ServiceLoader<?>>(ServiceLoader::load)
+                        .streamer(backend -> backend)
+                        .reloader(ServiceLoader::reload);
+            }
+
+            public static Builder<ServiceLoader<?>> builder(ClassLoader classLoader) {
+                return new Builder<ServiceLoader<?>>(service -> ServiceLoader.load(service, classLoader))
+                        .streamer(backend -> backend)
+                        .reloader(ServiceLoader::reload);
+            }
+
+            public static <BACKEND> Builder<BACKEND> builder(Function<Class<?>, BACKEND> factory) {
+                return new Builder<>(factory);
+            }
+
+            private SwingColorSchemeLoader(Iterable<Example.SwingColorScheme> source, Runnable sourceReloader,
+                                           Iterable<Example.SwingColorSchemeBatch> batch, Runnable batchReloader,
+                                           Function<Example.SwingColorSchemeBatch, Iterable<Example.SwingColorScheme>> mapper,
+                                           Consumer<Throwable> onUnexpectedError) {
+                super(source, sourceReloader, batch, batchReloader, mapper, onUnexpectedError);
+            }
+
+            public static final class Builder<BACKEND> extends BuilderTemplate<BACKEND, Builder<BACKEND>> {
+
+                private Builder(Function<Class<?>, BACKEND> factory) {
+                    super(factory);
+                }
+
+                public SwingColorSchemeLoader build() {
+                    BACKEND sourceBackend = factory.apply(Example.SwingColorScheme.class);
+                    BACKEND batchBackend = factory.apply(Example.SwingColorSchemeBatch.class);
+                    return new SwingColorSchemeLoader(
+                            asLoader(Example.SwingColorScheme.class, sourceBackend),
+                            asReloader(sourceBackend),
+                            asLoader(Example.SwingColorSchemeBatch.class, batchBackend),
+                            asReloader(batchBackend),
+                            asMapper(Example.SwingColorSchemeBatch::getProviders),
+                            onUnexpectedError
+                    );
+                }
+            }
+        }
+
+        static final class FileTypeSpiLoader extends MultipleTemplate<Example.FileTypeSpi, Void> {
+
+            public static List<Example.FileTypeSpi> load() {
+                return builder().build().get();
+            }
+
+            public static Builder<ServiceLoader<?>> builder() {
+                return new Builder<ServiceLoader<?>>(ServiceLoader::load)
+                        .streamer(backend -> backend)
+                        .reloader(ServiceLoader::reload);
+            }
+
+            public static Builder<ServiceLoader<?>> builder(ClassLoader classLoader) {
+                return new Builder<ServiceLoader<?>>(service -> ServiceLoader.load(service, classLoader))
+                        .streamer(backend -> backend)
+                        .reloader(ServiceLoader::reload);
+            }
+
+            private FileTypeSpiLoader(Iterable<Example.FileTypeSpi> source, Runnable sourceReloader,
+                                      Iterable<Void> batch, Runnable batchReloader,
+                                      Function<Void, Iterable<Example.FileTypeSpi>> mapper,
+                                      Consumer<Throwable> onUnexpectedError) {
+                super(source, sourceReloader, batch, batchReloader, mapper, onUnexpectedError);
+            }
+
+            public static final class Builder<BACKEND> extends BuilderTemplate<BACKEND, Builder<BACKEND>> {
+
+                private Builder(Function<Class<?>, BACKEND> factory) {
+                    super(factory);
+                }
+
+                public FileTypeSpiLoader build() {
+                    BACKEND sourceBackend = factory.apply(Example.FileTypeSpi.class);
+                    return new FileTypeSpiLoader(
+                            asLoader(Example.FileTypeSpi.class, sourceBackend),
+                            asReloader(sourceBackend),
+                            noLoad(),
+                            noReload(),
+                            noMapping(),
+                            onUnexpectedError
+                    );
+                }
+            }
+        }
+
+        static final class InternalFileTypeSpiLoader {
+
+            private final FileTypeSpiLoader delegate = FileTypeSpiLoader.builder().build();
+
+            private final AtomicReference<List<Example.FileTypeSpi>> resource = new AtomicReference<>(delegate.get());
+
+            public List<Example.FileTypeSpi> get() {
+                return resource.get();
+            }
+
+            public void set(List<Example.FileTypeSpi> newValue) {
+                resource.set(Objects.requireNonNull(newValue));
             }
 
             public void reload() {
+                synchronized (delegate) {
+                    delegate.reload();
+                    set(delegate.get());
+                }
             }
+
+            public void reset() {
+                synchronized (delegate) {
+                    set(delegate.get());
+                }
+            }
+        }
+
+    }
+
+    static class Demo {
+
+        public static void main(String[] args) {
+            normalUsage();
+            fluentUsage();
+            convenientShortcut();
+            netBeansLookupBackend();
+            customClassLoaderBackend();
+            serviceDefinitionAdapter();
+            catchUnexpectedErrors();
+        }
+
+        private static void normalUsage() {
+            WinRegistryLoader optionalLoader = WinRegistryLoader.builder().build();
+            Optional<Example.WinRegistry> optional = optionalLoader.get();
+            optional.ifPresent(Demo::printWindowsVersion);
+            optionalLoader.reload();
+
+            ConfigurationLoader singleLoader = ConfigurationLoader.builder().build();
+            Example.Configuration single = singleLoader.get();
+            printProperties(single);
+            singleLoader.reload();
+
+            SwingColorSchemeLoader multipleLoader = SwingColorSchemeLoader.builder().build();
+            List<Example.SwingColorScheme> multiple = multipleLoader.get();
+            multiple.forEach(Demo::printColors);
+            multipleLoader.reload();
+        }
+
+        private static void fluentUsage() {
+            WinRegistryLoader.builder().build().get().ifPresent(Demo::printWindowsVersion);
+
+            printProperties(ConfigurationLoader.builder().build().get());
+
+            SwingColorSchemeLoader.builder().build().get().forEach(Demo::printColors);
+        }
+
+        private static void convenientShortcut() {
+            WinRegistryLoader.load().ifPresent(Demo::printWindowsVersion);
+
+            printProperties(ConfigurationLoader.load());
+
+            SwingColorSchemeLoader.load().forEach(Demo::printColors);
+        }
+
+        private static void netBeansLookupBackend() {
+            WinRegistryLoader
+                    .builder(Lookup.getDefault()::lookupResult)
+                    .streamer(Lookup.Result::allInstances)
+                    .build()
+                    .get().ifPresent(Demo::printWindowsVersion);
+
+            printProperties(
+                    ConfigurationLoader
+                            .builder(Lookup.getDefault()::lookupResult)
+                            .streamer(Lookup.Result::allInstances)
+                            .build()
+                            .get()
+            );
+
+            SwingColorSchemeLoader
+                    .builder(Lookup.getDefault()::lookupResult)
+                    .streamer(Lookup.Result::allInstances)
+                    .build()
+                    .get().forEach(Demo::printColors);
+        }
+
+        private static void customClassLoaderBackend() {
+            WinRegistryLoader
+                    .builder(Thread.currentThread().getContextClassLoader())
+                    .build()
+                    .get().ifPresent(Demo::printWindowsVersion);
+
+            printProperties(
+                    ConfigurationLoader
+                            .builder(Thread.currentThread().getContextClassLoader())
+                            .build()
+                            .get()
+            );
+
+            SwingColorSchemeLoader
+                    .builder(Thread.currentThread().getContextClassLoader())
+                    .build()
+                    .get().forEach(Demo::printColors);
+        }
+
+        private static void serviceDefinitionAdapter() {
+            Generated.InternalFileTypeSpiLoader adapter = new Generated.InternalFileTypeSpiLoader();
+            adapter.set(emptyList());
+            adapter.reload();
+            adapter.reset();
+            adapter.get();
+        }
+
+        private static void catchUnexpectedErrors() {
+            SwingColorSchemeLoader
+                    .builder()
+                    .onUnexpectedError(ex -> Logger.getAnonymousLogger().log(Level.WARNING, "While loading", ex))
+                    .build()
+                    .get()
+                    .forEach(Demo::printColors);
+        }
+
+        private static void printWindowsVersion(Example.WinRegistry reg) {
+            System.out.println(reg.readString(Example.WinRegistry.HKEY_LOCAL_MACHINE, "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion", "ProductName"));
+        }
+
+        private static void printProperties(Example.Configuration configuration) {
+            configuration.getProperties().forEach((k, v) -> System.out.println(k + "=" + v));
+        }
+
+        private static void printColors(Example.SwingColorScheme colorScheme) {
+            System.out.println(colorScheme.getColors());
         }
     }
 }

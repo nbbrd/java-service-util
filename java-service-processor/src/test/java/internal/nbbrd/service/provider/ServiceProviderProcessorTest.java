@@ -19,6 +19,7 @@ package internal.nbbrd.service.provider;
 import _test.Compilations;
 import com.google.testing.compile.Compilation;
 import com.google.testing.compile.Compiler;
+import io.toolisticon.cute.CompileTestBuilder;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledOnJre;
@@ -35,6 +36,9 @@ import java.util.ServiceLoader;
 import static _test.Compilations.*;
 import static com.google.testing.compile.JavaFileObjects.forResource;
 import static com.google.testing.compile.JavaFileObjects.forSourceLines;
+import static io.toolisticon.cute.CompileTestBuilder.ExpectedFileObjectMatcherKind.TEXT_IGNORE_LINE_ENDINGS;
+import static io.toolisticon.cute.JavaFileObjectUtils.readFromString;
+import static javax.tools.StandardLocation.CLASS_OUTPUT;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.InstanceOfAssertFactories.STRING;
 import static org.assertj.core.groups.Tuple.tuple;
@@ -310,20 +314,42 @@ public class ServiceProviderProcessorTest {
 
     @Test
     @DisabledOnJre(JRE.JAVA_8)
-    @Disabled("https://github.com/google/compile-testing/issues/335#issuecomment-1269011171")
+//    @Disabled("https://github.com/google/compile-testing/issues/335#issuecomment-1269011171")
     public void testModuleInfoWithAnnotation() {
-        Compilation compilation = compile(
-                forResource(fixPackageNotVisible()),
-                forResource("provider/WithAnnotation.java"),
-                forSourceLines("module-info",
-                        "module xxx {",
-                        "  exports provider;",
-                        "  provides provider.WithAnnotation.HelloService with provider.WithAnnotation.Provider1;",
-                        "}"
-                ));
+        CompileTestBuilder.compilationTest()
+                .addSources(
+                        forResource(fixPackageNotVisible()),
+                        forResource("provider/WithAnnotation.java"),
+                        forSourceLines("module-info",
+                                "module xxx {",
+                                "  exports provider;",
+                                "  provides provider.WithAnnotation.HelloService with provider.WithAnnotation.Provider1;",
+                                "}"
+                        )
+                )
+                .addProcessors(ServiceProviderProcessor.class)
+                .compilationShouldSucceed()
+                .expectThatFileObjectExists(
+                        CLASS_OUTPUT, "", "META-INF/services/provider.WithAnnotation$HelloService",
+                        TEXT_IGNORE_LINE_ENDINGS, readFromString("provider.WithAnnotation$Provider1\nprovider.WithAnnotation$Provider2")
+                )
+                .executeTest();
+    }
+
+    @Test
+    public void testClassPathOrder() {
+        JavaFileObject file = forResource("provider/ClassPathOrder.java");
+        Compilation compilation = compile(file);
 
         assertThat(compilation)
-                .has(succeededWithoutWarnings());
+                .has(succeeded());
+
+        assertThat(compilation)
+                .extracting(Compilation::generatedFiles, JAVA_FILE_OBJECTS)
+                .filteredOn(fileNamed("/CLASS_OUTPUT/META-INF/services/ClassPathOrder$HelloService"))
+                .singleElement()
+                .extracting(Compilations::contentsAsUtf8String, STRING)
+                .isEqualToIgnoringNewLines("ClassPathOrder$AClassPathOrder$BClassPathOrder$C");
     }
 
     private URL fixPackageNotVisible() {

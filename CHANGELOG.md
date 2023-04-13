@@ -6,6 +6,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.6.1] - 2023-04-13
+
+### Changed
+
+- Order providers in ClassPath to simplify debugging [#218](https://github.com/nbbrd/java-service-util/issues/218)
+- Validate providers in ClassPath to raise problems at compile time instead of runtime [#219](https://github.com/nbbrd/java-service-util/issues/219)
+- Replace antlr4 with javaparser to handle module-info content
+
+### Fixed
+
+- Fix parsing of imports that end with asterisk [#223](https://github.com/nbbrd/java-service-util/issues/223)
+
 ## [1.6.0] - 2023-03-23
 
 ### Added
@@ -119,7 +131,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial release
 
-[Unreleased]: https://github.com/nbbrd/java-service-util/compare/v1.6.0...HEAD
+[Unreleased]: https://github.com/nbbrd/java-service-util/compare/v1.6.1...HEAD
+[1.6.1]: https://github.com/nbbrd/java-service-util/compare/v1.6.0...v1.6.1
 [1.6.0]: https://github.com/nbbrd/java-service-util/compare/v1.5.3...v1.6.0
 [1.5.3]: https://github.com/nbbrd/java-service-util/compare/v1.5.2...v1.5.3
 [1.5.2]: https://github.com/nbbrd/java-service-util/compare/v1.5.1...v1.5.2
