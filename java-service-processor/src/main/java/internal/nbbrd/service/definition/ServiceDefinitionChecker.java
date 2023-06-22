@@ -110,6 +110,28 @@ final class ServiceDefinitionChecker {
         return true;
     }
 
+    public boolean checkId(LoadId id) {
+        Types types = env.getTypeUtils();
+        ExecutableElement x = id.getMethod();
+        if (!id.getServiceType().isPresent() || id.getServiceType().get().getAnnotation(ServiceDefinition.class) == null) {
+            env.error(x, "[RULE_I1] Id method only applies to methods of a service");
+            return false;
+        }
+        if (x.getModifiers().contains(Modifier.STATIC)) {
+            env.error(x, "[RULE_I2] Id method does not apply to static methods");
+            return false;
+        }
+        if (!x.getParameters().isEmpty()) {
+            env.error(x, "[RULE_I3] Id method must have no-args");
+            return false;
+        }
+        if (!types.isSameType(x.getReturnType(), env.asTypeElement(String.class).asType())) {
+            env.error(x, "[RULE_I4] Id method must return String");
+            return false;
+        }
+        return true;
+    }
+
     public boolean checkDefinition(LoadDefinition definition) {
         Types types = env.getTypeUtils();
         TypeElement service = env.asTypeElement(definition.getServiceType());

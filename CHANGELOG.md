@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Add ServiceId annotation [#244](https://github.com/nbbrd/java-service-util/issues/244)
+
 ## [1.6.1] - 2023-04-13
 
 ### Changed

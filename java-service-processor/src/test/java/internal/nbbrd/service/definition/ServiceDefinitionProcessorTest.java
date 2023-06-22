@@ -21,6 +21,7 @@ import com.google.testing.compile.Compilation;
 import com.google.testing.compile.Compiler;
 import com.google.testing.compile.JavaFileObjects;
 import internal.nbbrd.service.provider.ServiceProviderProcessor;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import javax.annotation.processing.Processor;
@@ -486,6 +487,68 @@ public class ServiceDefinitionProcessorTest {
                 .containsOnly(
                         tuple("Sorter method must return double, int, long or comparable", file, 10L)
                 );
+    }
+
+    @Nested
+    class ServiceIdTest {
+
+        @Test
+        public void testValidIds() {
+            assertThat(compile(forResource("definition/Ids.java")))
+                    .has(succeededWithoutWarnings());
+        }
+
+        @Test
+        public void testLostId() {
+            JavaFileObject file = forResource("definition/LostId.java");
+
+            assertThat(compile(file))
+                    .has(failed())
+                    .extracting(Compilation::errors, DIAGNOSTICS)
+                    .singleElement()
+                    .returns("[RULE_I1] Id method only applies to methods of a service", Compilations::getDefaultMessage)
+                    .returns(file, Diagnostic::getSource)
+                    .returns(8L, Diagnostic::getLineNumber);
+        }
+
+        @Test
+        public void testStaticId() {
+            JavaFileObject file = forResource("definition/StaticId.java");
+
+            assertThat(compile(file))
+                    .has(failed())
+                    .extracting(Compilation::errors, DIAGNOSTICS)
+                    .singleElement()
+                    .returns("[RULE_I2] Id method does not apply to static methods", Compilations::getDefaultMessage)
+                    .returns(file, Diagnostic::getSource)
+                    .returns(10L, Diagnostic::getLineNumber);
+        }
+
+        @Test
+        public void testNoArgId() {
+            JavaFileObject file = forResource("definition/NoArgId.java");
+
+            assertThat(compile(file))
+                    .has(failed())
+                    .extracting(Compilation::errors, DIAGNOSTICS)
+                    .singleElement()
+                    .returns("[RULE_I3] Id method must have no-args", Compilations::getDefaultMessage)
+                    .returns(file, Diagnostic::getSource)
+                    .returns(10L, Diagnostic::getLineNumber);
+        }
+
+        @Test
+        public void testNonStringId() {
+            JavaFileObject file = forResource("definition/NonStringId.java");
+
+            assertThat(compile(file))
+                    .has(failed())
+                    .extracting(Compilation::errors, DIAGNOSTICS)
+                    .singleElement()
+                    .returns("[RULE_I4] Id method must return String", Compilations::getDefaultMessage)
+                    .returns(file, Diagnostic::getSource)
+                    .returns(10L, Diagnostic::getLineNumber);
+        }
     }
 
     @Test

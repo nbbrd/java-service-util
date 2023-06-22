@@ -39,7 +39,8 @@ class ServiceDefinitionGenerator {
     public static List<ServiceDefinitionGenerator> allOf(
             List<LoadDefinition> definitions,
             Map<ClassName, List<LoadFilter>> filtersByService,
-            Map<ClassName, List<LoadSorter>> sortersByService) {
+            Map<ClassName, List<LoadSorter>> sortersByService,
+            Map<ClassName, List<LoadId>> idsByService) {
         return definitions
                 .stream()
                 .map(definition -> of(definition, filtersByService, sortersByService))
