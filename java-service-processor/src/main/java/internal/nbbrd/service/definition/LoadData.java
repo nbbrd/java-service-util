@@ -34,4 +34,7 @@ class LoadData {
 
     @lombok.Singular
     List<LoadSorter> sorters;
+
+    @lombok.Singular
+    List<LoadId> ids;
 }

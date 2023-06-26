@@ -23,12 +23,12 @@ import internal.nbbrd.service.ProcessorUtil;
 import internal.nbbrd.service.Wrapper;
 import nbbrd.service.ServiceDefinition;
 import nbbrd.service.ServiceFilter;
+import nbbrd.service.ServiceId;
 import nbbrd.service.ServiceSorter;
 
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.element.ExecutableElement;
-import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.PrimitiveType;
@@ -83,6 +83,13 @@ final class ServiceDefinitionCollector {
                             .map(ExecutableElement.class::cast)
                             .map(this::sorterOf)
                             .forEach(result::sorter);
+                    break;
+                case "ServiceId":
+                    roundEnv.getElementsAnnotatedWith(annotation)
+                            .stream()
+                            .map(ExecutableElement.class::cast)
+                            .map(this::idOf)
+                            .forEach(result::id);
                     break;
             }
         }
@@ -140,6 +147,13 @@ final class ServiceDefinitionCollector {
         );
     }
 
+    private LoadId idOf(ExecutableElement x) {
+        ServiceId annotation = x.getAnnotation(ServiceId.class);
+        return new LoadId(x,
+                Optional.ofNullable(getServiceTypeOrNull(x))
+        );
+    }
+
     private LoadSorter.KeyType getKeyTypeOrNull(ExecutableElement x) {
         Types types = env.getTypeUtils();
         if (types.isSameType(x.getReturnType(), doubleType)) {
@@ -158,7 +172,7 @@ final class ServiceDefinitionCollector {
     }
 
     private TypeElement getServiceTypeOrNull(ExecutableElement x) {
-        return x.getModifiers().contains(Modifier.STATIC) ? null : (TypeElement) x.getEnclosingElement();
+        return (TypeElement) x.getEnclosingElement();
     }
 
     private Optional<TypeMirror> nonNull(Supplier<Class<?>> type, Class<?> nullType) {

@@ -21,6 +21,7 @@ import com.google.testing.compile.Compilation;
 import com.google.testing.compile.Compiler;
 import com.google.testing.compile.JavaFileObjects;
 import internal.nbbrd.service.provider.ServiceProviderProcessor;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import javax.annotation.processing.Processor;
@@ -274,99 +275,6 @@ public class ServiceDefinitionProcessorTest {
     }
 
     @Test
-    public void testFilters() {
-        JavaFileObject file = forResource("definition/Filters.java");
-        Compilation compilation = compile(file);
-
-        assertThat(compilation)
-                .has(succeededWithoutWarnings());
-
-        assertThat(compilation)
-                .extracting(Compilation::generatedSourceFiles, JAVA_FILE_OBJECTS)
-                .singleElement()
-                .has(sourceFileNamed("definition", "FiltersLoader.java"))
-                .extracting(Compilations::contentsAsUtf8String, STRING)
-                .contains(
-                        "private final Optional<Filters.SingleFilter> resource = doLoad();",
-                        ".filter(Filters.SingleFilter::isAvailable)",
-                        "private final Optional<Filters.MultiFilter> resource = doLoad();",
-                        ".filter(((Predicate<Filters.MultiFilter>)Filters.MultiFilter::isAvailable).and(Filters.MultiFilter::isFastEnough))",
-                        "private final Optional<Filters.ReversedFilter> resource = doLoad();",
-                        ".filter(((Predicate<Filters.ReversedFilter>)Filters.ReversedFilter::isAvailable).negate())",
-                        "private final Optional<Filters.MultiFilterWithPosition> resource = doLoad();",
-                        ".filter(((Predicate<Filters.MultiFilterWithPosition>)Filters.MultiFilterWithPosition::isFastEnough).and(Filters.MultiFilterWithPosition::isAvailable))"
-                );
-    }
-
-    @Test
-    public void testNoArgFilter() {
-        JavaFileObject file = forResource("definition/NoArgFilter.java");
-        Compilation compilation = compile(file);
-
-        assertThat(compilation)
-                .has(failed());
-
-        assertThat(compilation)
-                .extracting(Compilation::errors, DIAGNOSTICS)
-                .hasSize(1)
-                .extracting(Compilations::getDefaultMessage, Diagnostic::getSource, Diagnostic::getLineNumber)
-                .containsOnly(
-                        tuple("Filter method must have no-args", file, 10L)
-                );
-    }
-
-    @Test
-    public void testStaticFilter() {
-        JavaFileObject file = forResource("definition/StaticFilter.java");
-        Compilation compilation = compile(file);
-
-        assertThat(compilation)
-                .has(failed());
-
-        assertThat(compilation)
-                .extracting(Compilation::errors, DIAGNOSTICS)
-                .hasSize(1)
-                .extracting(Compilations::getDefaultMessage, Diagnostic::getSource, Diagnostic::getLineNumber)
-                .containsOnly(
-                        tuple("Filter method does not apply to static methods", file, 10L)
-                );
-    }
-
-    @Test
-    public void testLostFilter() {
-        JavaFileObject file = forResource("definition/LostFilter.java");
-        Compilation compilation = compile(file);
-
-        assertThat(compilation)
-                .has(failed());
-
-        assertThat(compilation)
-                .extracting(Compilation::errors, DIAGNOSTICS)
-                .hasSize(1)
-                .extracting(Compilations::getDefaultMessage, Diagnostic::getSource, Diagnostic::getLineNumber)
-                .containsOnly(
-                        tuple("Filter method only applies to methods of a service", file, 8L)
-                );
-    }
-
-    @Test
-    public void testNonBooleanFilter() {
-        JavaFileObject file = forResource("definition/NonBooleanFilter.java");
-        Compilation compilation = compile(file);
-
-        assertThat(compilation)
-                .has(failed());
-
-        assertThat(compilation)
-                .extracting(Compilation::errors, DIAGNOSTICS)
-                .hasSize(1)
-                .extracting(Compilations::getDefaultMessage, Diagnostic::getSource, Diagnostic::getLineNumber)
-                .containsOnly(
-                        tuple("Filter method must return boolean", file, 10L)
-                );
-    }
-
-    @Test
     public void testWrappers() {
         JavaFileObject file = forResource("definition/Wrappers.java");
         Compilation compilation = compile(file);
@@ -389,205 +297,345 @@ public class ServiceDefinitionProcessorTest {
                 );
     }
 
-    @Test
-    public void testSorters() {
-        JavaFileObject file = forResource("definition/Sorters.java");
-        Compilation compilation = compile(file);
+    @Nested
+    class ServiceFilterTest {
 
-        assertThat(compilation)
-                .has(succeededWithoutWarnings());
+        @Test
+        public void testValidFilters() {
+            JavaFileObject file = forResource("definition/Filters.java");
 
-        assertThat(compilation)
-                .extracting(Compilation::generatedSourceFiles, JAVA_FILE_OBJECTS)
-                .singleElement()
-                .has(sourceFileNamed("definition", "SortersLoader.java"))
-                .extracting(Compilations::contentsAsUtf8String, STRING)
-                .contains(
-                        "private final Optional<Sorters.IntSorter> resource = doLoad();",
-                        ".sorted(Comparator.comparingInt(Sorters.IntSorter::getCost))",
-                        "private final Optional<Sorters.LongSorter> resource = doLoad();",
-                        ".sorted(Comparator.comparingLong(Sorters.LongSorter::getCost))",
-                        "private final Optional<Sorters.DoubleSorter> resource = doLoad();",
-                        ".sorted(Comparator.comparingDouble(Sorters.DoubleSorter::getCost))",
-                        "private final Optional<Sorters.ComparableSorter> resource = doLoad();",
-                        ".sorted(Comparator.comparing(Sorters.ComparableSorter::getCost))",
-                        "private final Optional<Sorters.MultiSorter> resource = doLoad();",
-                        ".sorted(((Comparator<Sorters.MultiSorter>)Comparator.comparingInt(Sorters.MultiSorter::getCost)).thenComparing(Comparator.comparingDouble(Sorters.MultiSorter::getAccuracy)))",
-                        "private final Optional<Sorters.ReversedSorter> resource = doLoad();",
-                        ".sorted(Collections.reverseOrder(Comparator.comparingInt(Sorters.ReversedSorter::getCost)))",
-                        "private final Optional<Sorters.MultiSorterWithPosition> resource = doLoad();",
-                        ".sorted(((Comparator<Sorters.MultiSorterWithPosition>)Comparator.comparingDouble(Sorters.MultiSorterWithPosition::getAccuracy)).thenComparing(Comparator.comparingInt(Sorters.MultiSorterWithPosition::getCost)))"
-                );
+            assertThat(compile(file))
+                    .has(succeededWithoutWarnings())
+                    .extracting(Compilation::generatedSourceFiles, JAVA_FILE_OBJECTS)
+                    .singleElement()
+                    .has(sourceFileNamed("definition", "FiltersLoader.java"))
+                    .extracting(Compilations::contentsAsUtf8String, STRING)
+                    .contains(
+                            "private final Optional<Filters.SingleFilter> resource = doLoad();",
+                            ".filter(Filters.SingleFilter::isAvailable)",
+                            "private final Optional<Filters.MultiFilter> resource = doLoad();",
+                            ".filter(((Predicate<Filters.MultiFilter>)Filters.MultiFilter::isAvailable).and(Filters.MultiFilter::isFastEnough))",
+                            "private final Optional<Filters.ReversedFilter> resource = doLoad();",
+                            ".filter(((Predicate<Filters.ReversedFilter>)Filters.ReversedFilter::isAvailable).negate())",
+                            "private final Optional<Filters.MultiFilterWithPosition> resource = doLoad();",
+                            ".filter(((Predicate<Filters.MultiFilterWithPosition>)Filters.MultiFilterWithPosition::isFastEnough).and(Filters.MultiFilterWithPosition::isAvailable))"
+                    );
+        }
+
+        @Test
+        public void testLostFilter() {
+            JavaFileObject file = forResource("definition/LostFilter.java");
+
+            assertThat(compile(file))
+                    .has(failed())
+                    .extracting(Compilation::errors, DIAGNOSTICS)
+                    .singleElement()
+                    .returns("[RULE_F1] Filter method only applies to methods of a service", Compilations::getDefaultMessage)
+                    .returns(file, Diagnostic::getSource)
+                    .returns(8L, Diagnostic::getLineNumber);
+        }
+
+        @Test
+        public void testStaticFilter() {
+            JavaFileObject file = forResource("definition/StaticFilter.java");
+
+            assertThat(compile(file))
+                    .has(failed())
+                    .extracting(Compilation::errors, DIAGNOSTICS)
+                    .singleElement()
+                    .returns("[RULE_F2] Filter method does not apply to static methods", Compilations::getDefaultMessage)
+                    .returns(file, Diagnostic::getSource)
+                    .returns(10L, Diagnostic::getLineNumber);
+        }
+
+        @Test
+        public void testNoArgFilter() {
+            JavaFileObject file = forResource("definition/NoArgFilter.java");
+
+            assertThat(compile(file))
+                    .has(failed())
+                    .extracting(Compilation::errors, DIAGNOSTICS)
+                    .singleElement()
+                    .returns("[RULE_F3] Filter method must have no-args", Compilations::getDefaultMessage)
+                    .returns(file, Diagnostic::getSource)
+                    .returns(10L, Diagnostic::getLineNumber);
+        }
+
+        @Test
+        public void testNonBooleanFilter() {
+            JavaFileObject file = forResource("definition/NonBooleanFilter.java");
+
+            assertThat(compile(file))
+                    .has(failed())
+                    .extracting(Compilation::errors, DIAGNOSTICS)
+                    .singleElement()
+                    .returns("[RULE_F4] Filter method must return boolean", Compilations::getDefaultMessage)
+                    .returns(file, Diagnostic::getSource)
+                    .returns(10L, Diagnostic::getLineNumber);
+        }
     }
 
-    @Test
-    public void testNoArgSorter() {
-        JavaFileObject file = forResource("definition/NoArgSorter.java");
-        Compilation compilation = compile(file);
+    @Nested
+    class ServiceSorterTest {
 
-        assertThat(compilation)
-                .has(failed());
+        @Test
+        public void testValidSorters() {
+            JavaFileObject file = forResource("definition/Sorters.java");
 
-        assertThat(compilation)
-                .extracting(Compilation::errors, DIAGNOSTICS)
-                .hasSize(1)
-                .extracting(Compilations::getDefaultMessage, Diagnostic::getSource, Diagnostic::getLineNumber)
-                .containsOnly(
-                        tuple("Sorter method must have no-args", file, 10L)
-                );
+            assertThat(compile(file))
+                    .has(succeededWithoutWarnings())
+                    .extracting(Compilation::generatedSourceFiles, JAVA_FILE_OBJECTS)
+                    .singleElement()
+                    .has(sourceFileNamed("definition", "SortersLoader.java"))
+                    .extracting(Compilations::contentsAsUtf8String, STRING)
+                    .contains(
+                            "private final Optional<Sorters.IntSorter> resource = doLoad();",
+                            ".sorted(Comparator.comparingInt(Sorters.IntSorter::getCost))",
+                            "private final Optional<Sorters.LongSorter> resource = doLoad();",
+                            ".sorted(Comparator.comparingLong(Sorters.LongSorter::getCost))",
+                            "private final Optional<Sorters.DoubleSorter> resource = doLoad();",
+                            ".sorted(Comparator.comparingDouble(Sorters.DoubleSorter::getCost))",
+                            "private final Optional<Sorters.ComparableSorter> resource = doLoad();",
+                            ".sorted(Comparator.comparing(Sorters.ComparableSorter::getCost))",
+                            "private final Optional<Sorters.MultiSorter> resource = doLoad();",
+                            ".sorted(((Comparator<Sorters.MultiSorter>)Comparator.comparingInt(Sorters.MultiSorter::getCost)).thenComparing(Comparator.comparingDouble(Sorters.MultiSorter::getAccuracy)))",
+                            "private final Optional<Sorters.ReversedSorter> resource = doLoad();",
+                            ".sorted(Collections.reverseOrder(Comparator.comparingInt(Sorters.ReversedSorter::getCost)))",
+                            "private final Optional<Sorters.MultiSorterWithPosition> resource = doLoad();",
+                            ".sorted(((Comparator<Sorters.MultiSorterWithPosition>)Comparator.comparingDouble(Sorters.MultiSorterWithPosition::getAccuracy)).thenComparing(Comparator.comparingInt(Sorters.MultiSorterWithPosition::getCost)))"
+                    );
+        }
+
+        @Test
+        public void testLostSorter() {
+            JavaFileObject file = forResource("definition/LostSorter.java");
+
+            assertThat(compile(file))
+                    .has(failed())
+                    .extracting(Compilation::errors, DIAGNOSTICS)
+                    .singleElement()
+                    .returns("[RULE_S1] Sorter method only applies to methods of a service", Compilations::getDefaultMessage)
+                    .returns(file, Diagnostic::getSource)
+                    .returns(8L, Diagnostic::getLineNumber);
+        }
+
+        @Test
+        public void testStaticSorter() {
+            JavaFileObject file = forResource("definition/StaticSorter.java");
+
+            assertThat(compile(file))
+                    .has(failed())
+                    .extracting(Compilation::errors, DIAGNOSTICS)
+                    .singleElement()
+                    .returns("[RULE_S2] Sorter method does not apply to static methods", Compilations::getDefaultMessage)
+                    .returns(file, Diagnostic::getSource)
+                    .returns(10L, Diagnostic::getLineNumber);
+        }
+
+        @Test
+        public void testNoArgSorter() {
+            JavaFileObject file = forResource("definition/NoArgSorter.java");
+
+            assertThat(compile(file))
+                    .has(failed())
+                    .extracting(Compilation::errors, DIAGNOSTICS)
+                    .singleElement()
+                    .returns("[RULE_S3] Sorter method must have no-args", Compilations::getDefaultMessage)
+                    .returns(file, Diagnostic::getSource)
+                    .returns(10L, Diagnostic::getLineNumber);
+        }
+
+        @Test
+        public void testNonComparableSorter() {
+            JavaFileObject file = forResource("definition/NonComparableSorter.java");
+
+            assertThat(compile(file))
+                    .has(failed())
+                    .extracting(Compilation::errors, DIAGNOSTICS)
+                    .singleElement()
+                    .returns("[RULE_S4] Sorter method must return double, int, long or comparable", Compilations::getDefaultMessage)
+                    .returns(file, Diagnostic::getSource)
+                    .returns(10L, Diagnostic::getLineNumber);
+        }
     }
 
-    @Test
-    public void testStaticSorter() {
-        JavaFileObject file = forResource("definition/StaticSorter.java");
-        Compilation compilation = compile(file);
+    @Nested
+    class ServiceIdTest {
 
-        assertThat(compilation)
-                .has(failed());
+        @Test
+        public void testValidIds() {
+            assertThat(compile(forResource("definition/Ids.java")))
+                    .has(succeededWithoutWarnings());
+        }
 
-        assertThat(compilation)
-                .extracting(Compilation::errors, DIAGNOSTICS)
-                .hasSize(1)
-                .extracting(Compilations::getDefaultMessage, Diagnostic::getSource, Diagnostic::getLineNumber)
-                .containsOnly(
-                        tuple("Sorter method does not apply to static methods", file, 10L)
-                );
+        @Test
+        public void testLostId() {
+            JavaFileObject file = forResource("definition/LostId.java");
+
+            assertThat(compile(file))
+                    .has(failed())
+                    .extracting(Compilation::errors, DIAGNOSTICS)
+                    .singleElement()
+                    .returns("[RULE_I1] Id method only applies to methods of a service", Compilations::getDefaultMessage)
+                    .returns(file, Diagnostic::getSource)
+                    .returns(8L, Diagnostic::getLineNumber);
+        }
+
+        @Test
+        public void testStaticId() {
+            JavaFileObject file = forResource("definition/StaticId.java");
+
+            assertThat(compile(file))
+                    .has(failed())
+                    .extracting(Compilation::errors, DIAGNOSTICS)
+                    .singleElement()
+                    .returns("[RULE_I2] Id method does not apply to static methods", Compilations::getDefaultMessage)
+                    .returns(file, Diagnostic::getSource)
+                    .returns(10L, Diagnostic::getLineNumber);
+        }
+
+        @Test
+        public void testNoArgId() {
+            JavaFileObject file = forResource("definition/NoArgId.java");
+
+            assertThat(compile(file))
+                    .has(failed())
+                    .extracting(Compilation::errors, DIAGNOSTICS)
+                    .singleElement()
+                    .returns("[RULE_I3] Id method must have no-args", Compilations::getDefaultMessage)
+                    .returns(file, Diagnostic::getSource)
+                    .returns(10L, Diagnostic::getLineNumber);
+        }
+
+        @Test
+        public void testNonStringId() {
+            JavaFileObject file = forResource("definition/NonStringId.java");
+
+            assertThat(compile(file))
+                    .has(failed())
+                    .extracting(Compilation::errors, DIAGNOSTICS)
+                    .singleElement()
+                    .returns("[RULE_I4] Id method must return String", Compilations::getDefaultMessage)
+                    .returns(file, Diagnostic::getSource)
+                    .returns(10L, Diagnostic::getLineNumber);
+        }
     }
 
-    @Test
-    public void testLostSorter() {
-        JavaFileObject file = forResource("definition/LostSorter.java");
-        Compilation compilation = compile(file);
+    @Nested
+    class CustomServiceLoaderTest {
 
-        assertThat(compilation)
-                .has(failed());
+        @Test
+        public void testCustomBackend() {
+            assertThat(compile(forResource("definition/CustomBackend.java")))
+                    .has(succeededWithoutWarnings())
+                    .extracting(Compilation::generatedSourceFiles, JAVA_FILE_OBJECTS)
+                    .filteredOn(sourceFileNamed("definition", "CustomBackendLoader.java"))
+                    .singleElement()
+                    .extracting(Compilations::contentsAsUtf8String, STRING)
+                    .contains("private final Iterable<CustomBackend> source = CustomBackend.NetBeansLookup.INSTANCE.apply(CustomBackend.class);");
+        }
 
-        assertThat(compilation)
-                .extracting(Compilation::errors, DIAGNOSTICS)
-                .hasSize(1)
-                .extracting(Compilations::getDefaultMessage, Diagnostic::getSource, Diagnostic::getLineNumber)
-                .containsOnly(
-                        tuple("Sorter method only applies to methods of a service", file, 8L)
-                );
+        @Test
+        public void testNonAssignableBackend() {
+            JavaFileObject file = forResource("definition/NonAssignableBackend.java");
+
+            assertThat(compile(file))
+                    .has(failed())
+                    .extracting(Compilation::errors, DIAGNOSTICS)
+                    .singleElement()
+                    .returns("Backend 'definition.NonAssignableBackend.HelloProc' doesn't extend nor implement 'java.util.function.Function<java.lang.Class,? extends java.lang.Iterable>'", Compilations::getDefaultMessage)
+                    .returns(file, Diagnostic::getSource)
+                    .returns(11L, Diagnostic::getLineNumber);
+        }
     }
 
-    @Test
-    public void testNonComparableSorter() {
-        JavaFileObject file = forResource("definition/NonComparableSorter.java");
-        Compilation compilation = compile(file);
+    @Nested
+    class BatchLoadingTest {
 
-        assertThat(compilation)
-                .has(failed());
+        @Test
+        public void testNonNestedBatch() {
+            JavaFileObject file = forResource("definition/NonNestedBatch.java");
+            Compilation compilation = compile(file);
 
-        assertThat(compilation)
-                .extracting(Compilation::errors, DIAGNOSTICS)
-                .hasSize(1)
-                .extracting(Compilations::getDefaultMessage, Diagnostic::getSource, Diagnostic::getLineNumber)
-                .containsOnly(
-                        tuple("Sorter method must return double, int, long or comparable", file, 10L)
-                );
-    }
+            assertThat(compilation)
+                    .has(succeededWithoutWarnings());
 
-    @Test
-    public void testCustomBackend() {
-        assertThat(compile(forResource("definition/CustomBackend.java")))
-                .has(succeededWithoutWarnings())
-                .extracting(Compilation::generatedSourceFiles, JAVA_FILE_OBJECTS)
-                .filteredOn(sourceFileNamed("definition", "CustomBackendLoader.java"))
-                .singleElement()
-                .extracting(Compilations::contentsAsUtf8String, STRING)
-                .contains("private final Iterable<CustomBackend> source = CustomBackend.NetBeansLookup.INSTANCE.apply(CustomBackend.class);");
-    }
+            assertThat(compilation)
+                    .extracting(Compilation::generatedSourceFiles, JAVA_FILE_OBJECTS)
+                    .filteredOn(sourceFileNamed("definition", "NonNestedBatchLoader.java"))
+                    .singleElement()
+                    .extracting(Compilations::contentsAsUtf8String, STRING)
+                    .contains(
+                            "private final Iterable<NonNestedBatch> source = ServiceLoader.load(NonNestedBatch.class);",
+                            "private final Iterable<NonNestedBatchBatch> batch = ServiceLoader.load(NonNestedBatchBatch.class);"
+                    );
 
-    @Test
-    public void testNonAssignableBackend() {
-        JavaFileObject file = forResource("definition/NonAssignableBackend.java");
-        Compilation compilation = compile(file);
+            assertThat(compilation)
+                    .extracting(Compilation::generatedSourceFiles, JAVA_FILE_OBJECTS)
+                    .filteredOn(sourceFileNamed("definition", "NonNestedBatchBatch.java"))
+                    .singleElement()
+                    .extracting(Compilations::contentsAsUtf8String, STRING)
+                    .contains(
+                            "Stream<NonNestedBatch> getProviders();"
+                    );
 
-        assertThat(compilation)
-                .has(failed());
+            assertThat(compilation)
+                    .extracting(Compilation::generatedFiles, JAVA_FILE_OBJECTS)
+                    .filteredOn(fileNamed("/CLASS_OUTPUT/META-INF/services/definition.NonNestedBatchBatch"))
+                    .singleElement()
+                    .extracting(Compilations::contentsAsUtf8String, STRING)
+                    .contains(
+                            "definition.NonNestedBatch$ABC"
+                    );
+        }
 
-        assertThat(compilation)
-                .extracting(Compilation::errors, DIAGNOSTICS)
-                .hasSize(1)
-                .extracting(Compilations::getDefaultMessage, Diagnostic::getSource, Diagnostic::getLineNumber)
-                .containsOnly(
-                        tuple("Backend 'definition.NonAssignableBackend.HelloProc' doesn't extend nor implement 'java.util.function.Function<java.lang.Class,? extends java.lang.Iterable>'", file, 11L)
-                );
-    }
+        @Test
+        public void testNestedBatch() {
+            JavaFileObject file = forResource("definition/NestedBatch.java");
+            Compilation compilation = compile(file);
 
-    @Test
-    public void testNonNestedBatch() {
-        JavaFileObject file = forResource("definition/NonNestedBatch.java");
-        Compilation compilation = compile(file);
+            assertThat(compilation)
+                    .has(succeededWithoutWarnings());
 
-        assertThat(compilation)
-                .has(succeededWithoutWarnings());
+            assertThat(compilation)
+                    .extracting(Compilation::generatedSourceFiles, JAVA_FILE_OBJECTS)
+                    .filteredOn(sourceFileNamed("definition", "NestedBatchLoader.java"))
+                    .singleElement()
+                    .extracting(Compilations::contentsAsUtf8String, STRING)
+                    .contains(
+                            "private final Iterable<NestedBatch.HelloService> source = ServiceLoader.load(NestedBatch.HelloService.class);",
+                            "private final Iterable<NestedBatchBatch.HelloService> batch = ServiceLoader.load(NestedBatchBatch.HelloService.class);"
+                    );
 
-        assertThat(compilation)
-                .extracting(Compilation::generatedSourceFiles, JAVA_FILE_OBJECTS)
-                .filteredOn(sourceFileNamed("definition", "NonNestedBatchLoader.java"))
-                .singleElement()
-                .extracting(Compilations::contentsAsUtf8String, STRING)
-                .contains(
-                        "private final Iterable<NonNestedBatch> source = ServiceLoader.load(NonNestedBatch.class);",
-                        "private final Iterable<NonNestedBatchBatch> batch = ServiceLoader.load(NonNestedBatchBatch.class);"
-                );
+            assertThat(compilation)
+                    .extracting(Compilation::generatedSourceFiles, JAVA_FILE_OBJECTS)
+                    .filteredOn(sourceFileNamed("definition", "NestedBatchBatch.java"))
+                    .singleElement()
+                    .extracting(Compilations::contentsAsUtf8String, STRING)
+                    .contains(
+                            "Stream<NestedBatch.HelloService> getProviders();"
+                    );
 
-        assertThat(compilation)
-                .extracting(Compilation::generatedSourceFiles, JAVA_FILE_OBJECTS)
-                .filteredOn(sourceFileNamed("definition", "NonNestedBatchBatch.java"))
-                .singleElement()
-                .extracting(Compilations::contentsAsUtf8String, STRING)
-                .contains(
-                        "Stream<NonNestedBatch> getProviders();"
-                );
+            assertThat(compilation)
+                    .extracting(Compilation::generatedFiles, JAVA_FILE_OBJECTS)
+                    .filteredOn(fileNamed("/CLASS_OUTPUT/META-INF/services/definition.NestedBatchBatch$HelloService"))
+                    .singleElement()
+                    .extracting(Compilations::contentsAsUtf8String, STRING)
+                    .contains(
+                            "definition.NestedBatch$ABC"
+                    );
+        }
 
-        assertThat(compilation)
-                .extracting(Compilation::generatedFiles, JAVA_FILE_OBJECTS)
-                .filteredOn(fileNamed("/CLASS_OUTPUT/META-INF/services/definition.NonNestedBatchBatch"))
-                .singleElement()
-                .extracting(Compilations::contentsAsUtf8String, STRING)
-                .contains(
-                        "definition.NonNestedBatch$ABC"
-                );
-    }
-
-    @Test
-    public void testNestedBatch() {
-        JavaFileObject file = forResource("definition/NestedBatch.java");
-        Compilation compilation = compile(file);
-
-        assertThat(compilation)
-                .has(succeededWithoutWarnings());
-
-        assertThat(compilation)
-                .extracting(Compilation::generatedSourceFiles, JAVA_FILE_OBJECTS)
-                .filteredOn(sourceFileNamed("definition", "NestedBatchLoader.java"))
-                .singleElement()
-                .extracting(Compilations::contentsAsUtf8String, STRING)
-                .contains(
-                        "private final Iterable<NestedBatch.HelloService> source = ServiceLoader.load(NestedBatch.HelloService.class);",
-                        "private final Iterable<NestedBatchBatch.HelloService> batch = ServiceLoader.load(NestedBatchBatch.HelloService.class);"
-                );
-
-        assertThat(compilation)
-                .extracting(Compilation::generatedSourceFiles, JAVA_FILE_OBJECTS)
-                .filteredOn(sourceFileNamed("definition", "NestedBatchBatch.java"))
-                .singleElement()
-                .extracting(Compilations::contentsAsUtf8String, STRING)
-                .contains(
-                        "Stream<NestedBatch.HelloService> getProviders();"
-                );
-
-        assertThat(compilation)
-                .extracting(Compilation::generatedFiles, JAVA_FILE_OBJECTS)
-                .filteredOn(fileNamed("/CLASS_OUTPUT/META-INF/services/definition.NestedBatchBatch$HelloService"))
-                .singleElement()
-                .extracting(Compilations::contentsAsUtf8String, STRING)
-                .contains(
-                        "definition.NestedBatch$ABC"
-                );
+        @Test
+        public void testBatchReloading() {
+            assertThat(compile(forResource("definition/BatchReloading.java")))
+                    .has(succeeded())
+                    .extracting(Compilation::generatedSourceFiles, JAVA_FILE_OBJECTS)
+                    .filteredOn(sourceFileNamed("definition", "BatchReloadingLoader.java"))
+                    .singleElement()
+                    .extracting(Compilations::contentsAsUtf8String, STRING)
+                    .isEqualToIgnoringNewLines(contentsAsUtf8String(forResource("definition/expected/TestBatchReloadingLoader.java")));
+        }
     }
 
     @Test
@@ -639,30 +687,12 @@ public class ServiceDefinitionProcessorTest {
     @Test
     public void testMultiRoundProcessing() {
         JavaFileObject file = forResource("definition/TestMultiRoundProcessing.java");
-        Compilation compilation = compile(file);
 
-        assertThat(compilation)
-                .has(succeededWithoutWarnings());
-
-        assertThat(compilation)
+        assertThat(compile(file))
+                .has(succeededWithoutWarnings())
                 .extracting(Compilation::generatedSourceFiles, JAVA_FILE_OBJECTS)
                 .haveAtLeastOne(sourceFileNamed("internal", "FirstLoader.java"))
                 .haveAtLeastOne(sourceFileNamed("internal", "SecondLoader.java"));
-    }
-
-    @Test
-    public void testBatchReloading() {
-        Compilation compilation = compile(forResource("definition/BatchReloading.java"));
-
-        assertThat(compilation)
-                .has(succeeded());
-
-        assertThat(compilation)
-                .extracting(Compilation::generatedSourceFiles, JAVA_FILE_OBJECTS)
-                .filteredOn(sourceFileNamed("definition", "BatchReloadingLoader.java"))
-                .singleElement()
-                .extracting(Compilations::contentsAsUtf8String, STRING)
-                .isEqualToIgnoringNewLines(contentsAsUtf8String(forResource("definition/expected/TestBatchReloadingLoader.java")));
     }
 
     @Test

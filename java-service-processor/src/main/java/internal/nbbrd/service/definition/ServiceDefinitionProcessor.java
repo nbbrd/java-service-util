@@ -43,7 +43,8 @@ import static java.util.stream.Collectors.*;
 @SupportedAnnotationTypes({
         "nbbrd.service.ServiceDefinition",
         "nbbrd.service.ServiceFilter",
-        "nbbrd.service.ServiceSorter"
+        "nbbrd.service.ServiceSorter",
+        "nbbrd.service.ServiceId"
 })
 public final class ServiceDefinitionProcessor extends AbstractProcessor {
 
@@ -81,7 +82,12 @@ public final class ServiceDefinitionProcessor extends AbstractProcessor {
                 .filter(checker::checkSorter)
                 .collect(groupingBy(sorter -> sorter.getServiceType().map(ClassName::get).orElseThrow(Unreachable::new)));
 
-        definitionsByTopLevel.forEach((topLevel, definitions) -> generate(topLevel, ServiceDefinitionGenerator.allOf(definitions, filtersByService, sortersByService)));
+        Map<ClassName, List<LoadId>> idsByService = data.getIds()
+                .stream()
+                .filter(checker::checkId)
+                .collect(groupingBy(sorter -> sorter.getServiceType().map(ClassName::get).orElseThrow(Unreachable::new)));
+
+        definitionsByTopLevel.forEach((topLevel, definitions) -> generate(topLevel, ServiceDefinitionGenerator.allOf(definitions, filtersByService, sortersByService, idsByService)));
 
         return true;
     }
