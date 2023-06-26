@@ -70,20 +70,20 @@ final class ServiceDefinitionChecker {
     public boolean checkFilter(LoadFilter filter) {
         Types types = env.getTypeUtils();
         ExecutableElement x = filter.getMethod();
-        if (x.getModifiers().contains(Modifier.STATIC)) {
-            env.error(x, "Filter method does not apply to static methods");
+        if (!filter.getServiceType().isPresent() || filter.getServiceType().get().getAnnotation(ServiceDefinition.class) == null) {
+            env.error(x, "[RULE_F1] Filter method only applies to methods of a service");
             return false;
         }
-        if (!filter.getServiceType().isPresent() || filter.getServiceType().get().getAnnotation(ServiceDefinition.class) == null) {
-            env.error(x, "Filter method only applies to methods of a service");
+        if (x.getModifiers().contains(Modifier.STATIC)) {
+            env.error(x, "[RULE_F2] Filter method does not apply to static methods");
             return false;
         }
         if (!x.getParameters().isEmpty()) {
-            env.error(x, "Filter method must have no-args");
+            env.error(x, "[RULE_F3] Filter method must have no-args");
             return false;
         }
         if (!types.isSameType(x.getReturnType(), booleanType)) {
-            env.error(x, "Filter method must return boolean");
+            env.error(x, "[RULE_F4] Filter method must return boolean");
             return false;
         }
         return true;
@@ -91,20 +91,20 @@ final class ServiceDefinitionChecker {
 
     public boolean checkSorter(LoadSorter sorter) {
         ExecutableElement x = sorter.getMethod();
-        if (x.getModifiers().contains(Modifier.STATIC)) {
-            env.error(x, "Sorter method does not apply to static methods");
+        if (!sorter.getServiceType().isPresent() || sorter.getServiceType().get().getAnnotation(ServiceDefinition.class) == null) {
+            env.error(x, "[RULE_S1] Sorter method only applies to methods of a service");
             return false;
         }
-        if (!sorter.getServiceType().isPresent() || sorter.getServiceType().get().getAnnotation(ServiceDefinition.class) == null) {
-            env.error(x, "Sorter method only applies to methods of a service");
+        if (x.getModifiers().contains(Modifier.STATIC)) {
+            env.error(x, "[RULE_S2] Sorter method does not apply to static methods");
             return false;
         }
         if (!x.getParameters().isEmpty()) {
-            env.error(x, "Sorter method must have no-args");
+            env.error(x, "[RULE_S3] Sorter method must have no-args");
             return false;
         }
         if (!sorter.getKeyType().isPresent()) {
-            env.error(x, "Sorter method must return double, int, long or comparable");
+            env.error(x, "[RULE_S4] Sorter method must return double, int, long or comparable");
             return false;
         }
         return true;
