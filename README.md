@@ -374,3 +374,4 @@ Alternate setup if the IDE doesn't detect the processor:
 
 - [NetBeans Lookup](https://search.maven.org/search?q=g:org.netbeans.api%20AND%20a:org-openide-util-lookup&core=gav)
 - [Google AutoServive](https://www.baeldung.com/google-autoservice)
+- [purejin](https://github.com/jbee/purejin)
