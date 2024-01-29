@@ -16,6 +16,10 @@
     <description>Java service utilities - Processor</description>
     <url>https://github.com/nbbrd/java-service-util</url>
 
+    <properties>
+        <cute.version>1.0.0</cute.version>
+    </properties>
+
     <dependencies>
         <!-- compile only -->
         <dependency>
@@ -104,13 +108,19 @@
         <dependency>
             <groupId>io.toolisticon.cute</groupId>
             <artifactId>cute</artifactId>
-            <version>1.0.0</version>
+            <version>${cute.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.toolisticon.cute</groupId>
+            <artifactId>cute-legacy</artifactId>
+            <version>${cute.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>io.toolisticon.cute</groupId>
             <artifactId>extension-junit5</artifactId>
-            <version>1.0.0</version>
+            <version>${cute.version}</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
