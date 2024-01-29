@@ -34,6 +34,8 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 
 /**
  * @author Philippe Charles
@@ -127,6 +129,10 @@ final class ServiceDefinitionChecker {
         }
         if (!types.isSameType(x.getReturnType(), env.asTypeElement(String.class).asType())) {
             env.error(x, "[RULE_I4] Id method must return String");
+            return false;
+        }
+        if (!isValidPattern(id.getPattern())) {
+            env.error(x, "[RULE_I5] Id pattern must be valid");
             return false;
         }
         return true;
@@ -301,5 +307,14 @@ final class ServiceDefinitionChecker {
             return false;
         }
         return true;
+    }
+
+    private static boolean isValidPattern(String value) {
+        try {
+            Pattern.compile(value);
+            return true;
+        } catch (PatternSyntaxException ex) {
+            return false;
+        }
     }
 }

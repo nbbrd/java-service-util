@@ -150,7 +150,8 @@ final class ServiceDefinitionCollector {
     private LoadId idOf(ExecutableElement x) {
         ServiceId annotation = x.getAnnotation(ServiceId.class);
         return new LoadId(x,
-                Optional.ofNullable(getServiceTypeOrNull(x))
+                Optional.ofNullable(getServiceTypeOrNull(x)),
+                annotation.pattern()
         );
     }
 

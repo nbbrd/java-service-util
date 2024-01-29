@@ -519,6 +519,45 @@ public class ServiceDefinitionProcessorTest {
                     .returns(file, Diagnostic::getSource)
                     .returns(10L, Diagnostic::getLineNumber);
         }
+
+        @Test
+        public void testIdWithEmptyPattern() {
+            JavaFileObject file = forResource("definition/TestIdWithEmptyPattern.java");
+
+            assertThat(compile(file))
+                    .has(succeededWithoutWarnings())
+                    .extracting(Compilation::generatedSourceFiles, JAVA_FILE_OBJECTS)
+                    .singleElement()
+                    .has(sourceFileNamed("definition", "TestIdWithEmptyPatternLoader.java"))
+                    .extracting(Compilations::contentsAsUtf8String, STRING)
+                    .doesNotContain("public static final Pattern ID_PATTERN");
+        }
+
+        @Test
+        public void testIdWithValidPattern() {
+            JavaFileObject file = forResource("definition/TestIdWithValidPattern.java");
+
+            assertThat(compile(file))
+                    .has(succeededWithoutWarnings())
+                    .extracting(Compilation::generatedSourceFiles, JAVA_FILE_OBJECTS)
+                    .singleElement()
+                    .has(sourceFileNamed("definition", "TestIdWithValidPatternLoader.java"))
+                    .extracting(Compilations::contentsAsUtf8String, STRING)
+                    .contains("public static final Pattern ID_PATTERN = Pattern.compile(\"^[A-Z0-9]+(?:_[A-Z0-9]+)*$\");");
+        }
+
+        @Test
+        public void testIdWithInvalidPattern() {
+            JavaFileObject file = forResource("definition/TestIdWithInvalidPattern.java");
+
+            assertThat(compile(file))
+                    .has(failed())
+                    .extracting(Compilation::errors, DIAGNOSTICS)
+                    .singleElement()
+                    .returns("[RULE_I5] Id pattern must be valid", Compilations::getDefaultMessage)
+                    .returns(file, Diagnostic::getSource)
+                    .returns(10L, Diagnostic::getLineNumber);
+        }
     }
 
     @Nested

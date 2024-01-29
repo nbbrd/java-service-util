@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Add regex pattern to ServiceId annotation [#253](https://github.com/nbbrd/java-service-util/issues/253)
+
 ## [1.7.0] - 2023-06-26
 
 ### Added
