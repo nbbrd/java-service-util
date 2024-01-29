@@ -521,6 +521,19 @@ public class ServiceDefinitionProcessorTest {
         }
 
         @Test
+        public void testIdUniqueness() {
+            JavaFileObject file = forResource("definition/TestIdUniqueness.java");
+
+            assertThat(compile(file))
+                    .has(failed())
+                    .extracting(Compilation::errors, DIAGNOSTICS)
+                    .singleElement()
+                    .returns("[RULE_I5] Id method must be unique", Compilations::getDefaultMessage)
+                    .returns(file, Diagnostic::getSource)
+                    .returns(13L, Diagnostic::getLineNumber);
+        }
+
+        @Test
         public void testIdWithEmptyPattern() {
             JavaFileObject file = forResource("definition/TestIdWithEmptyPattern.java");
 
@@ -554,7 +567,7 @@ public class ServiceDefinitionProcessorTest {
                     .has(failed())
                     .extracting(Compilation::errors, DIAGNOSTICS)
                     .singleElement()
-                    .returns("[RULE_I5] Id pattern must be valid", Compilations::getDefaultMessage)
+                    .returns("[RULE_I6] Id pattern must be valid", Compilations::getDefaultMessage)
                     .returns(file, Diagnostic::getSource)
                     .returns(10L, Diagnostic::getLineNumber);
         }

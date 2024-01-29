@@ -16,6 +16,7 @@
  */
 package internal.nbbrd.service.definition;
 
+import com.squareup.javapoet.ClassName;
 import internal.nbbrd.service.ExtEnvironment;
 import internal.nbbrd.service.ModuleInfoEntries;
 import nbbrd.service.Quantifier;
@@ -33,6 +34,7 @@ import javax.tools.Diagnostic;
 import java.io.IOException;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
@@ -132,8 +134,18 @@ final class ServiceDefinitionChecker {
             return false;
         }
         if (!isValidPattern(id.getPattern())) {
-            env.error(x, "[RULE_I5] Id pattern must be valid");
+            env.error(x, "[RULE_I6] Id pattern must be valid");
             return false;
+        }
+        return true;
+    }
+
+    public boolean checkIds(Map<ClassName, List<LoadId>> idsByService) {
+        for (Map.Entry<ClassName, List<LoadId>> o : idsByService.entrySet()) {
+            if (o.getValue().size() > 1) {
+                env.error(o.getValue().get(1).getMethod(), "[RULE_I5] Id method must be unique");
+                return false;
+            }
         }
         return true;
     }

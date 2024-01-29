@@ -87,6 +87,8 @@ public final class ServiceDefinitionProcessor extends AbstractProcessor {
                 .filter(checker::checkId)
                 .collect(groupingBy(sorter -> sorter.getServiceType().map(ClassName::get).orElseThrow(Unreachable::new)));
 
+        checker.checkIds(idsByService);
+
         definitionsByTopLevel.forEach((topLevel, definitions) -> generate(topLevel, ServiceDefinitionGenerator.allOf(definitions, filtersByService, sortersByService, idsByService)));
 
         return true;

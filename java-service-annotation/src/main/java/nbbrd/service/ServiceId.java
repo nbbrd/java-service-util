@@ -12,6 +12,7 @@ import java.lang.annotation.*;
  *     <li>Id method does not apply to static methods</li>
  *     <li>Id method must have no-args</li>
  *     <li>Id method must return String</li>
+ *     <li>Id method must be unique</li>
  *     <li>Id pattern must be valid</li>
  * </ol>
  */
