@@ -29,8 +29,8 @@ import java.util.regex.Pattern;
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
 
+import static internal.nbbrd.service.Blocks.*;
 import static java.util.Collections.emptyList;
 import static javax.lang.model.element.Modifier.*;
 
@@ -89,17 +89,19 @@ class ServiceDefinitionGenerator {
         TypeName quantifierType = getQuantifierType();
 
         FieldSpec sourceField = newSourceField();
+        Optional<FieldSpec> idPatternField = newIdPatternField();
         Optional<FieldSpec> batchField = newBatchField();
-        MethodSpec doLoadMethod = newDoLoadMethod(sourceField, batchField, quantifierType);
+        MethodSpec doLoadMethod = newDoLoadMethod(sourceField, idPatternField, batchField, quantifierType);
         FieldSpec resourceField = newResourceField(doLoadMethod, quantifierType);
         MethodSpec getMethod = newGetMethod(resourceField, quantifierType);
-        Optional<FieldSpec> idPatternField = newIdPatternField();
 
         TypeSpec.Builder result = TypeSpec
                 .classBuilder(className)
                 .addJavadoc(getMainJavadoc())
                 .addModifiers(PUBLIC, FINAL)
                 .addField(sourceField);
+
+        idPatternField.ifPresent(result::addField);
 
         batchField.ifPresent(result::addField);
 
@@ -127,8 +129,6 @@ class ServiceDefinitionGenerator {
         if (definition.getLifecycle() == Lifecycle.IMMUTABLE) {
             result.addMethod(newLoadMethod(className, quantifierType, getMethod));
         }
-
-        idPatternField.ifPresent(result::addField);
 
         return result.build();
     }
@@ -196,7 +196,7 @@ class ServiceDefinitionGenerator {
         return "null";
     }
 
-    private MethodSpec newDoLoadMethod(FieldSpec sourceField, Optional<FieldSpec> batchField, TypeName quantifierType) {
+    private MethodSpec newDoLoadMethod(FieldSpec sourceField, Optional<FieldSpec> idPatternField, Optional<FieldSpec> batchField, TypeName quantifierType) {
         return MethodSpec
                 .methodBuilder("doLoad")
                 .addModifiers(PRIVATE)
@@ -206,27 +206,34 @@ class ServiceDefinitionGenerator {
                 .addStatement(CodeBlock
                         .builder()
                         .add("return ")
-                        .add(getPreprocessingCode(sourceField, batchField))
+                        .add(getPreprocessingCode(sourceField, idPatternField, batchField))
                         .add(getQuantifierCode())
                         .build())
                 .build();
     }
 
-    private CodeBlock newStreamBlock(FieldSpec iterable) {
-        return CodeBlock.of("$T.stream($N.spliterator(), false)", StreamSupport.class, iterable);
-    }
+    private CodeBlock getPreprocessingCode(FieldSpec sourceField, Optional<FieldSpec> idPatternField, Optional<FieldSpec> batchField) {
+        final CodeBlock stream = iterableToStream(sourceField);
 
-    private CodeBlock getPreprocessingCode(FieldSpec sourceField, Optional<FieldSpec> batchField) {
-        CodeBlock sourceStream = newStreamBlock(sourceField);
-        Optional<CodeBlock> batchStream = batchField.map(this::newStreamBlock);
+        final CodeBlock streamWithBatch = batchField
+                .map(field -> concatStreams(stream, getBatchStream(field)))
+                .orElse(stream);
 
-        CodeBlock streamBlock = batchStream.isPresent()
-                ? CodeBlock.of("$T.concat($L, $L.flatMap(o -> o.getProviders()))", Stream.class, sourceStream, batchStream.get())
-                : sourceStream;
+        final CodeBlock streamWithBatchAndIdFilter = idPatternField
+                .map(field -> filterStream(streamWithBatch, getIdPredicate(field)))
+                .orElse(streamWithBatch);
 
         return definition.getPreprocessor().isPresent()
-                ? getAdvancedPreprocessingCode(streamBlock, definition.getPreprocessor().get())
-                : getBasicPreprocessingCode(streamBlock);
+                ? getAdvancedPreprocessingCode(streamWithBatchAndIdFilter, definition.getPreprocessor().get())
+                : getBasicPreprocessingCode(streamWithBatchAndIdFilter);
+    }
+
+    private CodeBlock getBatchStream(FieldSpec field) {
+        return flatMapStream(iterableToStream(field), CodeBlock.of("o -> o.getProviders()"));
+    }
+
+    private CodeBlock getIdPredicate(FieldSpec field) {
+        return CodeBlock.of("o -> $N.matcher(o.$L()).matches()", field, ids.get(0).getMethod().getSimpleName());
     }
 
     private CodeBlock getAdvancedPreprocessingCode(CodeBlock streamBlock, TypeInstantiator preprocessor) {
@@ -237,14 +244,14 @@ class ServiceDefinitionGenerator {
         CodeBlock.Builder result = CodeBlock.builder();
         result.add(streamBlock);
         if (definition.getWrapper().isPresent()) {
-            result.add("\n.map($L)", getWrapperCode(definition.getWrapper().get()));
-            result.add("\n.map($T.class::cast)", definition.getServiceType());
+            result.add(NEW_LINE).add(".map($L)", getWrapperCode(definition.getWrapper().get()));
+            result.add(NEW_LINE).add(".map($T.class::cast)", definition.getServiceType());
         }
         if (!filters.isEmpty()) {
-            result.add("\n.filter($L)", getFiltersCode(filters));
+            result.add(NEW_LINE).add(".filter($L)", getFiltersCode(filters));
         }
         if (!sorters.isEmpty()) {
-            result.add("\n.sorted($L)", getSortersCode(sorters));
+            result.add(NEW_LINE).add(".sorted($L)", getSortersCode(sorters));
         }
         return result.build();
     }
@@ -262,7 +269,7 @@ class ServiceDefinitionGenerator {
         }
 
         CodeBlock.Builder result = CodeBlock.builder();
-        result.add(Blocks.casting(typeOf(Predicate.class, definition.getServiceType()), first));
+        result.add(casting(typeOf(Predicate.class, definition.getServiceType()), first));
         while (filterIter.hasNext()) {
             result.add(".and($L)", filterIter.next());
         }
@@ -272,7 +279,7 @@ class ServiceDefinitionGenerator {
     private CodeBlock getFilterCode(LoadFilter filter) {
         CodeBlock result = CodeBlock.of("$T::$L", filter.getServiceType().orElseThrow(Unreachable::new), filter.getMethodName());
         return filter.isNegate()
-                ? CodeBlock.of("$L.negate()", Blocks.casting(typeOf(Predicate.class, definition.getServiceType()), result))
+                ? CodeBlock.of("$L.negate()", casting(typeOf(Predicate.class, definition.getServiceType()), result))
                 : result;
     }
 
@@ -289,7 +296,7 @@ class ServiceDefinitionGenerator {
         }
 
         CodeBlock.Builder result = CodeBlock.builder();
-        result.add(Blocks.casting(typeOf(Comparator.class, definition.getServiceType()), first));
+        result.add(casting(typeOf(Comparator.class, definition.getServiceType()), first));
         while (iter.hasNext()) {
             result.add(".thenComparing($L)", iter.next());
         }
@@ -642,4 +649,5 @@ class ServiceDefinitionGenerator {
 
     private static final Modifier[] NO_MODIFIER = new Modifier[0];
     private static final Modifier[] SINGLETON_MODIFIER = new Modifier[]{STATIC};
+    private static final CodeBlock NEW_LINE = CodeBlock.of("\n");
 }

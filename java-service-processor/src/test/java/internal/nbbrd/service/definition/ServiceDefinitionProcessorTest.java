@@ -556,7 +556,10 @@ public class ServiceDefinitionProcessorTest {
                     .singleElement()
                     .has(sourceFileNamed("definition", "TestIdValidPatternLoader.java"))
                     .extracting(Compilations::contentsAsUtf8String, STRING)
-                    .contains("public static final Pattern ID_PATTERN = Pattern.compile(\"^[A-Z0-9]+(?:_[A-Z0-9]+)*$\");");
+                    .contains(
+                            "public static final Pattern ID_PATTERN = Pattern.compile(\"^[A-Z0-9]+(?:_[A-Z0-9]+)*$\");",
+                            ".filter(o -> ID_PATTERN.matcher(o.getName()).matches())"
+                    );
         }
 
         @Test
