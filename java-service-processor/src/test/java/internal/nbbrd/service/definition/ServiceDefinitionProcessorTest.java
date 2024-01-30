@@ -463,14 +463,14 @@ public class ServiceDefinitionProcessorTest {
     class ServiceIdTest {
 
         @Test
-        public void testValidIds() {
-            assertThat(compile(forResource("definition/Ids.java")))
+        public void testNestedClass() {
+            assertThat(compile(forResource("definition/TestIdNestedClass.java")))
                     .has(succeededWithoutWarnings());
         }
 
         @Test
-        public void testLostId() {
-            JavaFileObject file = forResource("definition/LostId.java");
+        public void testLost() {
+            JavaFileObject file = forResource("definition/TestIdLost.java");
 
             assertThat(compile(file))
                     .has(failed())
@@ -482,8 +482,8 @@ public class ServiceDefinitionProcessorTest {
         }
 
         @Test
-        public void testStaticId() {
-            JavaFileObject file = forResource("definition/StaticId.java");
+        public void testStaticMethod() {
+            JavaFileObject file = forResource("definition/TestIdStaticMethod.java");
 
             assertThat(compile(file))
                     .has(failed())
@@ -495,8 +495,8 @@ public class ServiceDefinitionProcessorTest {
         }
 
         @Test
-        public void testNoArgId() {
-            JavaFileObject file = forResource("definition/NoArgId.java");
+        public void testNoArg() {
+            JavaFileObject file = forResource("definition/TestIdNoArg.java");
 
             assertThat(compile(file))
                     .has(failed())
@@ -508,8 +508,8 @@ public class ServiceDefinitionProcessorTest {
         }
 
         @Test
-        public void testNonStringId() {
-            JavaFileObject file = forResource("definition/NonStringId.java");
+        public void testNonString() {
+            JavaFileObject file = forResource("definition/TestIdNonString.java");
 
             assertThat(compile(file))
                     .has(failed())
@@ -521,7 +521,7 @@ public class ServiceDefinitionProcessorTest {
         }
 
         @Test
-        public void testIdUniqueness() {
+        public void testUniqueness() {
             JavaFileObject file = forResource("definition/TestIdUniqueness.java");
 
             assertThat(compile(file))
@@ -534,34 +534,34 @@ public class ServiceDefinitionProcessorTest {
         }
 
         @Test
-        public void testIdWithEmptyPattern() {
-            JavaFileObject file = forResource("definition/TestIdWithEmptyPattern.java");
+        public void testEmptyPattern() {
+            JavaFileObject file = forResource("definition/TestIdEmptyPattern.java");
 
             assertThat(compile(file))
                     .has(succeededWithoutWarnings())
                     .extracting(Compilation::generatedSourceFiles, JAVA_FILE_OBJECTS)
                     .singleElement()
-                    .has(sourceFileNamed("definition", "TestIdWithEmptyPatternLoader.java"))
+                    .has(sourceFileNamed("definition", "TestIdEmptyPatternLoader.java"))
                     .extracting(Compilations::contentsAsUtf8String, STRING)
                     .doesNotContain("public static final Pattern ID_PATTERN");
         }
 
         @Test
-        public void testIdWithValidPattern() {
-            JavaFileObject file = forResource("definition/TestIdWithValidPattern.java");
+        public void testWithValidPattern() {
+            JavaFileObject file = forResource("definition/TestIdValidPattern.java");
 
             assertThat(compile(file))
                     .has(succeededWithoutWarnings())
                     .extracting(Compilation::generatedSourceFiles, JAVA_FILE_OBJECTS)
                     .singleElement()
-                    .has(sourceFileNamed("definition", "TestIdWithValidPatternLoader.java"))
+                    .has(sourceFileNamed("definition", "TestIdValidPatternLoader.java"))
                     .extracting(Compilations::contentsAsUtf8String, STRING)
                     .contains("public static final Pattern ID_PATTERN = Pattern.compile(\"^[A-Z0-9]+(?:_[A-Z0-9]+)*$\");");
         }
 
         @Test
-        public void testIdWithInvalidPattern() {
-            JavaFileObject file = forResource("definition/TestIdWithInvalidPattern.java");
+        public void testInvalidPattern() {
+            JavaFileObject file = forResource("definition/TestIdInvalidPattern.java");
 
             assertThat(compile(file))
                     .has(failed())

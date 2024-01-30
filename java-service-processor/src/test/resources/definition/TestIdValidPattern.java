@@ -4,8 +4,8 @@ import nbbrd.service.ServiceDefinition;
 import nbbrd.service.ServiceId;
 
 @ServiceDefinition
-interface TestIdWithInvalidPattern {
+interface TestIdValidPattern {
 
-    @ServiceId( pattern = "***" )
+    @ServiceId( pattern = ServiceId.SCREAMING_SNAKE_CASE )
     String getName();
 }

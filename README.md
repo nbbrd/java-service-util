@@ -50,6 +50,7 @@ The `@ServiceDefinition` annotation **defines a service usage and generates a sp
 - checks coherence of service use in modules if `module-info.java` is available
 - allows use of [custom service loader](#custom-service-loader)
 - allows [batch loading](#batch-loading) of providers
+- allows [identification](#provider-identity) of providers
 
 **Limitations:**
 - does not support [type inspection before instantiation](https://github.com/nbbrd/java-service-util/issues/13)
@@ -327,6 +328,29 @@ for (String file : files) {
 }
 ```
 
+### Provider identity
+
+In some cases, you may need to identify the providers. This can be done by using the `@ServiceId` annotation.
+
+```java
+@ServiceDefinition(quantifier = Quantifier.MULTIPLE, batch = true)
+public interface HashAlgorithm {
+
+    @ServiceId(pattern = ServiceId.SCREAMING_KEBAB_CASE)
+    String getName();
+
+    String hashToHex(byte[] input);
+
+    static void main(String[] args) {
+        HashAlgorithmLoader.load().stream()
+                .filter(algo -> algo.getName().equals("SHA-256"))
+                .findFirst()
+                .ifPresent(algo -> System.out.println(algo.hashToHex("hello".getBytes(UTF_8))));
+    }
+}
+```
+_See [java-service-examples/src/main/java/nbbrd/service/examples/HashAlgorithm.java](java-service-examples/src/main/java/nbbrd/service/examples/HashAlgorithm.java)_
+
 ## Setup
 
 ```xml
@@ -373,4 +397,6 @@ Alternate setup if the IDE doesn't detect the processor:
 ## Related work
 
 - [NetBeans Lookup](https://search.maven.org/search?q=g:org.netbeans.api%20AND%20a:org-openide-util-lookup&core=gav)
-- [Google AutoServive](https://www.baeldung.com/google-autoservice)
+- [Google AutoService](https://www.baeldung.com/google-autoservice)
+- [TOOListicon SPI-Annotation-Processor](https://github.com/toolisticon/SPI-Annotation-Processor)
+
