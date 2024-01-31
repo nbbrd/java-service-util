@@ -6,7 +6,7 @@
     <parent>
         <groupId>com.github.nbbrd.java-service-util</groupId>
         <artifactId>java-service-parent</artifactId>
-        <version>1.7.0</version>
+        <version>1.8.0</version>
     </parent>
 
     <artifactId>java-service-processor</artifactId>
@@ -15,6 +15,10 @@
     <name>java-service-processor</name>
     <description>Java service utilities - Processor</description>
     <url>https://github.com/nbbrd/java-service-util</url>
+
+    <properties>
+        <cute.version>1.0.0</cute.version>
+    </properties>
 
     <dependencies>
         <!-- compile only -->
@@ -43,7 +47,7 @@
         <dependency>
             <groupId>com.github.javaparser</groupId>
             <artifactId>javaparser-core</artifactId>
-            <version>3.25.3</version>
+            <version>3.25.8</version>
         </dependency>
         <dependency>
             <groupId>com.squareup</groupId>
@@ -98,19 +102,25 @@
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
-            <version>32.0.1-jre</version>
+            <version>33.0.0-jre</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>io.toolisticon.cute</groupId>
             <artifactId>cute</artifactId>
-            <version>0.12.1</version>
+            <version>${cute.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.toolisticon.cute</groupId>
+            <artifactId>cute-legacy</artifactId>
+            <version>${cute.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>io.toolisticon.cute</groupId>
             <artifactId>extension-junit5</artifactId>
-            <version>0.12.1</version>
+            <version>${cute.version}</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
@@ -121,7 +131,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
-                <version>3.4.1</version>
+                <version>3.5.1</version>
                 <executions>
                     <execution>
                         <phase>package</phase>

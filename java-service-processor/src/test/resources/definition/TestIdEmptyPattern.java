@@ -4,10 +4,8 @@ import nbbrd.service.ServiceDefinition;
 import nbbrd.service.ServiceId;
 
 @ServiceDefinition
-interface StaticId {
+interface TestIdEmptyPattern {
 
-    @ServiceId
-    static String getName() {
-        return "";
-    }
+    @ServiceId( pattern = "" )
+    String getName();
 }

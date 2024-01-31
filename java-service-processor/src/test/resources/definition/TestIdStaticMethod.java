@@ -4,8 +4,10 @@ import nbbrd.service.ServiceDefinition;
 import nbbrd.service.ServiceId;
 
 @ServiceDefinition
-interface NonStringId {
+interface TestIdStaticMethod {
 
     @ServiceId
-    Object getName();
+    static String getName() {
+        return "";
+    }
 }

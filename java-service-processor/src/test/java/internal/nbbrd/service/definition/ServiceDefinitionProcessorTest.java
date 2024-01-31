@@ -311,14 +311,15 @@ public class ServiceDefinitionProcessorTest {
                     .has(sourceFileNamed("definition", "FiltersLoader.java"))
                     .extracting(Compilations::contentsAsUtf8String, STRING)
                     .contains(
+                            ".filter(filter)",
                             "private final Optional<Filters.SingleFilter> resource = doLoad();",
-                            ".filter(Filters.SingleFilter::isAvailable)",
+                            "private final Predicate<Filters.SingleFilter> filter = Filters.SingleFilter::isAvailable",
                             "private final Optional<Filters.MultiFilter> resource = doLoad();",
-                            ".filter(((Predicate<Filters.MultiFilter>)Filters.MultiFilter::isAvailable).and(Filters.MultiFilter::isFastEnough))",
+                            "private final Predicate<Filters.MultiFilter> filter = ((Predicate<Filters.MultiFilter>)Filters.MultiFilter::isAvailable).and(Filters.MultiFilter::isFastEnough)",
                             "private final Optional<Filters.ReversedFilter> resource = doLoad();",
-                            ".filter(((Predicate<Filters.ReversedFilter>)Filters.ReversedFilter::isAvailable).negate())",
+                            "private final Predicate<Filters.ReversedFilter> filter = ((Predicate<Filters.ReversedFilter>)Filters.ReversedFilter::isAvailable).negate()",
                             "private final Optional<Filters.MultiFilterWithPosition> resource = doLoad();",
-                            ".filter(((Predicate<Filters.MultiFilterWithPosition>)Filters.MultiFilterWithPosition::isFastEnough).and(Filters.MultiFilterWithPosition::isAvailable))"
+                            "private final Predicate<Filters.MultiFilterWithPosition> filter = ((Predicate<Filters.MultiFilterWithPosition>)Filters.MultiFilterWithPosition::isFastEnough).and(Filters.MultiFilterWithPosition::isAvailable)"
                     );
         }
 
@@ -373,6 +374,27 @@ public class ServiceDefinitionProcessorTest {
                     .returns(file, Diagnostic::getSource)
                     .returns(10L, Diagnostic::getLineNumber);
         }
+
+        @Test
+        public void testCheckedException() {
+            JavaFileObject file = forResource("definition/TestFilterCheckedException.java");
+
+            assertThat(compile(file))
+                    .has(failed())
+                    .extracting(Compilation::errors, DIAGNOSTICS)
+                    .singleElement()
+                    .returns("[RULE_F5] Filter method must not throw checked exceptions", Compilations::getDefaultMessage)
+                    .returns(file, Diagnostic::getSource)
+                    .returns(12L, Diagnostic::getLineNumber);
+        }
+
+        @Test
+        public void testUncheckedException() {
+            JavaFileObject file = forResource("definition/TestFilterUncheckedException.java");
+
+            assertThat(compile(file))
+                    .has(succeededWithoutWarnings());
+        }
     }
 
     @Nested
@@ -389,20 +411,21 @@ public class ServiceDefinitionProcessorTest {
                     .has(sourceFileNamed("definition", "SortersLoader.java"))
                     .extracting(Compilations::contentsAsUtf8String, STRING)
                     .contains(
+                            ".sorted(sorter)",
                             "private final Optional<Sorters.IntSorter> resource = doLoad();",
-                            ".sorted(Comparator.comparingInt(Sorters.IntSorter::getCost))",
+                            "Comparator.comparingInt(Sorters.IntSorter::getCost)",
                             "private final Optional<Sorters.LongSorter> resource = doLoad();",
-                            ".sorted(Comparator.comparingLong(Sorters.LongSorter::getCost))",
+                            "Comparator.comparingLong(Sorters.LongSorter::getCost)",
                             "private final Optional<Sorters.DoubleSorter> resource = doLoad();",
-                            ".sorted(Comparator.comparingDouble(Sorters.DoubleSorter::getCost))",
+                            "Comparator.comparingDouble(Sorters.DoubleSorter::getCost)",
                             "private final Optional<Sorters.ComparableSorter> resource = doLoad();",
-                            ".sorted(Comparator.comparing(Sorters.ComparableSorter::getCost))",
+                            "Comparator.comparing(Sorters.ComparableSorter::getCost)",
                             "private final Optional<Sorters.MultiSorter> resource = doLoad();",
-                            ".sorted(((Comparator<Sorters.MultiSorter>)Comparator.comparingInt(Sorters.MultiSorter::getCost)).thenComparing(Comparator.comparingDouble(Sorters.MultiSorter::getAccuracy)))",
+                            "((Comparator<Sorters.MultiSorter>)Comparator.comparingInt(Sorters.MultiSorter::getCost)).thenComparing(Comparator.comparingDouble(Sorters.MultiSorter::getAccuracy))",
                             "private final Optional<Sorters.ReversedSorter> resource = doLoad();",
-                            ".sorted(Collections.reverseOrder(Comparator.comparingInt(Sorters.ReversedSorter::getCost)))",
+                            "Collections.reverseOrder(Comparator.comparingInt(Sorters.ReversedSorter::getCost))",
                             "private final Optional<Sorters.MultiSorterWithPosition> resource = doLoad();",
-                            ".sorted(((Comparator<Sorters.MultiSorterWithPosition>)Comparator.comparingDouble(Sorters.MultiSorterWithPosition::getAccuracy)).thenComparing(Comparator.comparingInt(Sorters.MultiSorterWithPosition::getCost)))"
+                            "((Comparator<Sorters.MultiSorterWithPosition>)Comparator.comparingDouble(Sorters.MultiSorterWithPosition::getAccuracy)).thenComparing(Comparator.comparingInt(Sorters.MultiSorterWithPosition::getCost))"
                     );
         }
 
@@ -457,20 +480,41 @@ public class ServiceDefinitionProcessorTest {
                     .returns(file, Diagnostic::getSource)
                     .returns(10L, Diagnostic::getLineNumber);
         }
+
+        @Test
+        public void testCheckedException() {
+            JavaFileObject file = forResource("definition/TestSorterCheckedException.java");
+
+            assertThat(compile(file))
+                    .has(failed())
+                    .extracting(Compilation::errors, DIAGNOSTICS)
+                    .singleElement()
+                    .returns("[RULE_S5] Sorter method must not throw checked exceptions", Compilations::getDefaultMessage)
+                    .returns(file, Diagnostic::getSource)
+                    .returns(12L, Diagnostic::getLineNumber);
+        }
+
+        @Test
+        public void testUncheckedException() {
+            JavaFileObject file = forResource("definition/TestSorterUncheckedException.java");
+
+            assertThat(compile(file))
+                    .has(succeededWithoutWarnings());
+        }
     }
 
     @Nested
     class ServiceIdTest {
 
         @Test
-        public void testValidIds() {
-            assertThat(compile(forResource("definition/Ids.java")))
+        public void testNestedClass() {
+            assertThat(compile(forResource("definition/TestIdNestedClass.java")))
                     .has(succeededWithoutWarnings());
         }
 
         @Test
-        public void testLostId() {
-            JavaFileObject file = forResource("definition/LostId.java");
+        public void testLost() {
+            JavaFileObject file = forResource("definition/TestIdLost.java");
 
             assertThat(compile(file))
                     .has(failed())
@@ -482,8 +526,8 @@ public class ServiceDefinitionProcessorTest {
         }
 
         @Test
-        public void testStaticId() {
-            JavaFileObject file = forResource("definition/StaticId.java");
+        public void testStaticMethod() {
+            JavaFileObject file = forResource("definition/TestIdStaticMethod.java");
 
             assertThat(compile(file))
                     .has(failed())
@@ -495,8 +539,8 @@ public class ServiceDefinitionProcessorTest {
         }
 
         @Test
-        public void testNoArgId() {
-            JavaFileObject file = forResource("definition/NoArgId.java");
+        public void testNoArg() {
+            JavaFileObject file = forResource("definition/TestIdNoArg.java");
 
             assertThat(compile(file))
                     .has(failed())
@@ -508,14 +552,91 @@ public class ServiceDefinitionProcessorTest {
         }
 
         @Test
-        public void testNonStringId() {
-            JavaFileObject file = forResource("definition/NonStringId.java");
+        public void testNonString() {
+            JavaFileObject file = forResource("definition/TestIdNonString.java");
 
             assertThat(compile(file))
                     .has(failed())
                     .extracting(Compilation::errors, DIAGNOSTICS)
                     .singleElement()
                     .returns("[RULE_I4] Id method must return String", Compilations::getDefaultMessage)
+                    .returns(file, Diagnostic::getSource)
+                    .returns(10L, Diagnostic::getLineNumber);
+        }
+
+        @Test
+        public void testUniqueness() {
+            JavaFileObject file = forResource("definition/TestIdUniqueness.java");
+
+            assertThat(compile(file))
+                    .has(failed())
+                    .extracting(Compilation::errors, DIAGNOSTICS)
+                    .singleElement()
+                    .returns("[RULE_I5] Id method must be unique", Compilations::getDefaultMessage)
+                    .returns(file, Diagnostic::getSource)
+                    .returns(13L, Diagnostic::getLineNumber);
+        }
+
+        @Test
+        public void testCheckedException() {
+            JavaFileObject file = forResource("definition/TestIdCheckedException.java");
+
+            assertThat(compile(file))
+                    .has(failed())
+                    .extracting(Compilation::errors, DIAGNOSTICS)
+                    .singleElement()
+                    .returns("[RULE_I6] Id method must not throw checked exceptions", Compilations::getDefaultMessage)
+                    .returns(file, Diagnostic::getSource)
+                    .returns(12L, Diagnostic::getLineNumber);
+        }
+
+        @Test
+        public void testUncheckedException() {
+            JavaFileObject file = forResource("definition/TestIdUncheckedException.java");
+
+            assertThat(compile(file))
+                    .has(succeededWithoutWarnings());
+        }
+
+        @Test
+        public void testEmptyPattern() {
+            JavaFileObject file = forResource("definition/TestIdEmptyPattern.java");
+
+            assertThat(compile(file))
+                    .has(succeededWithoutWarnings())
+                    .extracting(Compilation::generatedSourceFiles, JAVA_FILE_OBJECTS)
+                    .singleElement()
+                    .has(sourceFileNamed("definition", "TestIdEmptyPatternLoader.java"))
+                    .extracting(Compilations::contentsAsUtf8String, STRING)
+                    .doesNotContain("public static final Pattern ID_PATTERN");
+        }
+
+        @Test
+        public void testWithValidPattern() {
+            JavaFileObject file = forResource("definition/TestIdValidPattern.java");
+
+            assertThat(compile(file))
+                    .has(succeededWithoutWarnings())
+                    .extracting(Compilation::generatedSourceFiles, JAVA_FILE_OBJECTS)
+                    .singleElement()
+                    .has(sourceFileNamed("definition", "TestIdValidPatternLoader.java"))
+                    .extracting(Compilations::contentsAsUtf8String, STRING)
+                    .contains(
+                            "public static final Pattern ID_PATTERN = Pattern.compile(\"^[A-Z0-9]+(?:_[A-Z0-9]+)*$\");",
+                            "private final Predicate<TestIdValidPattern> filter = o -> ID_PATTERN.matcher(o.getName()).matches()",
+                            ".filter(filter)"
+                    );
+        }
+
+        @Test
+        public void testInvalidPattern() {
+            JavaFileObject file = forResource("definition/TestIdInvalidPattern.java");
+
+            assertThat(compile(file))
+                    .has(failed())
+                    .extracting(Compilation::errors, DIAGNOSTICS)
+                    .singleElement()
+                    .returns("[RULE_I7] Id pattern must be valid", Compilations::getDefaultMessage)
                     .returns(file, Diagnostic::getSource)
                     .returns(10L, Diagnostic::getLineNumber);
         }
@@ -729,6 +850,19 @@ public class ServiceDefinitionProcessorTest {
                 .extracting(Compilation::generatedSourceFiles, JAVA_FILE_OBJECTS)
                 .singleElement()
                 .has(sourceFileNamed("definition", "TestNoFallbackLoader.java"));
+    }
+
+    @Test
+    public void testAllOptions() {
+        JavaFileObject file = forResource("definition/TestAllOptions.java");
+
+        assertThat(compile(file))
+                .has(succeededWithoutWarnings())
+                .extracting(Compilation::generatedSourceFiles, JAVA_FILE_OBJECTS)
+                .filteredOn(sourceFileNamed("definition", "TestAllOptionsLoader.java"))
+                .singleElement()
+                .extracting(Compilations::contentsAsUtf8String, STRING)
+                .isEqualToIgnoringNewLines(contentsAsUtf8String(forResource("definition/expected/TestAllOptionsLoader.java")));
     }
 
     private static Compilation compile(JavaFileObject file) {

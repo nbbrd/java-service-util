@@ -20,6 +20,7 @@ import _test.Compilations;
 import com.google.testing.compile.Compilation;
 import com.google.testing.compile.Compiler;
 import io.toolisticon.cute.CompileTestBuilder;
+import io.toolisticon.cute.CompileTestBuilderApi;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledOnJre;
@@ -36,7 +37,6 @@ import java.util.ServiceLoader;
 import static _test.Compilations.*;
 import static com.google.testing.compile.JavaFileObjects.forResource;
 import static com.google.testing.compile.JavaFileObjects.forSourceLines;
-import static io.toolisticon.cute.CompileTestBuilder.ExpectedFileObjectMatcherKind.TEXT_IGNORE_LINE_ENDINGS;
 import static io.toolisticon.cute.JavaFileObjectUtils.readFromString;
 import static javax.tools.StandardLocation.CLASS_OUTPUT;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -331,7 +331,7 @@ public class ServiceProviderProcessorTest {
                 .compilationShouldSucceed()
                 .expectThatFileObjectExists(
                         CLASS_OUTPUT, "", "META-INF/services/provider.WithAnnotation$HelloService",
-                        TEXT_IGNORE_LINE_ENDINGS, readFromString("provider.WithAnnotation$Provider1\nprovider.WithAnnotation$Provider2")
+                        CompileTestBuilderApi.ExpectedFileObjectMatcherKind.TEXT_IGNORE_LINE_ENDINGS, readFromString("provider.WithAnnotation$Provider1\nprovider.WithAnnotation$Provider2")
                 )
                 .executeTest();
     }

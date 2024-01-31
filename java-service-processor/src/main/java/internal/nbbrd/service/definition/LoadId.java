@@ -34,4 +34,7 @@ class LoadId implements HasMethod {
 
     @lombok.NonNull
     Optional<TypeElement> serviceType;
+
+    @lombok.NonNull
+    String pattern;
 }

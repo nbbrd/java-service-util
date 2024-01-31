@@ -28,6 +28,7 @@ import java.lang.annotation.*;
  *     <li>Sorter method does not apply to static methods</li>
  *     <li>Sorter method must have no-args</li>
  *     <li>Sorter method must return double, int, long or comparable</li>
+ *     <li>Sorter method must not throw checked exceptions</li>
  * </ol>
  *
  * @author Philippe Charles
