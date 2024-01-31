@@ -46,10 +46,12 @@ final class ServiceDefinitionChecker {
 
     private final ExtEnvironment env;
     private final PrimitiveType booleanType;
+    private final TypeMirror runtimeExceptionType;
 
     public ServiceDefinitionChecker(ProcessingEnvironment env) {
         this.env = new ExtEnvironment(env);
         this.booleanType = env.getTypeUtils().getPrimitiveType(TypeKind.BOOLEAN);
+        this.runtimeExceptionType = this.env.asTypeElement(RuntimeException.class).asType();
     }
 
     public void checkModuleInfo(List<LoadDefinition> definitions) {
@@ -73,42 +75,50 @@ final class ServiceDefinitionChecker {
 
     public boolean checkFilter(LoadFilter filter) {
         Types types = env.getTypeUtils();
-        ExecutableElement x = filter.getMethod();
+        ExecutableElement method = filter.getMethod();
         if (!filter.getServiceType().isPresent() || filter.getServiceType().get().getAnnotation(ServiceDefinition.class) == null) {
-            env.error(x, "[RULE_F1] Filter method only applies to methods of a service");
+            env.error(method, "[RULE_F1] Filter method only applies to methods of a service");
             return false;
         }
-        if (x.getModifiers().contains(Modifier.STATIC)) {
-            env.error(x, "[RULE_F2] Filter method does not apply to static methods");
+        if (method.getModifiers().contains(Modifier.STATIC)) {
+            env.error(method, "[RULE_F2] Filter method does not apply to static methods");
             return false;
         }
-        if (!x.getParameters().isEmpty()) {
-            env.error(x, "[RULE_F3] Filter method must have no-args");
+        if (!method.getParameters().isEmpty()) {
+            env.error(method, "[RULE_F3] Filter method must have no-args");
             return false;
         }
-        if (!types.isSameType(x.getReturnType(), booleanType)) {
-            env.error(x, "[RULE_F4] Filter method must return boolean");
+        if (!types.isSameType(method.getReturnType(), booleanType)) {
+            env.error(method, "[RULE_F4] Filter method must return boolean");
+            return false;
+        }
+        if (hasCheckedExceptions(method)) {
+            env.error(method, "[RULE_F5] Filter method must not throw checked exceptions");
             return false;
         }
         return true;
     }
 
     public boolean checkSorter(LoadSorter sorter) {
-        ExecutableElement x = sorter.getMethod();
+        ExecutableElement method = sorter.getMethod();
         if (!sorter.getServiceType().isPresent() || sorter.getServiceType().get().getAnnotation(ServiceDefinition.class) == null) {
-            env.error(x, "[RULE_S1] Sorter method only applies to methods of a service");
+            env.error(method, "[RULE_S1] Sorter method only applies to methods of a service");
             return false;
         }
-        if (x.getModifiers().contains(Modifier.STATIC)) {
-            env.error(x, "[RULE_S2] Sorter method does not apply to static methods");
+        if (method.getModifiers().contains(Modifier.STATIC)) {
+            env.error(method, "[RULE_S2] Sorter method does not apply to static methods");
             return false;
         }
-        if (!x.getParameters().isEmpty()) {
-            env.error(x, "[RULE_S3] Sorter method must have no-args");
+        if (!method.getParameters().isEmpty()) {
+            env.error(method, "[RULE_S3] Sorter method must have no-args");
             return false;
         }
         if (!sorter.getKeyType().isPresent()) {
-            env.error(x, "[RULE_S4] Sorter method must return double, int, long or comparable");
+            env.error(method, "[RULE_S4] Sorter method must return double, int, long or comparable");
+            return false;
+        }
+        if (hasCheckedExceptions(method)) {
+            env.error(method, "[RULE_S5] Sorter method must not throw checked exceptions");
             return false;
         }
         return true;
@@ -116,25 +126,29 @@ final class ServiceDefinitionChecker {
 
     public boolean checkId(LoadId id) {
         Types types = env.getTypeUtils();
-        ExecutableElement x = id.getMethod();
+        ExecutableElement method = id.getMethod();
         if (!id.getServiceType().isPresent() || id.getServiceType().get().getAnnotation(ServiceDefinition.class) == null) {
-            env.error(x, "[RULE_I1] Id method only applies to methods of a service");
+            env.error(method, "[RULE_I1] Id method only applies to methods of a service");
             return false;
         }
-        if (x.getModifiers().contains(Modifier.STATIC)) {
-            env.error(x, "[RULE_I2] Id method does not apply to static methods");
+        if (method.getModifiers().contains(Modifier.STATIC)) {
+            env.error(method, "[RULE_I2] Id method does not apply to static methods");
             return false;
         }
-        if (!x.getParameters().isEmpty()) {
-            env.error(x, "[RULE_I3] Id method must have no-args");
+        if (!method.getParameters().isEmpty()) {
+            env.error(method, "[RULE_I3] Id method must have no-args");
             return false;
         }
-        if (!types.isSameType(x.getReturnType(), env.asTypeElement(String.class).asType())) {
-            env.error(x, "[RULE_I4] Id method must return String");
+        if (!types.isSameType(method.getReturnType(), env.asTypeElement(String.class).asType())) {
+            env.error(method, "[RULE_I4] Id method must return String");
+            return false;
+        }
+        if (hasCheckedExceptions(method)) {
+            env.error(method, "[RULE_I6] Id method must not throw checked exceptions");
             return false;
         }
         if (!isValidPattern(id.getPattern())) {
-            env.error(x, "[RULE_I6] Id pattern must be valid");
+            env.error(method, "[RULE_I7] Id pattern must be valid");
             return false;
         }
         return true;
@@ -319,6 +333,10 @@ final class ServiceDefinitionChecker {
             return false;
         }
         return true;
+    }
+
+    private boolean hasCheckedExceptions(ExecutableElement method) {
+        return method.getThrownTypes().stream().anyMatch(type -> !env.getTypeUtils().isAssignable(type, runtimeExceptionType));
     }
 
     private static boolean isValidPattern(String value) {

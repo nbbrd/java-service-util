@@ -10,9 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Add regex pattern to ServiceId annotation [#253](https://github.com/nbbrd/java-service-util/issues/253)
 
-### Changed
+### Fixed
 
-- Enforce uniqueness of ServiceId annotation
+- Fix missing checks on annotations ServiceId, ServiceFilter and ServiceSorter [#245](https://github.com/nbbrd/java-service-util/issues/245)
 
 ## [1.7.0] - 2023-06-26
 

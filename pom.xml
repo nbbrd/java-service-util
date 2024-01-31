@@ -169,7 +169,7 @@
                     <properties>
                         <!-- Enable parallel execution of junit5 tests -->
                         <configurationParameters>
-                            junit.jupiter.execution.parallel.enabled=true
+                            junit.jupiter.execution.parallel.enabled=false
                             junit.jupiter.execution.parallel.mode.default=concurrent
                         </configurationParameters>
                     </properties>

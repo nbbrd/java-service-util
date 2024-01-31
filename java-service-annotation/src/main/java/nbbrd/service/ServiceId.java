@@ -13,6 +13,7 @@ import java.lang.annotation.*;
  *     <li>Id method must have no-args</li>
  *     <li>Id method must return String</li>
  *     <li>Id method must be unique</li>
+ *     <li>Id method must not throw checked exceptions</li>
  *     <li>Id pattern must be valid</li>
  * </ol>
  */

@@ -373,6 +373,27 @@ public class ServiceDefinitionProcessorTest {
                     .returns(file, Diagnostic::getSource)
                     .returns(10L, Diagnostic::getLineNumber);
         }
+
+        @Test
+        public void testCheckedException() {
+            JavaFileObject file = forResource("definition/TestFilterCheckedException.java");
+
+            assertThat(compile(file))
+                    .has(failed())
+                    .extracting(Compilation::errors, DIAGNOSTICS)
+                    .singleElement()
+                    .returns("[RULE_F5] Filter method must not throw checked exceptions", Compilations::getDefaultMessage)
+                    .returns(file, Diagnostic::getSource)
+                    .returns(12L, Diagnostic::getLineNumber);
+        }
+
+        @Test
+        public void testUncheckedException() {
+            JavaFileObject file = forResource("definition/TestFilterUncheckedException.java");
+
+            assertThat(compile(file))
+                    .has(succeededWithoutWarnings());
+        }
     }
 
     @Nested
@@ -457,6 +478,27 @@ public class ServiceDefinitionProcessorTest {
                     .returns(file, Diagnostic::getSource)
                     .returns(10L, Diagnostic::getLineNumber);
         }
+
+        @Test
+        public void testCheckedException() {
+            JavaFileObject file = forResource("definition/TestSorterCheckedException.java");
+
+            assertThat(compile(file))
+                    .has(failed())
+                    .extracting(Compilation::errors, DIAGNOSTICS)
+                    .singleElement()
+                    .returns("[RULE_S5] Sorter method must not throw checked exceptions", Compilations::getDefaultMessage)
+                    .returns(file, Diagnostic::getSource)
+                    .returns(12L, Diagnostic::getLineNumber);
+        }
+
+        @Test
+        public void testUncheckedException() {
+            JavaFileObject file = forResource("definition/TestSorterUncheckedException.java");
+
+            assertThat(compile(file))
+                    .has(succeededWithoutWarnings());
+        }
     }
 
     @Nested
@@ -534,6 +576,27 @@ public class ServiceDefinitionProcessorTest {
         }
 
         @Test
+        public void testCheckedException() {
+            JavaFileObject file = forResource("definition/TestIdCheckedException.java");
+
+            assertThat(compile(file))
+                    .has(failed())
+                    .extracting(Compilation::errors, DIAGNOSTICS)
+                    .singleElement()
+                    .returns("[RULE_I6] Id method must not throw checked exceptions", Compilations::getDefaultMessage)
+                    .returns(file, Diagnostic::getSource)
+                    .returns(12L, Diagnostic::getLineNumber);
+        }
+
+        @Test
+        public void testUncheckedException() {
+            JavaFileObject file = forResource("definition/TestIdUncheckedException.java");
+
+            assertThat(compile(file))
+                    .has(succeededWithoutWarnings());
+        }
+
+        @Test
         public void testEmptyPattern() {
             JavaFileObject file = forResource("definition/TestIdEmptyPattern.java");
 
@@ -570,7 +633,7 @@ public class ServiceDefinitionProcessorTest {
                     .has(failed())
                     .extracting(Compilation::errors, DIAGNOSTICS)
                     .singleElement()
-                    .returns("[RULE_I6] Id pattern must be valid", Compilations::getDefaultMessage)
+                    .returns("[RULE_I7] Id pattern must be valid", Compilations::getDefaultMessage)
                     .returns(file, Diagnostic::getSource)
                     .returns(10L, Diagnostic::getLineNumber);
         }

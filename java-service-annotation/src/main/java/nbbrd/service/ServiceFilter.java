@@ -28,6 +28,7 @@ import java.lang.annotation.*;
  *     <li>Filter method does not apply to static methods</li>
  *     <li>Filter method must have no-args</li>
  *     <li>Filter method must return boolean</li>
+ *     <li>Filter method must not throw checked exceptions</li>
  * </ol>
  *
  * @author Philippe Charles
