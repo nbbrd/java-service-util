@@ -277,9 +277,20 @@ _Example: [java-service-examples/src/main/java/nbbrd/service/examples/IconProvid
 
 ### @ServiceId
 
-The `@ServiceId` annotation **specifies the method used to identify a service provider**.  
-At max one annotation is allowed per service.  
-It must be used in conjunction with [@ServiceDefinition](#servicedefinition).
+The `@ServiceId` annotation **specifies the method used to identify a service provider**.
+
+Characteristics:
+- The `#pattern` property is used as a filter.
+- The `#pattern` property is available as a static field in the loader.
+
+Constraints:
+1. It only applies to methods of a service.
+2. It does not apply to static methods.
+3. The annotated method must have no-args.
+4. The annotated method must return String.
+5. The annotated method must be unique.
+6. The annotated method must not throw checked exceptions.
+7. Its pattern must be valid.
 
 Properties:
 - `#pattern`: specifies the regex pattern that the ID is expected to match
@@ -307,9 +318,18 @@ _Source: [java-service-examples/src/main/java/nbbrd/service/examples/HashAlgorit
 
 ### @ServiceFilter
 
-The `@ServiceFilter` annotation **specifies the method used to filter a service provider**.  
-There is no limit to the number of annotations per service.  
-It must be used in conjunction with [@ServiceDefinition](#servicedefinition).
+The `@ServiceFilter` annotation **specifies the method used to filter a service provider**.
+
+Characteristics:
+- There is no limit to the number of annotations per service.
+- Filtering is done before sorting.
+
+Constraints:
+1. It only applies to methods of a service.
+2. It does not apply to static methods.
+3. The annotated method must have no-args.
+4. The annotated method must return boolean.
+5. The annotated method must not throw checked exceptions.
 
 Properties:
 - `#position`: sets the filter ordering in case of multiple filters
@@ -339,9 +359,18 @@ _Source: [java-service-examples/src/main/java/nbbrd/service/examples/FileSearch.
 
 ### @ServiceSorter
 
-The `@ServiceSorter` annotation **specifies the method used to sort a service provider**.  
-There is no limit to the number of annotations per service.  
-It must be used in conjunction with [@ServiceDefinition](#servicedefinition).
+The `@ServiceSorter` annotation **specifies the method used to sort a service provider**.
+
+Characteristics:
+- There is no limit to the number of annotations per service.
+- Sorting is done after filtering.
+
+Constraints:
+1. It only applies to methods of a service.
+2. It does not apply to static methods.
+3. The annotated method must have no-args.
+4. The annotated method must return double, int, long or comparable.
+5. The annotated method must not throw checked exceptions.
 
 Properties:
 - `#position`: sets the sorter ordering in case of multiple sorters
