@@ -16,27 +16,26 @@
  */
 package nbbrd.service.examples;
 
-import nbbrd.service.Quantifier;
 import nbbrd.service.ServiceDefinition;
-
-import java.util.Optional;
+import nbbrd.service.ServiceSorter;
 
 /**
  * @author Philippe Charles
  */
-@ServiceDefinition(quantifier = Quantifier.OPTIONAL)
-public interface WinRegistry {
+@ServiceDefinition
+public interface LargeLanguageModel {
 
-    String readString(int hkey, String key, String valueName);
+    String summarize(String text);
 
-    int HKEY_LOCAL_MACHINE = 0;
+    @ServiceSorter(position = 1, reverse = true)
+    int getQuality();
+
+    @ServiceSorter(position = 2)
+    int getCost();
 
     static void main(String[] args) {
-        Optional<WinRegistry> optional = WinRegistryLoader.load();
-        optional.map(reg -> reg.readString(
-                        HKEY_LOCAL_MACHINE,
-                        "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion",
-                        "ProductName"))
+        LargeLanguageModelLoader.load()
+                .map(search -> search.summarize("bla bla bla"))
                 .ifPresent(System.out::println);
     }
 }

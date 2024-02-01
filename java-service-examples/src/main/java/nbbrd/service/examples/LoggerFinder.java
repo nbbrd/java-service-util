@@ -25,10 +25,7 @@ import java.util.function.Consumer;
 /**
  * @author Philippe Charles
  */
-@ServiceDefinition(
-        quantifier = Quantifier.SINGLE,
-        fallback = LoggerFinder.FallbackLogger.class
-)
+@ServiceDefinition(quantifier = Quantifier.SINGLE, fallback = LoggerFinder.FallbackLogger.class)
 public interface LoggerFinder {
 
     Consumer<String> getLogger(String name);
@@ -37,7 +34,7 @@ public interface LoggerFinder {
 
         @Override
         public Consumer<String> getLogger(String name) {
-            return message -> System.out.printf(Locale.ROOT, "[%s] %s%n", name, message);
+            return msg -> System.out.printf(Locale.ROOT, "[%s] %s%n", name, msg);
         }
     }
 

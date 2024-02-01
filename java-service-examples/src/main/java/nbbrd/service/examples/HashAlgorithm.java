@@ -23,10 +23,12 @@ public interface HashAlgorithm {
     String hashToHex(byte[] input);
 
     static void main(String[] args) {
-        HashAlgorithmLoader.load().stream()
+        HashAlgorithmLoader.load()
+                .stream()
                 .filter(algo -> algo.getName().equals("SHA-256"))
                 .findFirst()
-                .ifPresent(algo -> System.out.println(algo.hashToHex("hello".getBytes(UTF_8))));
+                .map(algo -> algo.hashToHex("hello".getBytes(UTF_8)))
+                .ifPresent(System.out::println);
     }
 
     @ServiceProvider

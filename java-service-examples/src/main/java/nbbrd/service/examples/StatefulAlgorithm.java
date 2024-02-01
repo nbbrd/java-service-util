@@ -25,9 +25,7 @@ import java.util.stream.Stream;
 /**
  * @author Philippe Charles
  */
-@ServiceDefinition(
-        singleton = false
-)
+@ServiceDefinition(singleton = false)
 public interface StatefulAlgorithm {
 
     void init(SecureRandom random);
