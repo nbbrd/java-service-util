@@ -68,11 +68,16 @@ Limitations:
 - does not support [type inspection before instantiation](https://github.com/nbbrd/java-service-util/issues/13)
 - does not support [lazy instantiation](https://github.com/nbbrd/java-service-util/issues/6)
 
-Properties:
+Basic properties:
 - [`#quantifier`](#quantifier-property): number of services expected at runtime
+- [`loaderName`](#loader-name-property): custom qualified name of the loader
+- [`#fallback` `#noFallback`](#fallback-and-no-fallback-properties): fallback type for `SINGLE` quantifier
+- [`#batch` `#batchName`](#batch-and-batch-name-properties): bridge different services and generate providers on the fly
+
+Advanced properties:
 - [`#mutability`](#mutability-property): on-demand set and reload
 - [`#singleton`](#singleton-property): loader scope
-- [`#batch` `#batchName`](#batch-and-batch-name-properties): bridge different services and generate providers on the fly
+- [`#wrapper`](#wrapper-property): wrapper type on backend
 - [`#preprocessing`](#preprocessing-property): custom operations on backend
 - [`#backend` `#cleaner`](#backend-and-cleaner-properties): custom service loader
 
@@ -101,7 +106,7 @@ Values:
     }
   }
   ```
-  _Source: [java-service-examples/src/main/java/nbbrd/service/examples/WinRegistry.java](java-service-examples/src/main/java/nbbrd/service/examples/WinRegistry.java)_
+  _Source: [nbbrd/service/examples/WinRegistry.java](java-service-examples/src/main/java/nbbrd/service/examples/WinRegistry.java)_
 
 
 - `SINGLE`: when exactly one service is guaranteed to be available
@@ -125,7 +130,7 @@ Values:
     }
   }
   ```
-  _Source: [java-service-examples/src/main/java/nbbrd/service/examples/LoggerFinder.java](java-service-examples/src/main/java/nbbrd/service/examples/LoggerFinder.java)_
+  _Source: [nbbrd/service/examples/LoggerFinder.java](java-service-examples/src/main/java/nbbrd/service/examples/LoggerFinder.java)_
 
 
 - `MULTIPLE`: when several instances of a service could be used at the same time
@@ -143,92 +148,16 @@ Values:
     }
   }
   ```
-  _Source: [java-service-examples/src/main/java/nbbrd/service/examples/Translator.java](java-service-examples/src/main/java/nbbrd/service/examples/Translator.java)_
+  _Source: [nbbrd/service/examples/Translator.java](java-service-examples/src/main/java/nbbrd/service/examples/Translator.java)_
 
 
-#### Mutability property
+#### Loader name property
 
-The `#mutability` property allows **on-demand set and reload** of a loader.
+`TODO`
 
-Values:
+#### Fallback and no fallback properties
 
-- `NONE`: when service provision is immutable
-  
-
-- `BASIC`: when service provision is mutable but not thread-safe
-  ```java
-  @ServiceDefinition(mutability = Mutability.BASIC)
-  public interface Messenger {
-  
-    void send(String message);
-  
-    static void main(String[] args) {
-      MessengerLoader loader = new MessengerLoader();
-      loader.get().ifPresent(o -> o.send("First"));
-  
-      loader.set(Optional.of(System.out::println));
-      loader.get().ifPresent(o -> o.send("Second"));
-  
-      loader.set(Optional.of(msg -> JOptionPane.showMessageDialog(null, msg)));
-      loader.get().ifPresent(o -> o.send("Third"));
-  
-      loader.reload();
-      loader.get().ifPresent(o -> o.send("Fourth"));
-    }
-  }
-  ```
-  _Source: [java-service-examples/src/main/java/nbbrd/service/examples/Messenger.java](java-service-examples/src/main/java/nbbrd/service/examples/Messenger.java)_
-
-
-- `CONCURRENT`: when service provision is mutable and thread-safe
-
-#### Singleton property
-
-The `#singleton` property specifies the **loader scope**.
-
-Values:
-
-- `false`: local scope
-  ```java
-  @ServiceDefinition(singleton = false)
-  public interface StatefulAlgorithm {
-  
-    void init(SecureRandom random);
-  
-    double compute(double... values);
-  
-    static void main(String[] args) throws NoSuchAlgorithmException {
-      StatefulAlgorithm algo1 = StatefulAlgorithmLoader.load().orElseThrow(RuntimeException::new);
-      algo1.init(SecureRandom.getInstance("NativePRNG"));
-  
-      StatefulAlgorithm algo2 = StatefulAlgorithmLoader.load().orElseThrow(RuntimeException::new);
-      algo2.init(SecureRandom.getInstance("PKCS11"));
-  
-      Stream.of(algo1, algo2)
-          .parallel()
-          .mapToDouble(algo -> algo.compute(1, 2, 3))
-          .forEach(System.out::println);
-    }
-  }
-  ```
-  _Source: [java-service-examples/src/main/java/nbbrd/service/examples/StatefulAlgorithm.java](java-service-examples/src/main/java/nbbrd/service/examples/StatefulAlgorithm.java)_
-
-
-- `true`: global scope
-  ```java
-  @ServiceDefinition(singleton = true)
-  public interface SystemSettings {
-  
-    String getDeviceName();
-  
-    static void main(String[] args) {
-      SystemSettingsLoader.get()
-          .ifPresent(sys -> System.out.println(sys.getDeviceName()));
-    }
-  }
-  ```
-  _Source: [java-service-examples/src/main/java/nbbrd/service/examples/SystemSettings.java](java-service-examples/src/main/java/nbbrd/service/examples/SystemSettings.java)_
-
+`TODO`
 
 #### Batch and batch name properties
 
@@ -259,21 +188,40 @@ public interface SwingColorScheme {
   }
 }
 ```
-_Source: [java-service-examples/src/main/java/nbbrd/service/examples/SwingColorScheme.java](java-service-examples/src/main/java/nbbrd/service/examples/SwingColorScheme.java)_
+_Source: [nbbrd/service/examples/SwingColorScheme.java](java-service-examples/src/main/java/nbbrd/service/examples/SwingColorScheme.java)_
+
+#### Mutability property
+
+The `#mutability` property allows **on-demand set and reload** of a loader.  
+_Example: [nbbrd/service/examples/Messenger.java](java-service-examples/src/main/java/nbbrd/service/examples/Messenger.java)_
+
+_This is a complex mechanism that targets specific usages. It will be removed and/or simplified in a future release._
+
+#### Singleton property
+
+The `#singleton` property specifies the **loader scope**.  
+_Example: [nbbrd/service/examples/StatefulAlgorithm.java](java-service-examples/src/main/java/nbbrd/service/examples/StatefulAlgorithm.java)
+and [nbbrd/service/examples/SystemSettings.java](java-service-examples/src/main/java/nbbrd/service/examples/SystemSettings.java)_
+
+_This is a complex mechanism that targets specific usages. It will be removed and/or simplified in a future release._
+
+#### Wrapper property
+
+`TODO`
 
 #### Preprocessing property
 
-The `#preprocessor` property allows **custom operations on backend** before any map/filter/sort operation occur.
-_This is a complex mechanism that targets specific usages_.
-
+The `#preprocessor` property allows **custom operations on backend** before any map/filter/sort operation occur.  
 _Example: `TODO`_
+
+_This is a complex mechanism that targets specific usages. It will be removed and/or simplified in a future release._
 
 #### Backend and cleaner properties
 
-The `#backend` and `#cleaner` properties allow to use a **custom service loader** such as [NetBeans Lookup](https://search.maven.org/search?q=g:org.netbeans.api%20AND%20a:org-openide-util-lookup&core=gav) instead of JDK `ServiceLoader`.
-_This is a complex mechanism that targets specific usages_.
+The `#backend` and `#cleaner` properties allow to use a **custom service loader** such as [NetBeans Lookup](https://search.maven.org/search?q=g:org.netbeans.api%20AND%20a:org-openide-util-lookup&core=gav) instead of JDK `ServiceLoader`.  
+_Example: [nbbrd/service/examples/IconProvider.java](java-service-examples/src/main/java/nbbrd/service/examples/IconProvider.java)_
 
-_Example: [java-service-examples/src/main/java/nbbrd/service/examples/IconProvider.java](java-service-examples/src/main/java/nbbrd/service/examples/IconProvider.java)_
+_This is a complex mechanism that targets specific usages. It will be removed and/or simplified in a future release._
 
 ### @ServiceId
 
@@ -314,7 +262,7 @@ public interface HashAlgorithm {
   }
 }
 ```
-_Source: [java-service-examples/src/main/java/nbbrd/service/examples/HashAlgorithm.java](java-service-examples/src/main/java/nbbrd/service/examples/HashAlgorithm.java)_
+_Source: [nbbrd/service/examples/HashAlgorithm.java](java-service-examples/src/main/java/nbbrd/service/examples/HashAlgorithm.java)_
 
 ### @ServiceFilter
 
@@ -355,7 +303,7 @@ public interface FileSearch {
   }
 }
 ```
-_Source: [java-service-examples/src/main/java/nbbrd/service/examples/FileSearch.java](java-service-examples/src/main/java/nbbrd/service/examples/FileSearch.java)_
+_Source: [nbbrd/service/examples/FileSearch.java](java-service-examples/src/main/java/nbbrd/service/examples/FileSearch.java)_
 
 ### @ServiceSorter
 
@@ -395,7 +343,7 @@ public interface LargeLanguageModel {
   }
 }
 ```
-_Source: [java-service-examples/src/main/java/nbbrd/service/examples/LargeLanguageModel.java](java-service-examples/src/main/java/nbbrd/service/examples/LargeLanguageModel.java)_
+_Source: [nbbrd/service/examples/LargeLanguageModel.java](java-service-examples/src/main/java/nbbrd/service/examples/LargeLanguageModel.java)_
 
 ### SPI pattern
 
@@ -439,7 +387,7 @@ public final class FileType {
   }
 }
 ```
-_Source: [java-service-examples/src/main/java/nbbrd/service/examples/FileType.java](java-service-examples/src/main/java/nbbrd/service/examples/FileType.java)_
+_Source: [nbbrd/service/examples/FileType.java](java-service-examples/src/main/java/nbbrd/service/examples/FileType.java)_
 
 ## Setup
 
