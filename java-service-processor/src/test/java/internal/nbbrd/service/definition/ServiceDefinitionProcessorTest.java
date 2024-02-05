@@ -775,6 +775,20 @@ public class ServiceDefinitionProcessorTest {
                     .singleElement()
                     .has(sourceFileNamed("definition", "TestFallbackUnexpectedLoader.java"));
         }
+
+        @Test
+        public void testSuppressWarning() {
+            JavaFileObject file = forResource("definition/TestFallbackSuppressWarning.java");
+            Compilation compilation = compile(file);
+
+            assertThat(compilation)
+                    .has(succeededWithoutWarnings());
+
+            assertThat(compilation)
+                    .extracting(Compilation::generatedSourceFiles, JAVA_FILE_OBJECTS)
+                    .singleElement()
+                    .has(sourceFileNamed("definition", "TestFallbackSuppressWarningLoader.java"));
+        }
     }
 
     @Nested

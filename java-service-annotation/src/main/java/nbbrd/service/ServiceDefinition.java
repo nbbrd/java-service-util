@@ -99,7 +99,9 @@ public @interface ServiceDefinition {
      * Specifies if fallback class is unexpected.
      *
      * @return true if fallback class is expected, false otherwise
+     * @deprecated Use {@link #SINGLE_FALLBACK_NOT_EXPECTED} instead
      */
+    @Deprecated
     boolean noFallback() default false;
 
     /**
@@ -227,4 +229,9 @@ public @interface ServiceDefinition {
             ((ServiceLoader) serviceLoader).reload();
         }
     }
+
+    /**
+     * Name to suppress single-fallback warning using @{@link SuppressWarnings}
+     */
+    String SINGLE_FALLBACK_NOT_EXPECTED = "SingleFallbackNotExpected";
 }

@@ -32,10 +32,7 @@ import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Types;
 import javax.tools.Diagnostic;
 import java.io.IOException;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
@@ -168,7 +165,7 @@ final class ServiceDefinitionChecker {
         Types types = env.getTypeUtils();
         TypeElement service = env.asTypeElement(definition.getServiceType());
 
-        if (!checkFallback(definition.getQuantifier(), definition.getFallback(), definition.isNoFallback(), service, types)) {
+        if (!checkFallback(definition.getQuantifier(), definition.getFallback(), definition.isNoFallback() || isSingleFallbackNotExpected(service), service, types)) {
             return false;
         }
         if (!checkWrapper(definition.getWrapper(), service, types)) {
@@ -346,5 +343,10 @@ final class ServiceDefinitionChecker {
         } catch (PatternSyntaxException ex) {
             return false;
         }
+    }
+
+    private static boolean isSingleFallbackNotExpected(TypeElement service) {
+        SuppressWarnings annotation = service.getAnnotation(SuppressWarnings.class);
+        return annotation != null && Arrays.asList(annotation.value()).contains(ServiceDefinition.SINGLE_FALLBACK_NOT_EXPECTED);
     }
 }
