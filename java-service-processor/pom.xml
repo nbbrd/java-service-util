@@ -54,6 +54,11 @@
             <artifactId>javapoet</artifactId>
             <version>1.13.0</version>
         </dependency>
+        <dependency>
+            <groupId>com.github.spullara.mustache.java</groupId>
+            <artifactId>compiler</artifactId>
+            <version>0.9.11</version>
+        </dependency>
 
         <!-- test only -->
         <dependency>
@@ -175,6 +180,10 @@
                         <relocation>
                             <pattern>com.squareup.javapoet</pattern>
                             <shadedPattern>internal.nbbrd.service.com.squareup.javapoet</shadedPattern>
+                        </relocation>
+                        <relocation>
+                            <pattern>com.github.mustachejava</pattern>
+                            <shadedPattern>internal.nbbrd.service.com.github.mustachejava</shadedPattern>
                         </relocation>
                     </relocations>
                 </configuration>

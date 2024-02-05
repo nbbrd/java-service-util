@@ -70,7 +70,7 @@ Limitations:
 
 Basic properties:
 - [`#quantifier`](#quantifier-property): number of services expected at runtime
-- [`loaderName`](#loader-name-property): custom qualified name of the loader
+- [`#loaderName`](#loader-name-property): custom qualified name of the loader
 - [`#fallback` `#noFallback`](#fallback-and-no-fallback-properties): fallback type for `SINGLE` quantifier
 - [`#batch` `#batchName`](#batch-and-batch-name-properties): bridge different services and generate providers on the fly
 
@@ -153,7 +153,13 @@ Values:
 
 #### Loader name property
 
-`TODO`
+The `#loaderName` property specifies the **custom qualified name of the loader**.
+
+An empty value generates an automatic name.  
+A non-empty value is interpreted as a [Mustache template](https://mustache.github.io/) with the following tags:
+- `{{packageName}}`: The package name of the service class, or "" if this is in the default package.
+- `{{simpleName}}`: The service class name.
+- `{{canonicalName}}`: The full service class name.
 
 #### Fallback and no fallback properties
 
@@ -195,7 +201,7 @@ _Source: [nbbrd/service/examples/SwingColorScheme.java](java-service-examples/sr
 The `#mutability` property allows **on-demand set and reload** of a loader.  
 _Example: [nbbrd/service/examples/Messenger.java](java-service-examples/src/main/java/nbbrd/service/examples/Messenger.java)_
 
-_This is a complex mechanism that targets specific usages. It will be removed and/or simplified in a future release._
+⚠️ _This is a complex mechanism that targets specific usages. It will be removed and/or simplified in a future release._
 
 #### Singleton property
 
@@ -203,7 +209,7 @@ The `#singleton` property specifies the **loader scope**.
 _Example: [nbbrd/service/examples/StatefulAlgorithm.java](java-service-examples/src/main/java/nbbrd/service/examples/StatefulAlgorithm.java)
 and [nbbrd/service/examples/SystemSettings.java](java-service-examples/src/main/java/nbbrd/service/examples/SystemSettings.java)_
 
-_This is a complex mechanism that targets specific usages. It will be removed and/or simplified in a future release._
+⚠️ _This is a complex mechanism that targets specific usages. It will be removed and/or simplified in a future release._
 
 #### Wrapper property
 
@@ -214,14 +220,14 @@ _This is a complex mechanism that targets specific usages. It will be removed an
 The `#preprocessor` property allows **custom operations on backend** before any map/filter/sort operation occur.  
 _Example: `TODO`_
 
-_This is a complex mechanism that targets specific usages. It will be removed and/or simplified in a future release._
+⚠️ _This is a complex mechanism that targets specific usages. It will be removed and/or simplified in a future release._
 
 #### Backend and cleaner properties
 
 The `#backend` and `#cleaner` properties allow to use a **custom service loader** such as [NetBeans Lookup](https://search.maven.org/search?q=g:org.netbeans.api%20AND%20a:org-openide-util-lookup&core=gav) instead of JDK `ServiceLoader`.  
 _Example: [nbbrd/service/examples/IconProvider.java](java-service-examples/src/main/java/nbbrd/service/examples/IconProvider.java)_
 
-_This is a complex mechanism that targets specific usages. It will be removed and/or simplified in a future release._
+⚠️ _This is a complex mechanism that targets specific usages. It will be removed and/or simplified in a future release._
 
 ### @ServiceId
 
@@ -373,7 +379,7 @@ public final class FileType {
 
   @ServiceDefinition(
       quantifier = Quantifier.MULTIPLE,
-      loaderName = "internal.FileTypeSpiLoader",
+      loaderName = "internal.{{canonicalName}}Loader",
       singleton = true
   )
   public interface FileTypeSpi {

@@ -16,6 +16,7 @@
  */
 package internal.nbbrd.service.definition;
 
+import com.github.mustachejava.DefaultMustacheFactory;
 import com.squareup.javapoet.ClassName;
 import internal.nbbrd.service.ExtEnvironment;
 import nbbrd.service.Quantifier;
@@ -23,6 +24,8 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Types;
+import java.io.StringReader;
+import java.io.StringWriter;
 import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -32,6 +35,7 @@ import java.util.stream.Stream;
 /**
  * @author Philippe Charles
  */
+@SuppressWarnings("OptionalUsedAsFieldOrParameterType")
 @lombok.Value
 @lombok.Builder
 class LoadDefinition {
@@ -79,10 +83,21 @@ class LoadDefinition {
     }
 
     // visible for testing
-    static ClassName resolveName(String fullyQualifiedName, ClassName serviceType, String defaultSuffix) {
-        if (!fullyQualifiedName.isEmpty()) {
-            return ClassName.bestGuess(fullyQualifiedName);
-        }
+    static ClassName resolveName(String classNameString, ClassName serviceType, String defaultSuffix) {
+        return NO_NAME.equals(classNameString)
+                ? generateName(serviceType, defaultSuffix)
+                : parseName(classNameString, serviceType);
+    }
+
+    private static ClassName parseName(String classNameString, ClassName serviceType) {
+        StringWriter writer = new StringWriter();
+        new DefaultMustacheFactory()
+                .compile(new StringReader(classNameString), "")
+                .execute(writer, serviceType);
+        return ClassName.bestGuess(writer.toString());
+    }
+
+    private static ClassName generateName(ClassName serviceType, String defaultSuffix) {
         ClassName top = serviceType.topLevelClassName();
         ClassName topLoader = ClassName.get(top.packageName(), top.simpleName() + defaultSuffix);
         if (top.equals(serviceType)) {
@@ -111,4 +126,6 @@ class LoadDefinition {
         TypeMirror extendsIterableOf = types.getWildcardType(iterableOf, null);
         return types.getDeclaredType(env.asTypeElement(Consumer.class), extendsIterableOf);
     }
+
+    public static final String NO_NAME = "";
 }

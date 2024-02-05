@@ -1,6 +1,6 @@
 package nbbrd.service.examples;
 
-import internal.FileTypeSpiLoader;
+import internal.nbbrd.service.examples.FileTypeSpiLoader;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;

@@ -134,8 +134,14 @@ public @interface ServiceDefinition {
     Class<? extends UnaryOperator<? extends Stream>> preprocessor() default NoProcessing.class;
 
     /**
-     * Specifies the fully qualified name of the loader. An empty value
-     * generates an automatic name.
+     * Specifies the fully qualified name of the loader.<br>
+     * An empty value generates an automatic name.
+     * A non-empty value is interpreted as a <a href="https://mustache.github.io/">Mustache template</a> with the following tags:
+     * <ul>
+     *     <li><code>{{packageName}}</code>: The package name of the service class, or "" if this is in the default package.</li>
+     *     <li><code>{{simpleName}}</code>: The service class name.</li>
+     *     <li><code>{{canonicalName}}</code>: The full service class name.</li>
+     * </ul>
      *
      * @return a fully qualified name
      */
@@ -181,8 +187,14 @@ public @interface ServiceDefinition {
     boolean batch() default false;
 
     /**
-     * Specifies the fully qualified name of the batch loading. An empty value
-     * generates an automatic name.
+     * Specifies the fully qualified name of the batch loading.
+     * An empty value generates an automatic name.
+     * A non-empty value is interpreted as a <a href="https://mustache.github.io/">Mustache template</a> with the following tags:
+     * <ul>
+     *     <li><code>{{packageName}}</code>: The package name of the service class, or "" if this is in the default package.</li>
+     *     <li><code>{{simpleName}}</code>: The service class name.</li>
+     *     <li><code>{{canonicalName}}</code>: The full service class name.</li>
+     * </ul>
      *
      * @return a fully qualified name
      */

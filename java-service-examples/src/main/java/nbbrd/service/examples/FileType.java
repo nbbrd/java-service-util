@@ -16,6 +16,7 @@
  */
 package nbbrd.service.examples;
 
+import internal.nbbrd.service.examples.FileTypeSpiLoader;
 import nbbrd.service.Quantifier;
 import nbbrd.service.ServiceDefinition;
 import nbbrd.service.ServiceProvider;
@@ -41,7 +42,7 @@ public final class FileType {
     }
 
     public static Optional<String> probeContentType(Path file) throws IOException {
-        for (FileTypeSpi probe : internal.FileTypeSpiLoader.get()) {
+        for (FileTypeSpi probe : FileTypeSpiLoader.get()) {
             String result = probe.getContentTypeOrNull(file);
             if (result != null) return Optional.of(result);
         }
@@ -57,7 +58,7 @@ public final class FileType {
 
     @ServiceDefinition(
             quantifier = Quantifier.MULTIPLE,
-            loaderName = "internal.FileTypeSpiLoader",
+            loaderName = "internal.{{canonicalName}}Loader",
             singleton = true
     )
     public interface FileTypeSpi {

@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Add mustache templating in loader and batch names [#320](https://github.com/nbbrd/java-service-util/issues/320)
+
 ## [1.8.0] - 2024-01-31
 
 ### Added

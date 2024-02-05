@@ -19,8 +19,10 @@ package internal.nbbrd.service.definition;
 import com.squareup.javapoet.ClassName;
 import org.junit.jupiter.api.Test;
 
+import static internal.nbbrd.service.definition.LoadDefinition.NO_NAME;
 import static internal.nbbrd.service.definition.LoadDefinition.resolveName;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 
 /**
  * @author Philippe Charles
@@ -29,23 +31,81 @@ public class LoadDefinitionTest {
 
     @Test
     public void testResolveNameForNonNestedService() {
-        ClassName nonNestedService = ClassName.get("nbbrd.charts", "ColorScheme");
+        ClassName nonNestedService = ClassName.get("node1.node2", "Leaf");
 
-        assertThat(resolveName("", nonNestedService, "Stuff"))
-                .isEqualTo(ClassName.get("nbbrd.charts", "ColorSchemeStuff"));
+        assertThat(resolveName(NO_NAME, nonNestedService, "Stuff"))
+                .isEqualTo(ClassName.get("node1.node2", "LeafStuff"));
 
-        assertThat(resolveName("internal.charts.ColorHandler", nonNestedService, "Stuff"))
-                .isEqualTo(ClassName.get("internal.charts", "ColorHandler"));
+        assertThat(resolveName("internal.CustomLeaf", nonNestedService, "Stuff"))
+                .isEqualTo(ClassName.get("internal", "CustomLeaf"));
+
+        assertThat(resolveName("{{packageName}}.CustomLeaf", nonNestedService, "Stuff"))
+                .isEqualTo(ClassName.get("node1.node2", "CustomLeaf"));
+
+        assertThat(resolveName("internal.{{packageName}}.{{simpleName}}Loader", nonNestedService, "Stuff"))
+                .isEqualTo(ClassName.get("internal.node1.node2", "LeafLoader"));
+
+        assertThat(resolveName("internal.{{canonicalName}}Loader", nonNestedService, "Stuff"))
+                .isEqualTo(ClassName.get("internal.node1.node2", "LeafLoader"));
+    }
+
+    @Test
+    public void testResolveNameForNonNestedServiceNoPackage() {
+        ClassName nonNestedService = ClassName.get("", "Leaf");
+
+        assertThat(resolveName(NO_NAME, nonNestedService, "Stuff"))
+                .isEqualTo(ClassName.get("", "LeafStuff"));
+
+        assertThat(resolveName("internal.CustomLeaf", nonNestedService, "Stuff"))
+                .isEqualTo(ClassName.get("internal", "CustomLeaf"));
+
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> resolveName("{{packageName}}.CustomLeaf", nonNestedService, "Stuff"));
+
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> resolveName("internal.{{packageName}}.{{simpleName}}Loader", nonNestedService, "Stuff"));
+
+        assertThat(resolveName("internal.{{canonicalName}}Loader", nonNestedService, "Stuff"))
+                .isEqualTo(ClassName.get("internal", "LeafLoader"));
     }
 
     @Test
     public void testResolveNameForNestedService() {
-        ClassName nestedService = ClassName.get("nbbrd.charts", "Utils", "ColorScheme");
+        ClassName nestedService = ClassName.get("node1.node2", "Leaf", "NestedLeaf");
 
-        assertThat(resolveName("", nestedService, "Stuff"))
-                .isEqualTo(ClassName.get("nbbrd.charts", "UtilsStuff", "ColorScheme"));
+        assertThat(resolveName(NO_NAME, nestedService, "Stuff"))
+                .isEqualTo(ClassName.get("node1.node2", "LeafStuff", "NestedLeaf"));
 
-        assertThat(resolveName("internal.charts.ColorHandler", nestedService, "Stuff"))
-                .isEqualTo(ClassName.get("internal.charts", "ColorHandler"));
+        assertThat(resolveName("internal.CustomLeaf", nestedService, "Stuff"))
+                .isEqualTo(ClassName.get("internal", "CustomLeaf"));
+
+        assertThat(resolveName("{{packageName}}.CustomLeaf", nestedService, "Stuff"))
+                .isEqualTo(ClassName.get("node1.node2", "CustomLeaf"));
+
+        assertThat(resolveName("internal.{{packageName}}.{{simpleName}}Loader", nestedService, "Stuff"))
+                .isEqualTo(ClassName.get("internal.node1.node2", "NestedLeafLoader"));
+
+        assertThat(resolveName("internal.{{canonicalName}}Loader", nestedService, "Stuff"))
+                .isEqualTo(ClassName.get("internal.node1.node2.Leaf", "NestedLeafLoader"));
+    }
+
+    @Test
+    public void testResolveNameForNestedServiceNoPackage() {
+        ClassName nestedService = ClassName.get("", "Leaf", "NestedLeaf");
+
+        assertThat(resolveName(NO_NAME, nestedService, "Stuff"))
+                .isEqualTo(ClassName.get("", "LeafStuff", "NestedLeaf"));
+
+        assertThat(resolveName("internal.CustomLeaf", nestedService, "Stuff"))
+                .isEqualTo(ClassName.get("internal", "CustomLeaf"));
+
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> resolveName("{{packageName}}.CustomLeaf", nestedService, "Stuff"));
+
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> resolveName("internal.{{packageName}}.{{simpleName}}Loader", nestedService, "Stuff"));
+
+        assertThat(resolveName("internal.{{canonicalName}}Loader", nestedService, "Stuff"))
+                .isEqualTo(ClassName.get("internal.Leaf", "NestedLeafLoader"));
     }
 }
