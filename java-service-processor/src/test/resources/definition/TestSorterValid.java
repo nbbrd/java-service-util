@@ -3,7 +3,7 @@ package definition;
 import nbbrd.service.ServiceDefinition;
 import nbbrd.service.ServiceSorter;
 
-class Sorters {
+class TestSorterValid {
 
     @ServiceDefinition
     interface IntSorter {

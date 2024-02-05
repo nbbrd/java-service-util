@@ -39,7 +39,7 @@ public class Experiment1 {
          *
          * @return a class name
          */
-        ClassName loader() default @ClassName;
+        String loader() default "";
 
         /**
          * Specifies the name of the batch loading. An empty value
@@ -47,7 +47,7 @@ public class Experiment1 {
          *
          * @return a class name
          */
-        ClassName batch() default @ClassName;
+        String batch() default "";
 
         /**
          * Specifies if batch loading is disabled.
@@ -63,7 +63,7 @@ public class Experiment1 {
         interface OptionalService {
         }
 
-        @ServiceProviderInterface(loader = @ClassName(simpleName = "Other", packageName = "internal"))
+        @ServiceProviderInterface(loader = "internal.Other")
         interface OptionalServiceWithCustomLoader {
         }
 
@@ -78,7 +78,7 @@ public class Experiment1 {
         interface MultiService {
         }
 
-        @ServiceProviderInterface(quantifier = Quantifier.MULTIPLE, batch = @ClassName(simpleName = "Stuff"))
+        @ServiceProviderInterface(quantifier = Quantifier.MULTIPLE, batch = "{{packageName}}.Stuff")
         interface MultiServiceWithCustomBatch {
         }
 

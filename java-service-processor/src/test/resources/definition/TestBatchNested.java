@@ -5,13 +5,16 @@ import nbbrd.service.ServiceProvider;
 
 import java.util.stream.Stream;
 
-@ServiceDefinition(batch = true)
-class NonNestedBatch {
+class TestBatchNested {
+
+    @ServiceDefinition(batch = true)
+    interface HelloService {
+    }
 
     @ServiceProvider
-    public static class ABC implements NonNestedBatchBatch {
+    public static class ABC implements TestBatchNestedBatch.HelloService {
         @Override
-        public Stream<NonNestedBatch> getProviders() {
+        public Stream<HelloService> getProviders() {
             return Stream.empty();
         }
     }

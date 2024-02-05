@@ -5,7 +5,7 @@ import java.util.stream.Stream;
 import nbbrd.service.Quantifier;
 import nbbrd.service.ServiceDefinition;
 
-class NonInstantiablePreprocessor {
+class TestPreprocessorNonInstantiable {
 
     @ServiceDefinition(quantifier = Quantifier.SINGLE, preprocessor = SomePreprocessor.class)
     interface SomeService {

@@ -2,7 +2,7 @@ package definition;
 
 import nbbrd.service.ServiceDefinition;
 
-class NonInstantiableWrapper {
+class TestWrapperNonInstantiable {
 
     @ServiceDefinition(wrapper = WrapperByPrivateConstructor.class)
     interface ByPrivateConstructor {

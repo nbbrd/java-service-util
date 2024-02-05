@@ -5,7 +5,7 @@ import nbbrd.service.ServiceDefinition;
 import java.util.Collections;
 import java.util.function.Function;
 
-class NonAssignableBackend {
+class TestBackendNonAssignable {
 
     @ServiceDefinition(backend = HelloProc.class)
     interface HelloService {

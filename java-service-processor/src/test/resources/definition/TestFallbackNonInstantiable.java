@@ -3,7 +3,7 @@ package definition;
 import nbbrd.service.Quantifier;
 import nbbrd.service.ServiceDefinition;
 
-class NonInstantiableFallback {
+class TestFallbackNonInstantiable {
 
     @ServiceDefinition(quantifier = Quantifier.SINGLE, fallback = SomeFallback.class)
     interface SomeService {

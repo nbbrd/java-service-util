@@ -4,7 +4,7 @@ import static nbbrd.service.Mutability.*;
 import static nbbrd.service.Quantifier.*;
 import nbbrd.service.ServiceDefinition;
 
-class SingleDef {
+class TestQuantifierSingle {
 
     @ServiceDefinition(quantifier = SINGLE, mutability = NONE)
     interface Immutable {

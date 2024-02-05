@@ -4,7 +4,7 @@ import nbbrd.service.ServiceDefinition;
 import nbbrd.service.ServiceSorter;
 
 @ServiceDefinition
-interface NonComparableSorter {
+interface TestSorterNonComparable {
 
     @ServiceSorter
     Object getCost();

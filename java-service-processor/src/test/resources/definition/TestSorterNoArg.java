@@ -4,10 +4,8 @@ import nbbrd.service.ServiceDefinition;
 import nbbrd.service.ServiceSorter;
 
 @ServiceDefinition
-interface StaticSorter {
+interface TestSorterNoArg {
 
     @ServiceSorter
-    static int getCost() {
-        return 0;
-    }
+    int getCost(String arg);
 }

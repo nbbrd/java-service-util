@@ -8,8 +8,8 @@ import java.util.Iterator;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-@ServiceDefinition(backend = CustomBackend.NetBeansLookup.class)
-interface CustomBackend {
+@ServiceDefinition(backend = TestBackendNetBeans.NetBeansLookup.class)
+interface TestBackendNetBeans {
 
     enum NetBeansLookup implements Function<Class, Iterable>, Consumer<Iterable> {
 

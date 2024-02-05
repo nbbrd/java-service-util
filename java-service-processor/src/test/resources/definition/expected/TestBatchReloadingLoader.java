@@ -9,9 +9,9 @@ import java.util.function.Consumer;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
-public final class BatchReloadingLoader {
+public final class TestBatchReloadingLoader {
   /**
-   * Custom service loader for {@link definition.BatchReloading.Mutable}.
+   * Custom service loader for {@link definition.TestBatchReloading.Mutable}.
    * <br>This class is thread-safe.
    * <p>Properties:
    * <ul>
@@ -28,34 +28,34 @@ public final class BatchReloadingLoader {
    * </ul>
    */
   public static final class Mutable {
-    private final Iterable<BatchReloading.Mutable> source = ServiceLoader.load(BatchReloading.Mutable.class);
+    private final Iterable<TestBatchReloading.Mutable> source = ServiceLoader.load(TestBatchReloading.Mutable.class);
 
-    private final Iterable<BatchReloadingBatch.Mutable> batch = ServiceLoader.load(BatchReloadingBatch.Mutable.class);
+    private final Iterable<TestBatchReloadingBatch.Mutable> batch = ServiceLoader.load(TestBatchReloadingBatch.Mutable.class);
 
-    private final AtomicReference<Optional<BatchReloading.Mutable>> resource = new AtomicReference<>(doLoad());
+    private final AtomicReference<Optional<TestBatchReloading.Mutable>> resource = new AtomicReference<>(doLoad());
 
     private final Consumer<Iterable> cleaner = loader -> ((ServiceLoader)loader).reload();
 
-    private Optional<BatchReloading.Mutable> doLoad() {
+    private Optional<TestBatchReloading.Mutable> doLoad() {
       return Stream.concat(StreamSupport.stream(source.spliterator(), false), StreamSupport.stream(batch.spliterator(), false).flatMap(o -> o.getProviders()))
           .findFirst();
     }
 
     /**
-     * Gets an optional {@link definition.BatchReloading.Mutable} instance.
+     * Gets an optional {@link definition.TestBatchReloading.Mutable} instance.
      * <br>This method is thread-safe.
      * @return the current non-null value
      */
-    public Optional<BatchReloading.Mutable> get() {
+    public Optional<TestBatchReloading.Mutable> get() {
       return resource.get();
     }
 
     /**
-     * Sets an optional {@link definition.BatchReloading.Mutable} instance.
+     * Sets an optional {@link definition.TestBatchReloading.Mutable} instance.
      * <br>This method is thread-safe.
      * @param newValue new non-null value
      */
-    public void set(Optional<BatchReloading.Mutable> newValue) {
+    public void set(Optional<TestBatchReloading.Mutable> newValue) {
       resource.set(Objects.requireNonNull(newValue));
     }
 
@@ -83,7 +83,7 @@ public final class BatchReloadingLoader {
   }
 
   /**
-   * Custom service loader for {@link definition.BatchReloading.MutableSingleton}.
+   * Custom service loader for {@link definition.TestBatchReloading.MutableSingleton}.
    * <br>This class is thread-safe.
    * <p>Properties:
    * <ul>
@@ -100,37 +100,37 @@ public final class BatchReloadingLoader {
    * </ul>
    */
   public static final class MutableSingleton {
-    private static final Iterable<BatchReloading.MutableSingleton> SOURCE = ServiceLoader.load(BatchReloading.MutableSingleton.class);
+    private static final Iterable<TestBatchReloading.MutableSingleton> SOURCE = ServiceLoader.load(TestBatchReloading.MutableSingleton.class);
 
-    private static final Iterable<BatchReloadingBatch.MutableSingleton> BATCH = ServiceLoader.load(BatchReloadingBatch.MutableSingleton.class);
+    private static final Iterable<TestBatchReloadingBatch.MutableSingleton> BATCH = ServiceLoader.load(TestBatchReloadingBatch.MutableSingleton.class);
 
-    private static final AtomicReference<Optional<BatchReloading.MutableSingleton>> RESOURCE = new AtomicReference<>(doLoad());
+    private static final AtomicReference<Optional<TestBatchReloading.MutableSingleton>> RESOURCE = new AtomicReference<>(doLoad());
 
     private static final Consumer<Iterable> CLEANER = loader -> ((ServiceLoader)loader).reload();
 
     private MutableSingleton() {
     }
 
-    private static Optional<BatchReloading.MutableSingleton> doLoad() {
+    private static Optional<TestBatchReloading.MutableSingleton> doLoad() {
       return Stream.concat(StreamSupport.stream(SOURCE.spliterator(), false), StreamSupport.stream(BATCH.spliterator(), false).flatMap(o -> o.getProviders()))
           .findFirst();
     }
 
     /**
-     * Gets an optional {@link definition.BatchReloading.MutableSingleton} instance.
+     * Gets an optional {@link definition.TestBatchReloading.MutableSingleton} instance.
      * <br>This method is thread-safe.
      * @return the current non-null value
      */
-    public static Optional<BatchReloading.MutableSingleton> get() {
+    public static Optional<TestBatchReloading.MutableSingleton> get() {
       return RESOURCE.get();
     }
 
     /**
-     * Sets an optional {@link definition.BatchReloading.MutableSingleton} instance.
+     * Sets an optional {@link definition.TestBatchReloading.MutableSingleton} instance.
      * <br>This method is thread-safe.
      * @param newValue new non-null value
      */
-    public static void set(Optional<BatchReloading.MutableSingleton> newValue) {
+    public static void set(Optional<TestBatchReloading.MutableSingleton> newValue) {
       RESOURCE.set(Objects.requireNonNull(newValue));
     }
 

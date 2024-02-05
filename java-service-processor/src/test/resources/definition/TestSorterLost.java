@@ -2,7 +2,7 @@ package definition;
 
 import nbbrd.service.ServiceSorter;
 
-interface LostSorter {
+interface TestSorterLost {
 
     @ServiceSorter
     int getCost();

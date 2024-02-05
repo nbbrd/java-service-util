@@ -2,9 +2,9 @@ package definition;
 
 import nbbrd.service.ServiceDefinition;
 
-class NonAssignableWrapper {
+class TestFallbackNonAssignable {
 
-    @ServiceDefinition(wrapper = String.class)
+    @ServiceDefinition(fallback = String.class)
     interface HelloService {
     }
 }

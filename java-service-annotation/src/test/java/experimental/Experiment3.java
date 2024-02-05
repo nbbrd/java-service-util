@@ -28,7 +28,7 @@ public class Experiment3 {
              *
              * @return a class name
              */
-            ClassName loader() default @ClassName;
+            String loader() default "";
         }
 
         @Documented
@@ -42,7 +42,7 @@ public class Experiment3 {
              *
              * @return a class name
              */
-            ClassName loader() default @ClassName;
+            String loader() default "";
 
             /**
              * Specifies the fallback class to use if no service is available.
@@ -70,7 +70,7 @@ public class Experiment3 {
              *
              * @return a class name
              */
-            ClassName loader() default @ClassName;
+            String loader() default "";
 
             /**
              * Specifies the name of the batch loading. An empty value
@@ -78,7 +78,7 @@ public class Experiment3 {
              *
              * @return a class name
              */
-            ClassName batch() default @ClassName;
+            String batch() default "";
 
             /**
              * Specifies if batch loading is disabled.
@@ -95,7 +95,7 @@ public class Experiment3 {
         interface OptionalService {
         }
 
-        @ServiceProviderInterface.Optional(loader = @ClassName(simpleName = "Other", packageName = "internal"))
+        @ServiceProviderInterface.Optional(loader = "internal.Other")
         interface OptionalServiceWithCustomLoader {
         }
 
@@ -110,7 +110,7 @@ public class Experiment3 {
         interface MultiService {
         }
 
-        @ServiceProviderInterface.Multiple(batch = @ClassName(simpleName = "Stuff"))
+        @ServiceProviderInterface.Multiple(batch = "{{packageName}}.Stuff")
         interface MultiServiceWithCustomBatch {
         }
 

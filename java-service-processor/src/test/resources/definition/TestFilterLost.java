@@ -2,7 +2,7 @@ package definition;
 
 import nbbrd.service.ServiceFilter;
 
-interface LostFilter {
+interface TestFilterLost {
 
     @ServiceFilter
     boolean isAvailable();

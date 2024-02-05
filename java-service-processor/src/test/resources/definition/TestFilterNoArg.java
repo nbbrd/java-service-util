@@ -4,8 +4,8 @@ import nbbrd.service.ServiceDefinition;
 import nbbrd.service.ServiceFilter;
 
 @ServiceDefinition
-interface NonBooleanFilter {
+interface TestFilterNoArg {
 
     @ServiceFilter
-    int isAvailable();
+    boolean isAvailable(String arg);
 }

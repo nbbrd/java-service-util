@@ -4,7 +4,7 @@ import nbbrd.service.ServiceDefinition;
 import nbbrd.service.ServiceFilter;
 
 @ServiceDefinition
-interface StaticFilter {
+interface TestFilterStatic {
 
     @ServiceFilter
     static boolean isAvailable() {

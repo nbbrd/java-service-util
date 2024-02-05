@@ -4,7 +4,7 @@ import java.util.function.UnaryOperator;
 import java.util.stream.Stream;
 import nbbrd.service.ServiceDefinition;
 
-class NonAssignablePreprocessor {
+class TestPreprocessorNonAssignable {
 
     @ServiceDefinition(preprocessor = HelloProc.class)
     interface HelloService {

@@ -2,7 +2,7 @@ package definition;
 
 import nbbrd.service.ServiceDefinition;
 
-class Wrappers {
+class TestWrapperValid {
 
     @ServiceDefinition(wrapper = WrapperByConstructor.class)
     interface ByConstructor {
