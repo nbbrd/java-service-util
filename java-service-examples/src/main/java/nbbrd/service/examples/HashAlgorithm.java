@@ -17,12 +17,14 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 @ServiceDefinition(quantifier = Quantifier.MULTIPLE, batch = true)
 public interface HashAlgorithm {
 
+    // 💡 Enforce service naming
     @ServiceId(pattern = ServiceId.SCREAMING_KEBAB_CASE)
     String getName();
 
     String hashToHex(byte[] input);
 
     static void main(String[] args) {
+        // 💡 Retrieve service by name
         HashAlgorithmLoader.load()
                 .stream()
                 .filter(algo -> algo.getName().equals("SHA-256"))

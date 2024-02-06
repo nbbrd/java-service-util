@@ -27,6 +27,7 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -41,6 +42,7 @@ public final class FileType {
         // static class
     }
 
+    // 💡 API: designed to be called and used
     public static Optional<String> probeContentType(Path file) throws IOException {
         for (FileTypeSpi probe : FileTypeSpiLoader.get()) {
             String result = probe.getContentTypeOrNull(file);
@@ -50,12 +52,12 @@ public final class FileType {
     }
 
     public static void main(String[] args) throws IOException {
-        String[] files = {"hello.csv", "stuff.txt"};
-        for (String file : files) {
+        for (String file : Arrays.asList("hello.csv", "stuff.txt")) {
             System.out.println(file + ": " + FileType.probeContentType(Paths.get(file)).orElse("?"));
         }
     }
 
+    // 💡 SPI: designed to be extended and implemented
     @ServiceDefinition(
             quantifier = Quantifier.MULTIPLE,
             loaderName = "internal.{{canonicalName}}Loader",

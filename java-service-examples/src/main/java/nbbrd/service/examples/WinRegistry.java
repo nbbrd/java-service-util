@@ -32,6 +32,7 @@ public interface WinRegistry {
     int HKEY_LOCAL_MACHINE = 0;
 
     static void main(String[] args) {
+        // 💡 Service availability not guaranteed
         Optional<WinRegistry> optional = WinRegistryLoader.load();
         optional.map(reg -> reg.readString(
                         HKEY_LOCAL_MACHINE,

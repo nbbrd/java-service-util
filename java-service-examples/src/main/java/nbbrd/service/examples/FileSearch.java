@@ -31,9 +31,11 @@ public interface FileSearch {
 
     List<File> searchByName(String name);
 
+    // 💡 General filter
     @ServiceFilter(position = 1)
     boolean isAvailableOnCurrentOS();
 
+    // 💡 Specific filter
     @ServiceFilter(position = 2, negate = true)
     boolean isDisabledBySystemProperty();
 

@@ -39,6 +39,7 @@ public interface LoggerFinder {
     }
 
     static void main(String[] args) {
+        // 💡 Service availability guaranteed
         LoggerFinder single = LoggerFinderLoader.load();
         single.getLogger("MyClass").accept("some message");
     }

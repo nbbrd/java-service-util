@@ -30,6 +30,7 @@ public interface Translator {
     String translate(String text);
 
     static void main(String[] args) {
+        // 💡 Multiple services expected
         List<Translator> multiple = TranslatorLoader.load();
         multiple.stream()
                 .map(translator -> translator.translate("hello"))

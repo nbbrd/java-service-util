@@ -15,7 +15,7 @@ If the service is a single interface then it is the same as a service provider i
 - Java 8 minimum requirement
 - has an automatic module name that makes it compatible with [JPMS](https://www.baeldung.com/java-9-modularity) 
 
-**Shortcuts:** [ [Components](#components) | [Setup](#setup) | [Developing](#developing) | [Contributing](#contributing)  | [Licensing](#licensing) | [Related work](#related-work) ]
+[ [Components](#components) | [Setup](#setup) | [Developing](#developing) | [Contributing](#contributing)  | [Licensing](#licensing) | [Related work](#related-work) | [Alternatives](#alternatives) ]
 
 ## Components
 
@@ -45,9 +45,11 @@ public interface FooSPI {}
 
 public interface BarSPI {}
 
+// 💡 Provides one service
 @ServiceProvider
 public class FooProvider implements FooSPI {}
 
+// 💡 Provides multiple services
 @ServiceProvider ( FooSPI.class )
 @ServiceProvider ( BarSPI.class )
 public class FooBarProvider implements FooSPI, BarSPI {}
@@ -66,12 +68,11 @@ Features:
 
 Limitations:
 - does not support [type inspection before instantiation](https://github.com/nbbrd/java-service-util/issues/13)
-- does not support [lazy instantiation](https://github.com/nbbrd/java-service-util/issues/6)
 
 Basic properties:
 - [`#quantifier`](#quantifier-property): number of services expected at runtime
 - [`#loaderName`](#loader-name-property): custom qualified name of the loader
-- [`#fallback` `#noFallback`](#fallback-and-no-fallback-properties): fallback type for `SINGLE` quantifier
+- [`#fallback`](#fallback-property): fallback type for `SINGLE` quantifier
 - [`#batch` `#batchName`](#batch-and-batch-name-properties): bridge different services and generate providers on the fly
 
 Advanced properties:
@@ -97,6 +98,7 @@ Values:
     int HKEY_LOCAL_MACHINE = 0;
   
     static void main(String[] args) {
+      // 💡 Service availability not guaranteed
       Optional<WinRegistry> optional = WinRegistryLoader.load();
       optional.map(reg -> reg.readString(
               HKEY_LOCAL_MACHINE,
@@ -125,6 +127,7 @@ Values:
     }
   
     static void main(String[] args) {
+      // 💡 Service availability guaranteed
       LoggerFinder single = LoggerFinderLoader.load();
       single.getLogger("MyClass").accept("some message");
     }
@@ -141,6 +144,7 @@ Values:
     String translate(String text);
   
     static void main(String[] args) {
+        // 💡 Multiple services expected
       List<Translator> multiple = TranslatorLoader.load();
       multiple.stream()
           .map(translator -> translator.translate("hello"))
@@ -155,15 +159,42 @@ Values:
 
 The `#loaderName` property specifies the **custom qualified name of the loader**.
 
+```java
+// 💡 Name without interpretation
+@ServiceDefinition(loaderName = "internal.FooSPILoader")
+public interface FooSPI { }
+```
+
 An empty value generates an automatic name.  
 A non-empty value is interpreted as a [Mustache template](https://mustache.github.io/) with the following tags:
-- `{{packageName}}`: The package name of the service class, or "" if this is in the default package.
-- `{{simpleName}}`: The service class name.
-- `{{canonicalName}}`: The full service class name.
 
-#### Fallback and no fallback properties
+| Tag             | Description                           |
+|-----------------|---------------------------------------|
+| `packageName`   | The package name of the service class |
+| `simpleName`    | The service class name                |
+| `canonicalName` | The full service class name           |
 
-`TODO`
+```java
+// 💡 Name with interpretation
+@ServiceDefinition(loaderName = "internal.{{simpleName}}Loader")
+public interface FooSPI { }
+```
+
+#### Fallback property
+
+The `#fallback` property specifies the **fallback class to use if no service is available**.  
+This property is only used in conjunction with `Quantifier#SINGLE`.
+
+```java
+@ServiceDefinition(quantifier = Quantifier.SINGLE, fallback = NoOpFooProvider.class)
+public interface FooSPI { }
+
+// 💡 Provider that does nothing except preventing NPE
+public class NoOpFooProvider implements FooSPI { }
+```
+
+_Note that a warning is raised at compile time if the fallback is missing 
+but this warning can be disabled with the `@SupressWarning("SingleFallbackNotExpected")` annotation._
 
 #### Batch and batch name properties
 
@@ -176,12 +207,14 @@ public interface SwingColorScheme {
   List<Color> getColors();
 
   static void main(String[] args) {
+    // 💡 Invisible use of RgbColorScheme
     SwingColorSchemeLoader.load()
         .stream()
         .map(SwingColorScheme::getColors)
         .forEach(System.out::println);
   }
 
+  // 💡 Bridge between SwingColorScheme and RgbColorScheme
   @ServiceProvider(SwingColorSchemeBatch.class)
   final class RgbBridge implements SwingColorSchemeBatch {
 
@@ -213,11 +246,14 @@ and [nbbrd/service/examples/SystemSettings.java](java-service-examples/src/main/
 
 #### Wrapper property
 
-`TODO`
+The `#wrapper` property allows **service decoration** before any map/filter/sort operation.
+_Example: `TODO`_
+
+⚠️ _This is a complex mechanism that targets specific usages. It will be removed and/or simplified in a future release._
 
 #### Preprocessing property
 
-The `#preprocessor` property allows **custom operations on backend** before any map/filter/sort operation occur.  
+The `#preprocessor` property allows **custom operations on backend** before any map/filter/sort operation.  
 _Example: `TODO`_
 
 ⚠️ _This is a complex mechanism that targets specific usages. It will be removed and/or simplified in a future release._
@@ -233,6 +269,32 @@ _Example: [nbbrd/service/examples/IconProvider.java](java-service-examples/src/m
 
 The `@ServiceId` annotation **specifies the method used to identify a service provider**.
 
+Properties:
+- `#pattern`: specifies the regex pattern that the ID is expected to match
+
+```java
+@ServiceDefinition(quantifier = Quantifier.MULTIPLE, batch = true)
+public interface HashAlgorithm {
+
+  // 💡 Enforce service naming
+  @ServiceId(pattern = ServiceId.SCREAMING_KEBAB_CASE)
+  String getName();
+
+  String hashToHex(byte[] input);
+
+  static void main(String[] args) {
+    // 💡 Retrieve service by name
+    HashAlgorithmLoader.load()
+      .stream()
+      .filter(algo -> algo.getName().equals("SHA-256"))
+      .findFirst()
+      .map(algo -> algo.hashToHex("hello".getBytes(UTF_8)))
+      .ifPresent(System.out::println);
+  }
+}
+```
+_Source: [nbbrd/service/examples/HashAlgorithm.java](java-service-examples/src/main/java/nbbrd/service/examples/HashAlgorithm.java)_
+
 Characteristics:
 - The `#pattern` property is used as a filter.
 - The `#pattern` property is available as a static field in the loader.
@@ -246,44 +308,9 @@ Constraints:
 6. The annotated method must not throw checked exceptions.
 7. Its pattern must be valid.
 
-Properties:
-- `#pattern`: specifies the regex pattern that the ID is expected to match
-
-```java
-@ServiceDefinition(quantifier = Quantifier.MULTIPLE, batch = true)
-public interface HashAlgorithm {
-
-  @ServiceId(pattern = ServiceId.SCREAMING_KEBAB_CASE)
-  String getName();
-
-  String hashToHex(byte[] input);
-
-  static void main(String[] args) {
-    HashAlgorithmLoader.load()
-      .stream()
-      .filter(algo -> algo.getName().equals("SHA-256"))
-      .findFirst()
-      .map(algo -> algo.hashToHex("hello".getBytes(UTF_8)))
-      .ifPresent(System.out::println);
-  }
-}
-```
-_Source: [nbbrd/service/examples/HashAlgorithm.java](java-service-examples/src/main/java/nbbrd/service/examples/HashAlgorithm.java)_
-
 ### @ServiceFilter
 
 The `@ServiceFilter` annotation **specifies the method used to filter a service provider**.
-
-Characteristics:
-- There is no limit to the number of annotations per service.
-- Filtering is done before sorting.
-
-Constraints:
-1. It only applies to methods of a service.
-2. It does not apply to static methods.
-3. The annotated method must have no-args.
-4. The annotated method must return boolean.
-5. The annotated method must not throw checked exceptions.
 
 Properties:
 - `#position`: sets the filter ordering in case of multiple filters
@@ -295,9 +322,11 @@ public interface FileSearch {
 
   List<File> searchByName(String name);
 
+  // 💡 General filter
   @ServiceFilter(position = 1)
   boolean isAvailableOnCurrentOS();
 
+  // 💡 Specific filter
   @ServiceFilter(position = 2, negate = true)
   boolean isDisabledBySystemProperty();
 
@@ -311,20 +340,20 @@ public interface FileSearch {
 ```
 _Source: [nbbrd/service/examples/FileSearch.java](java-service-examples/src/main/java/nbbrd/service/examples/FileSearch.java)_
 
-### @ServiceSorter
-
-The `@ServiceSorter` annotation **specifies the method used to sort a service provider**.
-
 Characteristics:
 - There is no limit to the number of annotations per service.
-- Sorting is done after filtering.
+- Filtering is done before sorting.
 
 Constraints:
 1. It only applies to methods of a service.
 2. It does not apply to static methods.
 3. The annotated method must have no-args.
-4. The annotated method must return double, int, long or comparable.
+4. The annotated method must return boolean.
 5. The annotated method must not throw checked exceptions.
+
+### @ServiceSorter
+
+The `@ServiceSorter` annotation **specifies the method used to sort a service provider**.
 
 Properties:
 - `#position`: sets the sorter ordering in case of multiple sorters
@@ -336,9 +365,11 @@ public interface LargeLanguageModel {
 
   String summarize(String text);
 
+  // 💡 Maximize quality
   @ServiceSorter(position = 1, reverse = true)
   int getQuality();
 
+  // 💡 Minimize cost
   @ServiceSorter(position = 2)
   int getCost();
 
@@ -351,19 +382,32 @@ public interface LargeLanguageModel {
 ```
 _Source: [nbbrd/service/examples/LargeLanguageModel.java](java-service-examples/src/main/java/nbbrd/service/examples/LargeLanguageModel.java)_
 
-### SPI pattern
+Characteristics:
+- There is no limit to the number of annotations per service.
+- Sorting is done after filtering.
 
-In some cases, it is better to clearly separate API from SPI. Here is an example on how to do it:
+Constraints:
+1. It only applies to methods of a service.
+2. It does not apply to static methods.
+3. The annotated method must have no-args.
+4. The annotated method must return double, int, long or comparable.
+5. The annotated method must not throw checked exceptions.
+
+### API vs SPI
+
+In some cases it is better to have a clear separation between API and SPI.
+
+An API is designed to be called and used. It should be simple and foolproof.  
+An SPI is designed to be extended and implemented. It can be complex but should be performant.
+
+Here is an example on how to do it:
 
 ```java
 public final class FileType {
 
-  private FileType() {
-    // static class
-  }
-
+  // 💡 API: designed to be called and used
   public static Optional<String> probeContentType(Path file) throws IOException {
-    for (FileTypeSpi probe : internal.FileTypeSpiLoader.get()) {
+    for (FileTypeSpi probe : FileTypeSpiLoader.get()) {
       String result = probe.getContentTypeOrNull(file);
       if (result != null) return Optional.of(result);
     }
@@ -371,12 +415,12 @@ public final class FileType {
   }
 
   public static void main(String[] args) throws IOException {
-    String[] files = {"hello.csv", "stuff.txt"};
-    for (String file : files) {
+    for (String file : Arrays.asList("hello.csv", "stuff.txt")) {
       System.out.println(file + ": " + FileType.probeContentType(Paths.get(file)).orElse("?"));
     }
   }
 
+  // 💡 SPI: designed to be extended and implemented
   @ServiceDefinition(
       quantifier = Quantifier.MULTIPLE,
       loaderName = "internal.{{canonicalName}}Loader",
@@ -461,6 +505,12 @@ The code of this project is licensed under the [European Union Public Licence (E
 
 ## Related work
 
+This project is not the only one using with the SPI mechanism. Here is a non-exhaustive list of related work:
 - [NetBeans Lookup](https://search.maven.org/search?q=g:org.netbeans.api%20AND%20a:org-openide-util-lookup&core=gav)
 - [Google AutoService](https://www.baeldung.com/google-autoservice)
 - [TOOListicon SPI-Annotation-Processor](https://github.com/toolisticon/SPI-Annotation-Processor)
+
+## Alternatives
+
+The SPI mechanism is not suitable for all use cases. Here are some alternatives:
+- [Dependency injection](https://github.com/akullpp/awesome-java?tab=readme-ov-file#dependency-injection)

@@ -15,12 +15,14 @@ public interface SwingColorScheme {
     List<Color> getColors();
 
     static void main(String[] args) {
+        // 💡 Invisible use of RgbColorScheme
         SwingColorSchemeLoader.load()
                 .stream()
                 .map(SwingColorScheme::getColors)
                 .forEach(System.out::println);
     }
 
+    // 💡 Bridge between SwingColorScheme and RgbColorScheme
     @ServiceProvider(SwingColorSchemeBatch.class)
     final class RgbBridge implements SwingColorSchemeBatch {
 

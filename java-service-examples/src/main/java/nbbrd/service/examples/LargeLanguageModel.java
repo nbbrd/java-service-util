@@ -27,9 +27,11 @@ public interface LargeLanguageModel {
 
     String summarize(String text);
 
+    // 💡 Maximize quality
     @ServiceSorter(position = 1, reverse = true)
     int getQuality();
 
+    // 💡 Minimize cost
     @ServiceSorter(position = 2)
     int getCost();
 
