@@ -5,7 +5,7 @@
 
     <groupId>com.github.nbbrd.java-service-util</groupId>
     <artifactId>java-service-parent</artifactId>
-    <version>1.8.1-SNAPSHOT</version>
+    <version>1.9.0</version>
     <packaging>pom</packaging>
 
     <name>java-service</name>
