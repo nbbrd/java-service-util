@@ -15,7 +15,7 @@ If the service is a single interface then it is the same as a service provider i
 - Java 8 minimum requirement
 - has an automatic module name that makes it compatible with [JPMS](https://www.baeldung.com/java-9-modularity) 
 
-[ [Components](#components) | [Setup](#setup) | [Developing](#developing) | [Contributing](#contributing)  | [Licensing](#licensing) | [Related work](#related-work) | [Alternatives](#alternatives) ]
+[ [Components](#components) | [Design](#design) | [Setup](#setup) | [Developing](#developing) | [Contributing](#contributing)  | [Licensing](#licensing) | [Related work](#related-work) | [Alternatives](#alternatives) ]
 
 ## Components
 
@@ -45,11 +45,11 @@ public interface FooSPI {}
 
 public interface BarSPI {}
 
-// 💡 Provides one service
+// 💡 One provider, one service
 @ServiceProvider
 public class FooProvider implements FooSPI {}
 
-// 💡 Provides multiple services
+// 💡 One provider, multiple services
 @ServiceProvider ( FooSPI.class )
 @ServiceProvider ( BarSPI.class )
 public class FooBarProvider implements FooSPI, BarSPI {}
@@ -62,14 +62,15 @@ Features:
 - generates boilerplate code, thus reducing bugs and improving code coherence
 - improves documentation by declaring services explicitly and generating javadoc
 - checks coherence of service use in modules if `module-info.java` is available
-- allows [custom backend](#backend-and-cleaner-properties)
+- allows [identification](#serviceid)
+- allows [filtering](#servicefilter) and [sorting](#servicesorter)
 - allows [batch loading](#batch-and-batch-name-properties) 
-- allows [identification](#serviceid), [filtering](#servicefilter) and [sorting](#servicesorter)
+- allows [custom backend](#backend-and-cleaner-properties)
 
 Limitations:
 - does not support [type inspection before instantiation](https://github.com/nbbrd/java-service-util/issues/13)
 
-Basic properties:
+Main properties:
 - [`#quantifier`](#quantifier-property): number of services expected at runtime
 - [`#loaderName`](#loader-name-property): custom qualified name of the loader
 - [`#fallback`](#fallback-property): fallback type for `SINGLE` quantifier
@@ -231,14 +232,16 @@ _Source: [nbbrd/service/examples/SwingColorScheme.java](java-service-examples/sr
 
 #### Mutability property
 
-The `#mutability` property allows **on-demand set and reload** of a loader.  
+The `#mutability` property allows **on-demand set and reload** of a loader.
+
 _Example: [nbbrd/service/examples/Messenger.java](java-service-examples/src/main/java/nbbrd/service/examples/Messenger.java)_
 
 ⚠️ _This is a complex mechanism that targets specific usages. It will be removed and/or simplified in a future release._
 
 #### Singleton property
 
-The `#singleton` property specifies the **loader scope**.  
+The `#singleton` property specifies the **loader scope**.
+
 _Example: [nbbrd/service/examples/StatefulAlgorithm.java](java-service-examples/src/main/java/nbbrd/service/examples/StatefulAlgorithm.java)
 and [nbbrd/service/examples/SystemSettings.java](java-service-examples/src/main/java/nbbrd/service/examples/SystemSettings.java)_
 
@@ -247,20 +250,23 @@ and [nbbrd/service/examples/SystemSettings.java](java-service-examples/src/main/
 #### Wrapper property
 
 The `#wrapper` property allows **service decoration** before any map/filter/sort operation.
+
 _Example: `TODO`_
 
 ⚠️ _This is a complex mechanism that targets specific usages. It will be removed and/or simplified in a future release._
 
 #### Preprocessing property
 
-The `#preprocessor` property allows **custom operations on backend** before any map/filter/sort operation.  
+The `#preprocessor` property allows **custom operations on backend** before any map/filter/sort operation.
+
 _Example: `TODO`_
 
 ⚠️ _This is a complex mechanism that targets specific usages. It will be removed and/or simplified in a future release._
 
 #### Backend and cleaner properties
 
-The `#backend` and `#cleaner` properties allow to use a **custom service loader** such as [NetBeans Lookup](https://search.maven.org/search?q=g:org.netbeans.api%20AND%20a:org-openide-util-lookup&core=gav) instead of JDK `ServiceLoader`.  
+The `#backend` and `#cleaner` properties allow to use a **custom service loader** such as [NetBeans Lookup](https://search.maven.org/search?q=g:org.netbeans.api%20AND%20a:org-openide-util-lookup&core=gav) instead of JDK `ServiceLoader`.
+
 _Example: [nbbrd/service/examples/IconProvider.java](java-service-examples/src/main/java/nbbrd/service/examples/IconProvider.java)_
 
 ⚠️ _This is a complex mechanism that targets specific usages. It will be removed and/or simplified in a future release._
@@ -392,6 +398,8 @@ Constraints:
 3. The annotated method must have no-args.
 4. The annotated method must return double, int, long or comparable.
 5. The annotated method must not throw checked exceptions.
+
+## Design
 
 ### API vs SPI
 
