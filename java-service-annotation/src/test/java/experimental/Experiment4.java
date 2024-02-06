@@ -38,7 +38,7 @@ public class Experiment4 {
          *
          * @return a class name
          */
-        ClassName loaderName() default @ClassName;
+        String loaderName() default "";
     }
 
     @Documented
@@ -52,7 +52,7 @@ public class Experiment4 {
          *
          * @return a class name
          */
-        ClassName loaderName() default @ClassName;
+        String loaderName() default "";
 
         /**
          * Specifies the fallback class to use if no service is available.
@@ -80,7 +80,7 @@ public class Experiment4 {
          *
          * @return a class name
          */
-        ClassName loaderName() default @ClassName;
+        String loaderName() default "";
 
         /**
          * Specifies the batch class to use during loading.
@@ -109,7 +109,7 @@ public class Experiment4 {
          *
          * @return a class name
          */
-        ClassName adapterName() default @ClassName;
+        String adapterName() default "";
 
         /**
          * Specifies the mutability of the adapter.
@@ -159,7 +159,7 @@ public class Experiment4 {
 
         @MultipleService(batch = Void.class)
         @ServiceDefinitionAdapter(
-                adapterName = @ClassName(simpleName = "internal.FileTypeSpiLoader"),
+                adapterName = "internal.FileTypeSpiLoader",
                 mutability = Mutability.CONCURRENT,
                 singleton = true
         )

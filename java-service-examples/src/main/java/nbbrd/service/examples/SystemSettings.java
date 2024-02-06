@@ -22,14 +22,13 @@ import nbbrd.service.ServiceDefinition;
  *
  * @author Philippe Charles
  */
-@ServiceDefinition(
-        singleton = true
-)
+@ServiceDefinition(singleton = true)
 public interface SystemSettings {
 
     String getDeviceName();
 
     static void main(String[] args) {
-        SystemSettingsLoader.get().ifPresent(sys -> System.out.println(sys.getDeviceName()));
+        SystemSettingsLoader.get()
+                .ifPresent(sys -> System.out.println(sys.getDeviceName()));
     }
 }

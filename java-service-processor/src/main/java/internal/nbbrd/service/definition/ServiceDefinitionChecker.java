@@ -23,25 +23,30 @@ import nbbrd.service.Quantifier;
 import nbbrd.service.ServiceDefinition;
 
 import javax.annotation.processing.ProcessingEnvironment;
+import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.PrimitiveType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
+import javax.lang.model.util.ElementFilter;
 import javax.lang.model.util.Types;
 import javax.tools.Diagnostic;
 import java.io.IOException;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
+import java.util.function.Predicate;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
+import java.util.stream.Stream;
+
+import static javax.lang.model.element.Modifier.*;
 
 /**
  * @author Philippe Charles
  */
+@SuppressWarnings({"OptionalUsedAsFieldOrParameterType", "RedundantIfStatement"})
 final class ServiceDefinitionChecker {
 
     private final ExtEnvironment env;
@@ -168,7 +173,7 @@ final class ServiceDefinitionChecker {
         Types types = env.getTypeUtils();
         TypeElement service = env.asTypeElement(definition.getServiceType());
 
-        if (!checkFallback(definition.getQuantifier(), definition.getFallback(), definition.isNoFallback(), service, types)) {
+        if (!checkFallback(definition.getQuantifier(), definition.getFallback(), definition.isNoFallback() || isSingleFallbackNotExpected(service), service, types)) {
             return false;
         }
         if (!checkWrapper(definition.getWrapper(), service, types)) {
@@ -183,7 +188,10 @@ final class ServiceDefinitionChecker {
         if (!checkCleaner(definition.getCleaner(), service, types)) {
             return false;
         }
-        if (!checkMutability(definition, service, types)) {
+        if (!checkMutability(definition, service)) {
+            return false;
+        }
+        if (!checkBatch(definition, service)) {
             return false;
         }
         return true;
@@ -312,11 +320,40 @@ final class ServiceDefinitionChecker {
         return true;
     }
 
-    private boolean checkMutability(LoadDefinition definition, TypeElement service, Types types) {
+    private boolean checkMutability(LoadDefinition definition, TypeElement service) {
         if (definition.getLifecycle() == Lifecycle.UNSAFE_MUTABLE) {
             env.warn(service, String.format(Locale.ROOT, "Thread-unsafe singleton for '%1$s'", service));
         }
         return true;
+    }
+
+    private boolean checkBatch(LoadDefinition definition, TypeElement service) {
+        if (definition.getBatchType().isPresent()) {
+            if (definition.isBatch()) {
+                env.error(service, "Batch type cannot be used with batch property");
+                return false;
+            }
+            TypeElement x = env.asTypeElement(definition.getBatchType().get());
+            if (x.getKind() != ElementKind.INTERFACE && !x.getModifiers().contains(ABSTRACT)) {
+                env.error(service, "[RULE_B1] Batch type must be an interface or an abstract class");
+                return false;
+            }
+            if (ElementFilter.methodsIn(x.getEnclosedElements()).stream().filter(batchMethodFilter(service)).count() != 1) {
+                env.error(service, "[RULE_B2] Batch method must be unique");
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private Predicate<ExecutableElement> batchMethodFilter(TypeElement service) {
+        DeclaredType streamType = env.getTypeUtils().getDeclaredType(env.asTypeElement(Stream.class), service.asType());
+        return method -> method.getModifiers().contains(PUBLIC)
+                && !method.getModifiers().contains(STATIC)
+                && method.getParameters().isEmpty()
+                && method.getSimpleName().contentEquals("getProviders")
+                && env.getTypeUtils().isAssignable(method.getReturnType(), streamType)
+                && !hasCheckedExceptions(method);
     }
 
     private boolean checkInstanceFactories(TypeElement annotatedElement, TypeMirror type, TypeInstantiator instance) {
@@ -346,5 +383,10 @@ final class ServiceDefinitionChecker {
         } catch (PatternSyntaxException ex) {
             return false;
         }
+    }
+
+    private static boolean isSingleFallbackNotExpected(TypeElement service) {
+        SuppressWarnings annotation = service.getAnnotation(SuppressWarnings.class);
+        return annotation != null && Arrays.asList(annotation.value()).contains(ServiceDefinition.SINGLE_FALLBACK_NOT_EXPECTED);
     }
 }

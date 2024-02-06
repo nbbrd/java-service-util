@@ -1,6 +1,6 @@
 package nbbrd.service.examples;
 
-import internal.FileTypeSpiLoader;
+import internal.nbbrd.service.examples.FileTypeSpiLoader;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -13,7 +13,7 @@ public class FileTypeSpiTest {
         assertThat(FileTypeSpiLoader.get())
                 .containsExactlyElementsOf(FileTypeSpiLoader.get())
                 .hasSize(2)
-                .satisfies(o -> assertThat(o).isInstanceOf(FileTypeSpi.ByMagicNumberProbe.class), atIndex(0))
-                .satisfies(o -> assertThat(o).isInstanceOf(FileTypeSpi.ByExtensionProbe.class), atIndex(1));
+                .satisfies(o -> assertThat(o).isInstanceOf(FileType.ByMagicNumberProbe.class), atIndex(0))
+                .satisfies(o -> assertThat(o).isInstanceOf(FileType.ByExtensionProbe.class), atIndex(1));
     }
 }

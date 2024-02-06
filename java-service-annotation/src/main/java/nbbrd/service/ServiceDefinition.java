@@ -99,7 +99,9 @@ public @interface ServiceDefinition {
      * Specifies if fallback class is unexpected.
      *
      * @return true if fallback class is expected, false otherwise
+     * @deprecated Use {@link #SINGLE_FALLBACK_NOT_EXPECTED} instead
      */
+    @Deprecated
     boolean noFallback() default false;
 
     /**
@@ -134,8 +136,14 @@ public @interface ServiceDefinition {
     Class<? extends UnaryOperator<? extends Stream>> preprocessor() default NoProcessing.class;
 
     /**
-     * Specifies the fully qualified name of the loader. An empty value
-     * generates an automatic name.
+     * Specifies the fully qualified name of the loader.<br>
+     * An empty value generates an automatic name.
+     * A non-empty value is interpreted as a <a href="https://mustache.github.io/">Mustache template</a> with the following tags:
+     * <ul>
+     *     <li><code>{{packageName}}</code>: The package name of the service class, or "" if this is in the default package.</li>
+     *     <li><code>{{simpleName}}</code>: The service class name.</li>
+     *     <li><code>{{canonicalName}}</code>: The full service class name.</li>
+     * </ul>
      *
      * @return a fully qualified name
      */
@@ -177,16 +185,39 @@ public @interface ServiceDefinition {
      * Specifies if batch loading should be allowed.
      *
      * @return true if batch loading should be allowed, false otherwise
+     * @deprecated use {@link #batchType()} instead
      */
+    @Deprecated
     boolean batch() default false;
 
     /**
-     * Specifies the fully qualified name of the batch loading. An empty value
-     * generates an automatic name.
+     * Specifies the fully qualified name of the batch loading.
+     * An empty value generates an automatic name.
+     * A non-empty value is interpreted as a <a href="https://mustache.github.io/">Mustache template</a> with the following tags:
+     * <ul>
+     *     <li><code>{{packageName}}</code>: The package name of the service class, or "" if this is in the default package.</li>
+     *     <li><code>{{simpleName}}</code>: The service class name.</li>
+     *     <li><code>{{canonicalName}}</code>: The full service class name.</li>
+     * </ul>
      *
      * @return a fully qualified name
+     * @deprecated use {@link #batchType()} instead
      */
+    @Deprecated
     String batchName() default "";
+
+    /**
+     * Specifies the batch class to use in batch loading.
+     * <p>
+     * Requirements:
+     * <ol>
+     * <li>Batch type must be an interface or an abstract class</li>
+     * <li>Batch method must be unique</li>
+     * </ol>
+     *
+     * @return the batch class if required, {@link Void} otherwise
+     */
+    Class<?> batchType() default Void.class;
 
     @SuppressWarnings("rawtypes")
     final class NoProcessing implements UnaryOperator<Stream> {
@@ -215,4 +246,9 @@ public @interface ServiceDefinition {
             ((ServiceLoader) serviceLoader).reload();
         }
     }
+
+    /**
+     * Name to suppress single-fallback warning using @{@link SuppressWarnings}
+     */
+    String SINGLE_FALLBACK_NOT_EXPECTED = "SingleFallbackNotExpected";
 }

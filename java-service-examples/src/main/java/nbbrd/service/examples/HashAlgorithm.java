@@ -14,23 +14,31 @@ import java.util.stream.Stream;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
-@ServiceDefinition(quantifier = Quantifier.MULTIPLE, batch = true)
+@ServiceDefinition(quantifier = Quantifier.MULTIPLE, batchType = HashAlgorithm.Batch.class)
 public interface HashAlgorithm {
 
+    // 💡 Enforce service naming
     @ServiceId(pattern = ServiceId.SCREAMING_KEBAB_CASE)
     String getName();
 
     String hashToHex(byte[] input);
 
     static void main(String[] args) {
-        HashAlgorithmLoader.load().stream()
+        // 💡 Retrieve service by name
+        HashAlgorithmLoader.load()
+                .stream()
                 .filter(algo -> algo.getName().equals("SHA-256"))
                 .findFirst()
-                .ifPresent(algo -> System.out.println(algo.hashToHex("hello".getBytes(UTF_8))));
+                .map(algo -> algo.hashToHex("hello".getBytes(UTF_8)))
+                .ifPresent(System.out::println);
+    }
+
+    interface Batch {
+        Stream<HashAlgorithm> getProviders();
     }
 
     @ServiceProvider
-    class MessageDigestBridge implements HashAlgorithmBatch {
+    class MessageDigestBridge implements Batch {
 
         @Override
         public Stream<HashAlgorithm> getProviders() {
