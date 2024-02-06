@@ -64,7 +64,7 @@ Features:
 - checks coherence of service use in modules if `module-info.java` is available
 - allows [identification](#serviceid)
 - allows [filtering](#servicefilter) and [sorting](#servicesorter)
-- allows [batch loading](#batch-and-batch-name-properties) 
+- allows [batch loading](#batch-type-property) 
 - allows [custom backend](#backend-and-cleaner-properties)
 
 Limitations:
@@ -74,7 +74,7 @@ Main properties:
 - [`#quantifier`](#quantifier-property): number of services expected at runtime
 - [`#loaderName`](#loader-name-property): custom qualified name of the loader
 - [`#fallback`](#fallback-property): fallback type for `SINGLE` quantifier
-- [`#batch` `#batchName`](#batch-and-batch-name-properties): bridge different services and generate providers on the fly
+- [`#batchType`](#batch-type-property): bridge different services and generate providers on the fly
 
 Advanced properties:
 - [`#mutability`](#mutability-property): on-demand set and reload
@@ -197,12 +197,13 @@ public class NoOpFooProvider implements FooSPI { }
 _Note that a warning is raised at compile time if the fallback is missing 
 but this warning can be disabled with the `@SupressWarning("SingleFallbackNotExpected")` annotation._
 
-#### Batch and batch name properties
+#### Batch type property
 
-The `#batch` and `#batchName` properties allow to **bridge different services** and to **generate providers on the fly**.
+The `#batchType` property allows to **bridge different services** and to **generate providers on the fly**.  
+Batch providers are used alongside regular providers.
 
 ```java
-@ServiceDefinition(batch = true, quantifier = Quantifier.MULTIPLE)
+@ServiceDefinition(quantifier = Quantifier.MULTIPLE, batchType = SwingColorScheme.Batch.class)
 public interface SwingColorScheme {
 
   List<Color> getColors();
@@ -215,9 +216,13 @@ public interface SwingColorScheme {
         .forEach(System.out::println);
   }
 
+  interface Batch {
+    Stream<SwingColorScheme> getProviders();
+  }
+  
   // 💡 Bridge between SwingColorScheme and RgbColorScheme
-  @ServiceProvider(SwingColorSchemeBatch.class)
-  final class RgbBridge implements SwingColorSchemeBatch {
+  @ServiceProvider(Batch.class)
+  final class RgbBridge implements Batch {
 
     @Override
     public Stream<SwingColorScheme> getProviders() {
@@ -226,9 +231,23 @@ public interface SwingColorScheme {
           .map(RgbAdapter::new);
     }
   }
+
+  // 💡 Regular provider
+  @ServiceProvider(SwingColorScheme.class)
+  final class Cyan implements SwingColorScheme {
+
+    @Override
+    public List<Color> getColors() {
+      return Collections.singletonList(Color.CYAN);
+    }
+  }
 }
 ```
 _Source: [nbbrd/service/examples/SwingColorScheme.java](java-service-examples/src/main/java/nbbrd/service/examples/SwingColorScheme.java)_
+
+Constraints:
+1. Batch type must be an interface or an abstract class.
+2. Batch method must be unique.
 
 #### Mutability property
 
@@ -279,7 +298,7 @@ Properties:
 - `#pattern`: specifies the regex pattern that the ID is expected to match
 
 ```java
-@ServiceDefinition(quantifier = Quantifier.MULTIPLE, batch = true)
+@ServiceDefinition(quantifier = Quantifier.MULTIPLE)
 public interface HashAlgorithm {
 
   // 💡 Enforce service naming

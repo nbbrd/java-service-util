@@ -74,6 +74,9 @@ class LoadDefinition {
     @lombok.NonNull
     String batchName;
 
+    @lombok.NonNull
+    Optional<TypeMirror> batchType;
+
     public @NonNull ClassName resolveLoaderName() {
         return resolveName(loaderName, serviceType, "Loader");
     }

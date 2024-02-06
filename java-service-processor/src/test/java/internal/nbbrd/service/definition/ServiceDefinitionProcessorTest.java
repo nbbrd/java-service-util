@@ -701,6 +701,61 @@ public class ServiceDefinitionProcessorTest {
                     .extracting(Compilations::contentsAsUtf8String, STRING)
                     .isEqualToIgnoringNewLines(contentsAsUtf8String(forResource("definition/expected/TestBatchReloadingLoader.java")));
         }
+
+        @Test
+        public void testValidType() {
+            JavaFileObject file = forResource("definition/TestBatchValidType.java");
+            Compilation compilation = compile(file);
+
+            assertThat(compilation)
+//                    .has(succeededWithoutWarnings())
+                    .extracting(Compilation::generatedSourceFiles, JAVA_FILE_OBJECTS)
+                    .singleElement()
+                    .extracting(Compilations::contentsAsUtf8String, STRING)
+                    .contains(
+                            "private final Iterable<TestBatchValidType.SomeBatch> batch = ServiceLoader.load(TestBatchValidType.SomeBatch.class);",
+                            "Stream.concat(StreamSupport.stream(source.spliterator(), false), StreamSupport.stream(batch.spliterator(), false).flatMap(o -> o.getProviders()))"
+                    );
+        }
+
+        @Test
+        public void testPropertyType() {
+            JavaFileObject file = forResource("definition/TestBatchPropertyType.java");
+
+            assertThat(compile(file))
+                    .has(failed())
+                    .extracting(Compilation::errors, DIAGNOSTICS)
+                    .singleElement()
+                    .returns("Batch type cannot be used with batch property", Compilations::getDefaultMessage)
+                    .returns(file, Diagnostic::getSource)
+                    .returns(8L, Diagnostic::getLineNumber);
+        }
+
+        @Test
+        public void testInvalidType() {
+            JavaFileObject file = forResource("definition/TestBatchInvalidType.java");
+
+            assertThat(compile(file))
+                    .has(failed())
+                    .extracting(Compilation::errors, DIAGNOSTICS)
+                    .singleElement()
+                    .returns("[RULE_B1] Batch type must be an interface or an abstract class", Compilations::getDefaultMessage)
+                    .returns(file, Diagnostic::getSource)
+                    .returns(8L, Diagnostic::getLineNumber);
+        }
+
+        @Test
+        public void testMethodUnique() {
+            JavaFileObject file = forResource("definition/TestBatchTypeMethodUnique.java");
+
+            assertThat(compile(file))
+                    .has(failed())
+                    .extracting(Compilation::errors, DIAGNOSTICS)
+                    .singleElement()
+                    .returns("[RULE_B2] Batch method must be unique", Compilations::getDefaultMessage)
+                    .returns(file, Diagnostic::getSource)
+                    .returns(8L, Diagnostic::getLineNumber);
+        }
     }
 
     @Nested

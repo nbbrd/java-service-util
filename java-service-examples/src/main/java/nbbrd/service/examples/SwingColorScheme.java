@@ -5,11 +5,12 @@ import nbbrd.service.ServiceDefinition;
 import nbbrd.service.ServiceProvider;
 
 import java.awt.*;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-@ServiceDefinition(batch = true, quantifier = Quantifier.MULTIPLE)
+@ServiceDefinition(quantifier = Quantifier.MULTIPLE, batchType = SwingColorScheme.Batch.class)
 public interface SwingColorScheme {
 
     List<Color> getColors();
@@ -22,15 +23,29 @@ public interface SwingColorScheme {
                 .forEach(System.out::println);
     }
 
+    interface Batch {
+        Stream<SwingColorScheme> getProviders();
+    }
+
     // 💡 Bridge between SwingColorScheme and RgbColorScheme
-    @ServiceProvider(SwingColorSchemeBatch.class)
-    final class RgbBridge implements SwingColorSchemeBatch {
+    @ServiceProvider(Batch.class)
+    final class RgbBridge implements Batch {
 
         @Override
         public Stream<SwingColorScheme> getProviders() {
             return RgbColorSchemeLoader.load()
                     .stream()
                     .map(RgbAdapter::new);
+        }
+    }
+
+    // 💡 Regular provider
+    @ServiceProvider(SwingColorScheme.class)
+    final class Cyan implements SwingColorScheme {
+
+        @Override
+        public List<Color> getColors() {
+            return Collections.singletonList(Color.CYAN);
         }
     }
 

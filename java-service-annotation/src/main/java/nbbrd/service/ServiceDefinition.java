@@ -185,7 +185,9 @@ public @interface ServiceDefinition {
      * Specifies if batch loading should be allowed.
      *
      * @return true if batch loading should be allowed, false otherwise
+     * @deprecated use {@link #batchType()} instead
      */
+    @Deprecated
     boolean batch() default false;
 
     /**
@@ -199,8 +201,23 @@ public @interface ServiceDefinition {
      * </ul>
      *
      * @return a fully qualified name
+     * @deprecated use {@link #batchType()} instead
      */
+    @Deprecated
     String batchName() default "";
+
+    /**
+     * Specifies the batch class to use in batch loading.
+     * <p>
+     * Requirements:
+     * <ol>
+     * <li>Batch type must be an interface or an abstract class</li>
+     * <li>Batch method must be unique</li>
+     * </ol>
+     *
+     * @return the batch class if required, {@link Void} otherwise
+     */
+    Class<?> batchType() default Void.class;
 
     @SuppressWarnings("rawtypes")
     final class NoProcessing implements UnaryOperator<Stream> {

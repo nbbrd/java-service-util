@@ -115,6 +115,8 @@ final class ServiceDefinitionCollector {
         Optional<TypeInstantiator> cleaner = nonNull(annotation::cleaner, ServiceDefinition.DefaultCleaner.class)
                 .map(type -> new TypeInstantiator(type, Instantiator.allOf(types, env.asTypeElement(type), env.asTypeElement(type))));
 
+        Optional<TypeMirror> batchType = nonNull(annotation::batchType, Void.class);
+
         return LoadDefinition
                 .builder()
                 .quantifier(annotation.quantifier())
@@ -129,6 +131,7 @@ final class ServiceDefinitionCollector {
                 .cleaner(cleaner)
                 .batch(annotation.batch())
                 .batchName(annotation.batchName())
+                .batchType(batchType)
                 .build();
     }
 

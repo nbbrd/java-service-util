@@ -424,14 +424,24 @@ class ServiceDefinitionGenerator {
     }
 
     private Optional<FieldSpec> getBatchField() {
-        return definition.isBatch()
-                ? Optional.of(FieldSpec
-                .builder(typeOf(Iterable.class, definition.resolveBatchName()), fieldName("batch"))
-                .addModifiers(PRIVATE, FINAL)
-                .addModifiers(getSingletonModifiers())
-                .initializer("$L", getBackendInitCode(definition.resolveBatchName()))
-                .build())
-                : Optional.empty();
+        if (definition.isBatch()) {
+            return Optional.of(FieldSpec
+                    .builder(typeOf(Iterable.class, definition.resolveBatchName()), fieldName("batch"))
+                    .addModifiers(PRIVATE, FINAL)
+                    .addModifiers(getSingletonModifiers())
+                    .initializer("$L", getBackendInitCode(definition.resolveBatchName()))
+                    .build());
+        }
+        if (definition.getBatchType().isPresent()) {
+            ClassName batchTypeName = ClassName.bestGuess(definition.getBatchType().get().toString());
+            return Optional.of(FieldSpec
+                    .builder(typeOf(Iterable.class, batchTypeName), fieldName("batch"))
+                    .addModifiers(PRIVATE, FINAL)
+                    .addModifiers(getSingletonModifiers())
+                    .initializer("$L", getBackendInitCode(batchTypeName))
+                    .build());
+        }
+        return Optional.empty();
     }
 
     @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
