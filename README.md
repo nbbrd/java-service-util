@@ -532,10 +532,12 @@ The code of this project is licensed under the [European Union Public Licence (E
 
 ## Related work
 
-This project is not the only one using with the SPI mechanism. Here is a non-exhaustive list of related work:
+This project is not the only one using with the SPI mechanism.  
+Here is a non-exhaustive list of related work:
 - [NetBeans Lookup](https://search.maven.org/search?q=g:org.netbeans.api%20AND%20a:org-openide-util-lookup&core=gav)
 - [Google AutoService](https://www.baeldung.com/google-autoservice)
 - [TOOListicon SPI-Annotation-Processor](https://github.com/toolisticon/SPI-Annotation-Processor)
+- [Kordamp Jipsy](https://github.com/kordamp/jipsy)
 
 ## Alternatives
 
