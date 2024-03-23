@@ -17,7 +17,7 @@
     <url>https://github.com/nbbrd/java-service-util</url>
 
     <properties>
-        <cute.version>1.1.0</cute.version>
+        <cute.version>1.4.0</cute.version>
     </properties>
 
     <dependencies>
