@@ -77,7 +77,9 @@ public @interface ServiceDefinition {
      * Specifies if the loader must be a singleton.
      *
      * @return true if the loader is a singleton, false otherwise
+     * @deprecated Don't use this option because it is the source of many class loading issues.
      */
+    @Deprecated
     boolean singleton() default false;
 
     /**
