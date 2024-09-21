@@ -58,7 +58,7 @@
             <dependency>
                 <groupId>org.netbeans.api</groupId>
                 <artifactId>org-openide-util-lookup</artifactId>
-                <version>RELEASE220</version>
+                <version>RELEASE230</version>
             </dependency>
             <dependency>
                 <groupId>org.checkerframework</groupId>
