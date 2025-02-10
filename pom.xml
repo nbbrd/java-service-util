@@ -51,16 +51,6 @@
         <dependencies>
             <!-- annotations & processors -->
             <dependency>
-                <groupId>org.projectlombok</groupId>
-                <artifactId>lombok</artifactId>
-                <version>1.18.36</version>
-            </dependency>
-            <dependency>
-                <groupId>org.netbeans.api</groupId>
-                <artifactId>org-openide-util-lookup</artifactId>
-                <version>RELEASE240</version>
-            </dependency>
-            <dependency>
                 <groupId>org.checkerframework</groupId>
                 <artifactId>checker-qual</artifactId>
                 <version>3.49.0</version>
@@ -292,15 +282,124 @@
             </build>
         </profile>
 
-        <!-- Enforce Java8 API -->
+        <!-- Base processors -->
         <profile>
-            <id>enforce-java8-api</id>
+            <id>base-processors</id>
             <activation>
-                <jdk>[11,)</jdk>
+                <property>
+                    <name>!skipBaseProcessors</name>
+                </property>
             </activation>
             <properties>
-                <maven.compiler.release>8</maven.compiler.release>
+                <lombok.version>1.18.36</lombok.version>
+                <netbeans.version>RELEASE240</netbeans.version>
             </properties>
+            <dependencyManagement>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.projectlombok</groupId>
+                        <artifactId>lombok</artifactId>
+                        <version>${lombok.version}</version>
+                    </dependency>
+                    <dependency>
+                        <groupId>org.netbeans.api</groupId>
+                        <artifactId>org-openide-util-lookup</artifactId>
+                        <version>${netbeans.version}</version>
+                    </dependency>
+                </dependencies>
+            </dependencyManagement>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-compiler-plugin</artifactId>
+                        <configuration>
+                            <annotationProcessorPaths>
+                                <path>
+                                    <groupId>org.projectlombok</groupId>
+                                    <artifactId>lombok</artifactId>
+                                    <version>${lombok.version}</version>
+                                </path>
+                                <path>
+                                    <groupId>org.netbeans.api</groupId>
+                                    <artifactId>org-openide-util-lookup</artifactId>
+                                    <version>${netbeans.version}</version>
+                                </path>
+                            </annotationProcessorPaths>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
+        <!-- Run Java8 build with JPMS on JDK9+ -->
+        <profile>
+            <id>java8-with-jpms</id>
+            <activation>
+                <jdk>[9,)</jdk>
+            </activation>
+            <properties>
+                <!-- Fix NetBeans bug with test packages -->
+                <maven.compiler.target>9</maven.compiler.target>
+                <maven.compiler.source>9</maven.compiler.source>
+            </properties>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-compiler-plugin</artifactId>
+                        <executions>
+                            <!-- First: compile all as Java9 -->
+                            <execution>
+                                <id>default-compile</id>
+                                <configuration>
+                                    <release>9</release>
+                                </configuration>
+                            </execution>
+                            <!-- Second: recompile all but module-info as Java8 -->
+                            <execution>
+                                <id>base-compile</id>
+                                <goals>
+                                    <goal>compile</goal>
+                                </goals>
+                                <configuration>
+                                    <source>8</source>
+                                    <target>8</target>
+                                    <excludes>
+                                        <exclude>module-info.java</exclude>
+                                    </excludes>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
+        <!-- Run Java8 build without JPMS on JDK8 -->
+        <profile>
+            <id>java8-without-jpms</id>
+            <activation>
+                <jdk>1.8</jdk>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-compiler-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>default-compile</id>
+                                <configuration>
+                                    <excludes>
+                                        <exclude>module-info.java</exclude>
+                                    </excludes>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
         </profile>
 
         <!-- Enforce dependency & Maven-central rules -->
