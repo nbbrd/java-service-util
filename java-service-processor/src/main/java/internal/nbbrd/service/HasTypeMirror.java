@@ -1,6 +1,6 @@
 package internal.nbbrd.service;
 
-import org.checkerframework.checker.nullness.qual.NonNull;
+import lombok.NonNull;
 
 import javax.lang.model.type.TypeMirror;
 

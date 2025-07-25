@@ -16,7 +16,7 @@
  */
 package internal.nbbrd.service;
 
-import org.checkerframework.checker.nullness.qual.NonNull;
+import lombok.NonNull;
 
 import java.util.Arrays;
 import java.util.List;

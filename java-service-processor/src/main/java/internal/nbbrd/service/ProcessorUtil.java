@@ -17,7 +17,7 @@
 package internal.nbbrd.service;
 
 import com.squareup.javapoet.JavaFile;
-import org.checkerframework.checker.nullness.qual.NonNull;
+import lombok.NonNull;
 
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.type.MirroredTypeException;

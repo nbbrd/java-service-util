@@ -20,7 +20,7 @@ import com.github.mustachejava.DefaultMustacheFactory;
 import com.squareup.javapoet.ClassName;
 import internal.nbbrd.service.ExtEnvironment;
 import nbbrd.service.Quantifier;
-import org.checkerframework.checker.nullness.qual.NonNull;
+import lombok.NonNull;
 
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Types;

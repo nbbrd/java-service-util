@@ -18,7 +18,7 @@ package internal.nbbrd.service.definition;
 
 import internal.nbbrd.service.Unreachable;
 import nbbrd.service.Mutability;
-import org.checkerframework.checker.nullness.qual.NonNull;
+import lombok.NonNull;
 
 /**
  * @author Philippe Charles

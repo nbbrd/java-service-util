@@ -18,7 +18,7 @@ package internal.nbbrd.service.definition;
 
 import internal.nbbrd.service.HasTypeMirror;
 import internal.nbbrd.service.Wrapper;
-import org.checkerframework.checker.nullness.qual.NonNull;
+import lombok.NonNull;
 
 import javax.lang.model.type.TypeMirror;
 import java.util.List;

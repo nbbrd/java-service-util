@@ -2,7 +2,7 @@ package internal.nbbrd.service.provider;
 
 import lombok.AccessLevel;
 import lombok.NonNull;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /**
  * <a href="https://docs.oracle.com/javase/8/docs/api/java/util/ServiceLoader.html">...</a>

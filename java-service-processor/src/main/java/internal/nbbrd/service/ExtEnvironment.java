@@ -17,8 +17,8 @@
 package internal.nbbrd.service;
 
 import com.squareup.javapoet.ClassName;
-import org.checkerframework.checker.nullness.qual.NonNull;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import lombok.NonNull;
+import org.jspecify.annotations.Nullable;
 
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.Element;
