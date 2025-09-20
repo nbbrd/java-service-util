@@ -285,7 +285,7 @@
                 </property>
             </activation>
             <properties>
-                <lombok.version>1.18.40</lombok.version>
+                <lombok.version>1.18.42</lombok.version>
                 <netbeans.version>RELEASE270</netbeans.version>
             </properties>
             <dependencyManagement>
