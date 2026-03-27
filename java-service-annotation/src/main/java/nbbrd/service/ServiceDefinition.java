@@ -42,11 +42,18 @@ public @interface ServiceDefinition {
     Quantifier quantifier() default Quantifier.OPTIONAL;
 
     /**
-     * Specifies the mutability of the loader.
+     * Specifies the fully qualified name of the loader.<br>
+     * An empty value generates an automatic name.
+     * A non-empty value is interpreted as a <a href="https://mustache.github.io/">Mustache template</a> with the following tags:
+     * <ul>
+     *     <li><code>{{packageName}}</code>: The package name of the service class, or "" if this is in the default package.</li>
+     *     <li><code>{{simpleName}}</code>: The service class name.</li>
+     *     <li><code>{{canonicalName}}</code>: The full service class name.</li>
+     * </ul>
      *
-     * @return a non-null mutability
+     * @return a fully qualified name
      */
-    Mutability mutability() default Mutability.NONE;
+    String loaderName() default "";
 
     /**
      * Specifies the fallback class to use if no service is available.<br>This
@@ -64,6 +71,28 @@ public @interface ServiceDefinition {
     Class<?> fallback() default Void.class;
 
     /**
+     * Specifies the batch class to use in batch loading.
+     * <p>
+     * Requirements:
+     * <ol>
+     * <li>Batch type must be an interface or an abstract class</li>
+     * <li>Batch method must be unique</li>
+     * </ol>
+     *
+     * @return the batch class if required, {@link Void} otherwise
+     */
+    Class<?> batchType() default Void.class;
+
+    /**
+     * Specifies the mutability of the loader.
+     *
+     * @return a non-null mutability
+     * @deprecated This is a complex mechanism that targets specific usages. It will be removed and/or simplified in a future release.
+     */
+    @Deprecated
+    Mutability mutability() default Mutability.NONE;
+
+    /**
      * Specifies the wrapper class to be used in basic preprocessing.
      * <p>
      * Requirements:
@@ -74,7 +103,9 @@ public @interface ServiceDefinition {
      * </ul>
      *
      * @return the wrapper class if required, {@link Void} otherwise
+     * @deprecated This is a complex mechanism that targets specific usages. It will be removed and/or simplified in a future release.
      */
+    @Deprecated
     Class<?> wrapper() default Void.class;
 
     /**
@@ -91,22 +122,10 @@ public @interface ServiceDefinition {
      *
      * @return the preprocessor class if required, {@link NoProcessing}
      * otherwise
+     * @deprecated This is a complex mechanism that targets specific usages. It will be removed and/or simplified in a future release.
      */
+    @Deprecated
     Class<? extends UnaryOperator<? extends Stream>> preprocessor() default NoProcessing.class;
-
-    /**
-     * Specifies the fully qualified name of the loader.<br>
-     * An empty value generates an automatic name.
-     * A non-empty value is interpreted as a <a href="https://mustache.github.io/">Mustache template</a> with the following tags:
-     * <ul>
-     *     <li><code>{{packageName}}</code>: The package name of the service class, or "" if this is in the default package.</li>
-     *     <li><code>{{simpleName}}</code>: The service class name.</li>
-     *     <li><code>{{canonicalName}}</code>: The full service class name.</li>
-     * </ul>
-     *
-     * @return a fully qualified name
-     */
-    String loaderName() default "";
 
     /**
      * Specifies the class that creates a service loader.
@@ -121,7 +140,9 @@ public @interface ServiceDefinition {
      *
      * @return the backend class if required, {@link DefaultBackend}
      * otherwise
+     * @deprecated This is a complex mechanism that targets specific usages. It will be removed and/or simplified in a future release.
      */
+    @Deprecated
     Class<? extends Function<? extends Class, ? extends Iterable>> backend() default DefaultBackend.class;
 
     /**
@@ -137,23 +158,13 @@ public @interface ServiceDefinition {
      *
      * @return the backend class if required, {@link DefaultCleaner}
      * otherwise
+     * @deprecated This is a complex mechanism that targets specific usages. It will be removed and/or simplified in a future release.
      */
+    @Deprecated
     Class<? extends Consumer<? extends Iterable>> cleaner() default DefaultCleaner.class;
 
-    /**
-     * Specifies the batch class to use in batch loading.
-     * <p>
-     * Requirements:
-     * <ol>
-     * <li>Batch type must be an interface or an abstract class</li>
-     * <li>Batch method must be unique</li>
-     * </ol>
-     *
-     * @return the batch class if required, {@link Void} otherwise
-     */
-    Class<?> batchType() default Void.class;
-
     @SuppressWarnings("rawtypes")
+    @Deprecated
     final class NoProcessing implements UnaryOperator<Stream> {
 
         @Override
@@ -163,6 +174,7 @@ public @interface ServiceDefinition {
     }
 
     @SuppressWarnings("rawtypes")
+    @Deprecated
     final class DefaultBackend implements Function<Class, Iterable> {
 
         @SuppressWarnings("unchecked")
@@ -173,6 +185,7 @@ public @interface ServiceDefinition {
     }
 
     @SuppressWarnings("rawtypes")
+    @Deprecated
     final class DefaultCleaner implements Consumer<Iterable> {
 
         @Override
