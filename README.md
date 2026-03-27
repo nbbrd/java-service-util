@@ -79,7 +79,6 @@ Main properties:
 
 Advanced properties:
 - [`#mutability`](#mutability-property): on-demand set and reload
-- [`#preprocessing`](#preprocessing-property): custom operations on backend
 - [`#backend` `#cleaner`](#backend-and-cleaner-properties): custom service loader
 
 #### Quantifier property
@@ -253,14 +252,6 @@ Constraints:
 The `#mutability` property allows **on-demand set and reload** of a loader.
 
 _Example: [nbbrd/service/examples/Messenger.java](java-service-examples/src/main/java/nbbrd/service/examples/Messenger.java)_
-
-⚠️ _This is a complex mechanism that targets specific usages. It will be removed and/or simplified in a future release._
-
-#### Preprocessing property
-
-The `#preprocessor` property allows **custom operations on backend** before any map/filter/sort operation.
-
-_Example: `TODO`_
 
 ⚠️ _This is a complex mechanism that targets specific usages. It will be removed and/or simplified in a future release._
 

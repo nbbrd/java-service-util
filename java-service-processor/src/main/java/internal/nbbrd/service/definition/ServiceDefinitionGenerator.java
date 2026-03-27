@@ -17,7 +17,10 @@
 package internal.nbbrd.service.definition;
 
 import com.squareup.javapoet.*;
-import internal.nbbrd.service.*;
+import internal.nbbrd.service.HasMethod;
+import internal.nbbrd.service.HasTypeMirror;
+import internal.nbbrd.service.Instantiator;
+import internal.nbbrd.service.Unreachable;
 import nbbrd.service.Quantifier;
 
 import javax.lang.model.type.TypeMirror;
@@ -151,16 +154,6 @@ class ServiceDefinitionGenerator {
     }
 
     private String getPreprocessingJavadoc() {
-        return definition.getPreprocessor().isPresent()
-                ? getAdvancedPreprocessingJavadoc()
-                : getBasicPreprocessingJavadoc();
-    }
-
-    private String getAdvancedPreprocessingJavadoc() {
-        return toJavadocLink(definition.getPreprocessor());
-    }
-
-    private String getBasicPreprocessingJavadoc() {
         if (!filters.isEmpty() || !sorters.isEmpty()) {
             return "filters:" + filters.stream().collect(toMethodNames())
                     + " sorters:" + sorters.stream().collect(toMethodNames());
@@ -195,9 +188,11 @@ class ServiceDefinitionGenerator {
             Optional<FieldSpec> filterField,
             Optional<FieldSpec> sorterField
     ) {
-        return definition.getPreprocessor().isPresent()
-                ? getAdvancedPreprocessingCode(rawStreamCode, filterField, sorterField, definition.getPreprocessor().get())
-                : getBasicPreprocessingCode(rawStreamCode, filterField, sorterField);
+        CodeBlock.Builder result = CodeBlock.builder();
+        result.add(rawStreamCode);
+        filterField.ifPresent(field -> result.add(NEW_LINE).add(".filter($L)", field.name));
+        sorterField.ifPresent(field -> result.add(NEW_LINE).add(".sorted($L)", field.name));
+        return result.build();
     }
 
     @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
@@ -214,30 +209,6 @@ class ServiceDefinitionGenerator {
 
     private CodeBlock getIdPredicateCode(FieldSpec field) {
         return CodeBlock.of("o -> $N.matcher(o.$L()).matches()", field, ids.get(0).getMethod().getSimpleName());
-    }
-
-    @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
-    private CodeBlock getAdvancedPreprocessingCode(
-            CodeBlock streamBlock,
-            Optional<FieldSpec> filterField,
-            Optional<FieldSpec> sorterField,
-            TypeInstantiator preprocessor
-    ) {
-        CodeBlock result = CodeBlock.of("$L\n.apply($L)", getInstantiatorCode(preprocessor), streamBlock);
-        return getBasicPreprocessingCode(result, filterField, sorterField);
-    }
-
-    @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
-    private CodeBlock getBasicPreprocessingCode(
-            CodeBlock streamBlock,
-            Optional<FieldSpec> filterField,
-            Optional<FieldSpec> sorterField
-    ) {
-        CodeBlock.Builder result = CodeBlock.builder();
-        result.add(streamBlock);
-        filterField.ifPresent(field -> result.add(NEW_LINE).add(".filter($L)", field.name));
-        sorterField.ifPresent(field -> result.add(NEW_LINE).add(".sorted($L)", field.name));
-        return result.build();
     }
 
     private CodeBlock getFiltersCode(Optional<FieldSpec> idPatternField) {

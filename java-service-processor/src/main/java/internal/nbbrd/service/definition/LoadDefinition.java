@@ -19,8 +19,8 @@ package internal.nbbrd.service.definition;
 import com.github.mustachejava.DefaultMustacheFactory;
 import com.squareup.javapoet.ClassName;
 import internal.nbbrd.service.ExtEnvironment;
-import nbbrd.service.Quantifier;
 import lombok.NonNull;
+import nbbrd.service.Quantifier;
 
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Types;
@@ -29,8 +29,6 @@ import java.io.StringWriter;
 import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.function.UnaryOperator;
-import java.util.stream.Stream;
 
 /**
  * @author Philippe Charles
@@ -51,11 +49,6 @@ class LoadDefinition {
 
     @lombok.NonNull
     Optional<TypeInstantiator> fallback;
-
-    boolean noFallback;
-
-    @lombok.NonNull
-    Optional<TypeInstantiator> preprocessor;
 
     @lombok.NonNull
     String loaderName;
@@ -95,12 +88,6 @@ class LoadDefinition {
             return topLoader;
         }
         return topLoader.nestedClass(serviceType.simpleName());
-    }
-
-    static @NonNull TypeMirror getPreprocessorType(@NonNull ExtEnvironment env, @NonNull TypeMirror service) {
-        Types types = env.getTypeUtils();
-        TypeMirror streamOf = types.getDeclaredType(env.asTypeElement(Stream.class), service);
-        return types.getDeclaredType(env.asTypeElement(UnaryOperator.class), streamOf);
     }
 
     static @NonNull TypeMirror getBackendType(@NonNull ExtEnvironment env, @NonNull TypeMirror service) {

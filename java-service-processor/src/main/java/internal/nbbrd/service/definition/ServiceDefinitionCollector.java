@@ -102,9 +102,6 @@ final class ServiceDefinitionCollector {
         Optional<TypeInstantiator> fallback = nonNull(annotation::fallback, Void.class)
                 .map(fallbackType -> new TypeInstantiator(fallbackType, Instantiator.allOf(types, serviceType, env.asTypeElement(fallbackType))));
 
-        Optional<TypeInstantiator> preprocessor = nonNull(annotation::preprocessor, ServiceDefinition.NoProcessing.class)
-                .map(preprocessorType -> new TypeInstantiator(preprocessorType, Instantiator.allOf(types, env.asTypeElement(preprocessorType), env.asTypeElement(preprocessorType))));
-
         Optional<TypeInstantiator> backend = nonNull(annotation::backend, ServiceDefinition.DefaultBackend.class)
                 .map(type -> new TypeInstantiator(type, Instantiator.allOf(types, env.asTypeElement(type), env.asTypeElement(type))));
 
@@ -119,8 +116,6 @@ final class ServiceDefinitionCollector {
                 .lifecycle(Lifecycle.of(annotation.mutability()))
                 .serviceType(ClassName.get(serviceType))
                 .fallback(fallback)
-                .noFallback(false)
-                .preprocessor(preprocessor)
                 .loaderName(annotation.loaderName())
                 .backend(backend)
                 .cleaner(cleaner)

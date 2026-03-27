@@ -93,25 +93,6 @@ public @interface ServiceDefinition {
     Mutability mutability() default Mutability.NONE;
 
     /**
-     * Specifies the preprocessor class to be used in advanced
-     * preprocessing.<br>This operation happens between loading and
-     * storage.<br>It may include filtering, sorting and mapping.
-     * <p>
-     * Requirements:
-     * <ul>
-     * <li>must be assignable to {@code UnaryOperator<? extends Stream<SERVICE_TYPE>>}
-     * <li>must be instantiable either by constructor, static method, enum field
-     * or static final field
-     * </ul>
-     *
-     * @return the preprocessor class if required, {@link NoProcessing}
-     * otherwise
-     * @deprecated This is a complex mechanism that targets specific usages. It will be removed and/or simplified in a future release.
-     */
-    @Deprecated
-    Class<? extends UnaryOperator<? extends Stream>> preprocessor() default NoProcessing.class;
-
-    /**
      * Specifies the class that creates a service loader.
      * <br>The default backend uses {@link ServiceLoader#load(Class)}.
      * <p>
@@ -146,16 +127,6 @@ public @interface ServiceDefinition {
      */
     @Deprecated
     Class<? extends Consumer<? extends Iterable>> cleaner() default DefaultCleaner.class;
-
-    @SuppressWarnings("rawtypes")
-    @Deprecated
-    final class NoProcessing implements UnaryOperator<Stream> {
-
-        @Override
-        public Stream apply(Stream t) {
-            return t;
-        }
-    }
 
     @SuppressWarnings("rawtypes")
     @Deprecated

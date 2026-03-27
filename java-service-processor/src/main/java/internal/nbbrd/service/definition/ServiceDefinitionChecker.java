@@ -173,10 +173,7 @@ final class ServiceDefinitionChecker {
         Types types = env.getTypeUtils();
         TypeElement service = env.asTypeElement(definition.getServiceType());
 
-        if (!checkFallback(definition.getQuantifier(), definition.getFallback(), definition.isNoFallback() || isSingleFallbackNotExpected(service), service, types)) {
-            return false;
-        }
-        if (!checkPreprocessor(definition.getPreprocessor(), service, types)) {
+        if (!checkFallback(definition.getQuantifier(), definition.getFallback(), isSingleFallbackNotExpected(service), service, types)) {
             return false;
         }
         if (!checkBackend(definition.getBackend(), service, types)) {
@@ -218,28 +215,6 @@ final class ServiceDefinitionChecker {
     private boolean checkFallbackTypeHandler(TypeInstantiator handler, TypeElement service, Types types) {
         if (!types.isAssignable(handler.getType(), types.erasure(service.asType()))) {
             env.error(service, String.format(Locale.ROOT, "Fallback '%1$s' doesn't extend nor implement service '%2$s'", handler.getType(), service));
-            return false;
-        }
-
-        if (!checkInstanceFactories(service, handler.getType(), handler)) {
-            return false;
-        }
-        return true;
-    }
-
-    private boolean checkPreprocessor(Optional<TypeInstantiator> preprocessor, TypeElement service, Types types) {
-        if (preprocessor.isPresent()) {
-            if (!checkPreprocessorTypeHandler(preprocessor.get(), service, types)) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    private boolean checkPreprocessorTypeHandler(TypeInstantiator handler, TypeElement service, Types types) {
-        TypeMirror expectedType = LoadDefinition.getPreprocessorType(env, service.asType());
-        if (!types.isAssignable(handler.getType(), expectedType)) {
-            env.error(service, String.format(Locale.ROOT, "Preprocessor '%1$s' doesn't extend nor implement '%2$s'", handler.getType(), expectedType));
             return false;
         }
 

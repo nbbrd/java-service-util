@@ -75,15 +75,6 @@ public class ServiceDefinitionProcessorTest {
     }
 
     @Test
-    public void testAlternateFactories() {
-        JavaFileObject file = forResource("definition/AlternateFactories.java");
-        Compilation compilation = compile(file);
-
-        assertThat(compilation)
-                .has(succeededWithoutWarnings());
-    }
-
-    @Test
     public void testMultiRoundProcessing() {
         JavaFileObject file = forResource("definition/TestMultiRoundProcessing.java");
 
@@ -701,44 +692,6 @@ public class ServiceDefinitionProcessorTest {
                     .extracting(Compilation::generatedSourceFiles, JAVA_FILE_OBJECTS)
                     .singleElement()
                     .has(sourceFileNamed("definition", "TestFallbackSuppressWarningLoader.java"));
-        }
-    }
-
-    @Nested
-    class PreprocessingTest {
-
-        @Test
-        public void testNonInstantiable() {
-            JavaFileObject file = forResource("definition/TestPreprocessorNonInstantiable.java");
-            Compilation compilation = compile(file);
-
-            assertThat(compilation)
-                    .has(failed());
-
-            assertThat(compilation)
-                    .extracting(Compilation::errors, DIAGNOSTICS)
-                    .hasSize(1)
-                    .extracting(Compilations::getDefaultMessage, Diagnostic::getSource, Diagnostic::getLineNumber)
-                    .containsOnly(
-                            tuple("Don't know how to instantiate 'definition.TestPreprocessorNonInstantiable.SomePreprocessor'", file, 11L)
-                    );
-        }
-
-        @Test
-        public void testNonAssignable() {
-            JavaFileObject file = forResource("definition/TestPreprocessorNonAssignable.java");
-            Compilation compilation = compile(file);
-
-            assertThat(compilation)
-                    .has(failed());
-
-            assertThat(compilation)
-                    .extracting(Compilation::errors, DIAGNOSTICS)
-                    .hasSize(1)
-                    .extracting(Compilations::getDefaultMessage, Diagnostic::getSource, Diagnostic::getLineNumber)
-                    .containsOnly(
-                            tuple("Preprocessor 'definition.TestPreprocessorNonAssignable.HelloProc' doesn't extend nor implement 'java.util.function.UnaryOperator<java.util.stream.Stream<definition.TestPreprocessorNonAssignable.HelloService>>'", file, 10L)
-                    );
         }
     }
 
