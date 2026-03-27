@@ -93,22 +93,6 @@ public @interface ServiceDefinition {
     Mutability mutability() default Mutability.NONE;
 
     /**
-     * Specifies the wrapper class to be used in basic preprocessing.
-     * <p>
-     * Requirements:
-     * <ul>
-     * <li>must be assignable to the service type
-     * <li>must be instantiable either by constructor or static method, both
-     * with single parameter of service type
-     * </ul>
-     *
-     * @return the wrapper class if required, {@link Void} otherwise
-     * @deprecated This is a complex mechanism that targets specific usages. It will be removed and/or simplified in a future release.
-     */
-    @Deprecated
-    Class<?> wrapper() default Void.class;
-
-    /**
      * Specifies the preprocessor class to be used in advanced
      * preprocessing.<br>This operation happens between loading and
      * storage.<br>It may include filtering, sorting and mapping.

@@ -20,7 +20,6 @@ import com.squareup.javapoet.ClassName;
 import internal.nbbrd.service.ExtEnvironment;
 import internal.nbbrd.service.Instantiator;
 import internal.nbbrd.service.ProcessorUtil;
-import internal.nbbrd.service.Wrapper;
 import nbbrd.service.ServiceDefinition;
 import nbbrd.service.ServiceFilter;
 import nbbrd.service.ServiceId;
@@ -103,9 +102,6 @@ final class ServiceDefinitionCollector {
         Optional<TypeInstantiator> fallback = nonNull(annotation::fallback, Void.class)
                 .map(fallbackType -> new TypeInstantiator(fallbackType, Instantiator.allOf(types, serviceType, env.asTypeElement(fallbackType))));
 
-        Optional<TypeWrapper> wrapper = nonNull(annotation::wrapper, Void.class)
-                .map(wrapperType -> new TypeWrapper(wrapperType, Wrapper.allOf(types, serviceType, env.asTypeElement(wrapperType))));
-
         Optional<TypeInstantiator> preprocessor = nonNull(annotation::preprocessor, ServiceDefinition.NoProcessing.class)
                 .map(preprocessorType -> new TypeInstantiator(preprocessorType, Instantiator.allOf(types, env.asTypeElement(preprocessorType), env.asTypeElement(preprocessorType))));
 
@@ -124,7 +120,6 @@ final class ServiceDefinitionCollector {
                 .serviceType(ClassName.get(serviceType))
                 .fallback(fallback)
                 .noFallback(false)
-                .wrapper(wrapper)
                 .preprocessor(preprocessor)
                 .loaderName(annotation.loaderName())
                 .backend(backend)

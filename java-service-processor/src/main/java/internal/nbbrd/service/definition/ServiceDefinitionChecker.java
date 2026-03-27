@@ -176,9 +176,6 @@ final class ServiceDefinitionChecker {
         if (!checkFallback(definition.getQuantifier(), definition.getFallback(), definition.isNoFallback() || isSingleFallbackNotExpected(service), service, types)) {
             return false;
         }
-        if (!checkWrapper(definition.getWrapper(), service, types)) {
-            return false;
-        }
         if (!checkPreprocessor(definition.getPreprocessor(), service, types)) {
             return false;
         }
@@ -225,27 +222,6 @@ final class ServiceDefinitionChecker {
         }
 
         if (!checkInstanceFactories(service, handler.getType(), handler)) {
-            return false;
-        }
-        return true;
-    }
-
-    private boolean checkWrapper(Optional<TypeWrapper> wrapper, TypeElement service, Types types) {
-        if (wrapper.isPresent()) {
-            if (!checkWrapperTypeHandler(wrapper.get(), service, types)) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    private boolean checkWrapperTypeHandler(TypeWrapper handler, TypeElement service, Types types) {
-        if (!types.isAssignable(handler.getType(), types.erasure(service.asType()))) {
-            env.error(service, String.format(Locale.ROOT, "Wrapper '%1$s' doesn't extend nor implement service '%2$s'", handler.getType(), service));
-            return false;
-        }
-
-        if (!checkWrapperFactories(service, handler.getType(), handler)) {
             return false;
         }
         return true;
@@ -345,14 +321,6 @@ final class ServiceDefinitionChecker {
     private boolean checkInstanceFactories(TypeElement annotatedElement, TypeMirror type, TypeInstantiator instance) {
         if (!instance.select().isPresent()) {
             env.error(annotatedElement, String.format(Locale.ROOT, "Don't know how to instantiate '%1$s'", type));
-            return false;
-        }
-        return true;
-    }
-
-    private boolean checkWrapperFactories(TypeElement annotatedElement, TypeMirror type, TypeWrapper instance) {
-        if (!instance.select().isPresent()) {
-            env.error(annotatedElement, String.format(Locale.ROOT, "Don't know how to wrap '%1$s'", type));
             return false;
         }
         return true;

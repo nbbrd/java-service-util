@@ -161,9 +161,8 @@ class ServiceDefinitionGenerator {
     }
 
     private String getBasicPreprocessingJavadoc() {
-        if (definition.getWrapper().isPresent() || !filters.isEmpty() || !sorters.isEmpty()) {
-            return "wrapper: " + definition.getWrapper().map(HasTypeMirror::getTypeName).orElse("none")
-                    + " filters:" + filters.stream().collect(toMethodNames())
+        if (!filters.isEmpty() || !sorters.isEmpty()) {
+            return "filters:" + filters.stream().collect(toMethodNames())
                     + " sorters:" + sorters.stream().collect(toMethodNames());
         }
         return "null";
@@ -236,10 +235,6 @@ class ServiceDefinitionGenerator {
     ) {
         CodeBlock.Builder result = CodeBlock.builder();
         result.add(streamBlock);
-        if (definition.getWrapper().isPresent()) {
-            result.add(NEW_LINE).add(".map($L)", getWrapperCode(definition.getWrapper().get()));
-            result.add(NEW_LINE).add(".map($T.class::cast)", definition.getServiceType());
-        }
         filterField.ifPresent(field -> result.add(NEW_LINE).add(".filter($L)", field.name));
         sorterField.ifPresent(field -> result.add(NEW_LINE).add(".sorted($L)", field.name));
         return result.build();
@@ -343,18 +338,6 @@ class ServiceDefinitionGenerator {
             case ENUM_FIELD:
             case STATIC_FIELD:
                 return CodeBlock.of("$T.$L", instance.getType(), instantiator.getElement().getSimpleName());
-            default:
-                throw new Unreachable();
-        }
-    }
-
-    private CodeBlock getWrapperCode(TypeWrapper instance) {
-        Wrapper wrapper = instance.select().orElseThrow(RuntimeException::new);
-        switch (wrapper.getKind()) {
-            case CONSTRUCTOR:
-                return CodeBlock.of("$T::new", instance.getType());
-            case STATIC_METHOD:
-                return CodeBlock.of("$T::$L", instance.getType(), wrapper.getElement().getSimpleName());
             default:
                 throw new Unreachable();
         }

@@ -20,7 +20,7 @@ import java.util.stream.StreamSupport;
  * <ul>
  * <li>Quantifier: MULTIPLE</li>
  * <li>Fallback: null</li>
- * <li>Preprocessing: wrapper: none filters:[isAvailable+isDisabled] sorters:[getCost1+getCost2]</li>
+ * <li>Preprocessing: filters:[isAvailable+isDisabled] sorters:[getCost1+getCost2]</li>
  * <li>Mutability: CONCURRENT</li>
  * <li>Name: null</li>
  * <li>Backend: null</li>

@@ -55,9 +55,6 @@ class LoadDefinition {
     boolean noFallback;
 
     @lombok.NonNull
-    Optional<TypeWrapper> wrapper;
-
-    @lombok.NonNull
     Optional<TypeInstantiator> preprocessor;
 
     @lombok.NonNull
