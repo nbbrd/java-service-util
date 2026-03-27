@@ -42,9 +42,6 @@ class LoadDefinition {
     Quantifier quantifier;
 
     @lombok.NonNull
-    Lifecycle lifecycle;
-
-    @lombok.NonNull
     ClassName serviceType;
 
     @lombok.NonNull

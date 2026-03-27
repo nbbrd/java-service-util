@@ -20,8 +20,6 @@ import java.lang.annotation.*;
 import java.util.ServiceLoader;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.function.UnaryOperator;
-import java.util.stream.Stream;
 
 /**
  * Declarative definition of a service that generates a specialized service
@@ -82,15 +80,6 @@ public @interface ServiceDefinition {
      * @return the batch class if required, {@link Void} otherwise
      */
     Class<?> batchType() default Void.class;
-
-    /**
-     * Specifies the mutability of the loader.
-     *
-     * @return a non-null mutability
-     * @deprecated This is a complex mechanism that targets specific usages. It will be removed and/or simplified in a future release.
-     */
-    @Deprecated
-    Mutability mutability() default Mutability.NONE;
 
     /**
      * Specifies the class that creates a service loader.

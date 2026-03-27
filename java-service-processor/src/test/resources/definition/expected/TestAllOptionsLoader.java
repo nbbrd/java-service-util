@@ -6,7 +6,6 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import java.util.ServiceLoader;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
@@ -15,13 +14,11 @@ import java.util.stream.StreamSupport;
 
 /**
  * Custom service loader for {@link definition.TestAllOptions}.
- * <br>This class is thread-safe.
  * <p>Properties:
  * <ul>
  * <li>Quantifier: MULTIPLE</li>
  * <li>Fallback: null</li>
  * <li>Preprocessing: filters:[isAvailable+isDisabled] sorters:[getCost1+getCost2]</li>
- * <li>Mutability: CONCURRENT</li>
  * <li>Name: null</li>
  * <li>Backend: null</li>
  * <li>Cleaner: null</li>
@@ -37,7 +34,7 @@ public final class TestAllOptionsLoader {
 
   private final Comparator<TestAllOptions> sorter = ((Comparator<TestAllOptions>)Comparator.comparingInt(TestAllOptions::getCost1)).thenComparing(Collections.reverseOrder(Comparator.comparingInt(TestAllOptions::getCost2)));
 
-  private final AtomicReference<List<TestAllOptions>> resource = new AtomicReference<>(doLoad());
+  private List<TestAllOptions> resource = doLoad();
 
   private final Consumer<Iterable> cleaner = loader -> ((ServiceLoader)loader).reload();
 
@@ -50,40 +47,35 @@ public final class TestAllOptionsLoader {
 
   /**
    * Gets a list of {@link definition.TestAllOptions} instances.
-   * <br>This method is thread-safe.
    * @return the current non-null value
    */
   public List<TestAllOptions> get() {
-    return resource.get();
+    return resource;
   }
 
   /**
    * Sets a list of {@link definition.TestAllOptions} instances.
-   * <br>This method is thread-safe.
    * @param newValue new non-null value
    */
-  public void set(List<TestAllOptions> newValue) {
-    resource.set(Objects.requireNonNull(newValue));
+  private void set(List<TestAllOptions> newValue) {
+    resource = Objects.requireNonNull(newValue);
   }
 
   /**
    * Reloads the content by clearing the cache and fetching available providers.
-   * <br>This method is thread-safe.
    */
   public void reload() {
-    synchronized(source) {
-      cleaner.accept(source);
-      set(doLoad());
-    }
+    cleaner.accept(source);
+    set(doLoad());
   }
 
   /**
-   * Resets the content without clearing the cache.
-   * <br>This method is thread-safe.
+   * Gets a list of {@link definition.TestAllOptions} instances.
+   * <br>This is equivalent to the following code: <code>new TestAllOptionsLoader().get()</code>
+   * <br>Therefore, the returned value might be different at each call.
+   * @return a non-null value
    */
-  public void reset() {
-    synchronized(source) {
-      set(doLoad());
-    }
+  public static List<TestAllOptions> load() {
+    return new TestAllOptionsLoader().get();
   }
 }

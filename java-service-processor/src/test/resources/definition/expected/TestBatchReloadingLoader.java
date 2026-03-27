@@ -4,7 +4,6 @@ import java.lang.Iterable;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.ServiceLoader;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
@@ -12,13 +11,11 @@ import java.util.stream.StreamSupport;
 public final class TestBatchReloadingLoader {
   /**
    * Custom service loader for {@link definition.TestBatchReloading.Mutable}.
-   * <br>This class is thread-safe.
    * <p>Properties:
    * <ul>
    * <li>Quantifier: OPTIONAL</li>
    * <li>Fallback: null</li>
    * <li>Preprocessing: null</li>
-   * <li>Mutability: CONCURRENT</li>
    * <li>Name: null</li>
    * <li>Backend: null</li>
    * <li>Cleaner: null</li>
@@ -30,7 +27,7 @@ public final class TestBatchReloadingLoader {
 
     private final Iterable<TestBatchReloading.Batch> batch = ServiceLoader.load(TestBatchReloading.Batch.class);
 
-    private final AtomicReference<Optional<TestBatchReloading.Mutable>> resource = new AtomicReference<>(doLoad());
+    private Optional<TestBatchReloading.Mutable> resource = doLoad();
 
     private final Consumer<Iterable> cleaner = loader -> ((ServiceLoader)loader).reload();
 
@@ -41,42 +38,37 @@ public final class TestBatchReloadingLoader {
 
     /**
      * Gets an optional {@link definition.TestBatchReloading.Mutable} instance.
-     * <br>This method is thread-safe.
      * @return the current non-null value
      */
     public Optional<TestBatchReloading.Mutable> get() {
-      return resource.get();
+      return resource;
     }
 
     /**
      * Sets an optional {@link definition.TestBatchReloading.Mutable} instance.
-     * <br>This method is thread-safe.
      * @param newValue new non-null value
      */
-    public void set(Optional<TestBatchReloading.Mutable> newValue) {
-      resource.set(Objects.requireNonNull(newValue));
+    private void set(Optional<TestBatchReloading.Mutable> newValue) {
+      resource = Objects.requireNonNull(newValue);
     }
 
     /**
      * Reloads the content by clearing the cache and fetching available providers.
-     * <br>This method is thread-safe.
      */
     public void reload() {
-      synchronized(source) {
-        cleaner.accept(source);
-        cleaner.accept(batch);
-        set(doLoad());
-      }
+      cleaner.accept(source);
+      cleaner.accept(batch);
+      set(doLoad());
     }
 
     /**
-     * Resets the content without clearing the cache.
-     * <br>This method is thread-safe.
+     * Gets an optional {@link definition.TestBatchReloading.Mutable} instance.
+     * <br>This is equivalent to the following code: <code>new Mutable().get()</code>
+     * <br>Therefore, the returned value might be different at each call.
+     * @return a non-null value
      */
-    public void reset() {
-      synchronized(source) {
-        set(doLoad());
-      }
+    public static Optional<TestBatchReloading.Mutable> load() {
+      return new Mutable().get();
     }
   }
 }

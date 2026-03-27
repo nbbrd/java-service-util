@@ -8,7 +8,7 @@ import java.util.stream.Stream;
 
 class TestBatchReloading {
 
-    @ServiceDefinition(batchType = Batch.class, mutability = CONCURRENT)
+    @ServiceDefinition(batchType = Batch.class)
     interface Mutable {
     }
 

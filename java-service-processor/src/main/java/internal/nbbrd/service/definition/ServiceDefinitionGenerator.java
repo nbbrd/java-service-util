@@ -25,7 +25,6 @@ import nbbrd.service.Quantifier;
 
 import javax.lang.model.type.TypeMirror;
 import java.util.*;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
@@ -119,17 +118,12 @@ class ServiceDefinitionGenerator {
             result.addModifiers(STATIC).build();
         }
 
-        if (definition.getLifecycle().isModifiable()) {
-            FieldSpec cleanerField = newCleanerField();
-            result.addField(cleanerField);
-            result.addMethod(newSetMethod(resourceField, quantifierType));
-            result.addMethod(newReloadMethod(sourceField, batchField, cleanerField, doLoadMethod));
-            result.addMethod(newResetMethod(sourceField, doLoadMethod));
-        }
+        FieldSpec cleanerField = newCleanerField();
+        result.addField(cleanerField);
+        result.addMethod(newSetMethod(resourceField, quantifierType));
+        result.addMethod(newReloadMethod(sourceField, batchField, cleanerField, doLoadMethod));
 
-        if (definition.getLifecycle() == Lifecycle.IMMUTABLE) {
-            result.addMethod(newLoadMethod(className, quantifierType, getMethod));
-        }
+        result.addMethod(newLoadMethod(className, quantifierType, getMethod));
 
         return result.build();
     }
@@ -138,13 +132,11 @@ class ServiceDefinitionGenerator {
         return CodeBlock
                 .builder()
                 .add("Custom service loader for $L.\n", toJavadocLink(definition.getServiceType()))
-                .add("<br>This class $L thread-safe.\n", definition.getLifecycle().isThreadSafe() ? "is" : "is not")
                 .add("<p>Properties:\n")
                 .add("<ul>\n")
                 .add("<li>Quantifier: $L</li>\n", definition.getQuantifier())
                 .add("<li>Fallback: $L</li>\n", toJavadocLink(definition.getFallback()))
                 .add("<li>Preprocessing: $L</li>\n", getPreprocessingJavadoc())
-                .add("<li>Mutability: $L</li>\n", definition.getLifecycle().toMutability())
                 .add("<li>Name: $L</li>\n", definition.getLoaderName().isEmpty() ? "null" : definition.getLoaderName())
                 .add("<li>Backend: $L</li>\n", definition.getBackend().map(HasTypeMirror::getTypeName).orElse("null"))
                 .add("<li>Cleaner: $L</li>\n", definition.getCleaner().map(HasTypeMirror::getTypeName).orElse("null"))
@@ -401,23 +393,11 @@ class ServiceDefinitionGenerator {
     }
 
     private FieldSpec.Builder getResourceFieldBuilder(TypeName quantifierType) {
-        String name = "resource";
-        switch (definition.getLifecycle()) {
-            case IMMUTABLE:
-                return FieldSpec.builder(quantifierType, name, PRIVATE, FINAL);
-            case MUTABLE:
-                return FieldSpec.builder(quantifierType, name, PRIVATE);
-            case CONCURRENT:
-                return FieldSpec.builder(typeOf(AtomicReference.class, quantifierType), name, PRIVATE, FINAL);
-            default:
-                throw new Unreachable();
-        }
+        return FieldSpec.builder(quantifierType, "resource", PRIVATE);
     }
 
     private CodeBlock getResourceInitializer(MethodSpec doLoadMethod) {
-        return definition.getLifecycle().isAtomicReference()
-                ? CodeBlock.of("new $T<>($N())", ClassName.get(AtomicReference.class), doLoadMethod)
-                : CodeBlock.of("$N()", doLoadMethod);
+        return CodeBlock.of("$N()", doLoadMethod);
     }
 
     private MethodSpec getGetMethod(FieldSpec resourceField, TypeName quantifierType) {
@@ -426,7 +406,6 @@ class ServiceDefinitionGenerator {
                 .addJavadoc(CodeBlock
                         .builder()
                         .add(getGetDescription())
-                        .add(getThreadSafetyComment())
                         .add("@return the current non-null value\n")
                         .build())
                 .addModifiers(PUBLIC)
@@ -449,9 +428,7 @@ class ServiceDefinitionGenerator {
     }
 
     private CodeBlock getGetterStatement(FieldSpec resourceField) {
-        return definition.getLifecycle().isAtomicReference()
-                ? CodeBlock.of("return $N.get()", resourceField)
-                : CodeBlock.of("return $N", resourceField);
+        return CodeBlock.of("return $N", resourceField);
     }
 
     private MethodSpec newSetMethod(FieldSpec resourceField, TypeName quantifierType) {
@@ -460,10 +437,9 @@ class ServiceDefinitionGenerator {
                 .addJavadoc(CodeBlock
                         .builder()
                         .add(getSetDescription())
-                        .add(getThreadSafetyComment())
                         .add("@param newValue new non-null value\n")
                         .build())
-                .addModifiers(PUBLIC)
+                .addModifiers(PRIVATE)
                 .addParameter(quantifierType, "newValue")
                 .addStatement(getSetterStatement(resourceField))
                 .build();
@@ -483,9 +459,7 @@ class ServiceDefinitionGenerator {
     }
 
     private CodeBlock getSetterStatement(FieldSpec resourceField) {
-        return definition.getLifecycle().isAtomicReference()
-                ? CodeBlock.of("$N.set($T.requireNonNull(newValue))", resourceField, Objects.class)
-                : CodeBlock.of("$N = $T.requireNonNull(newValue)", resourceField, Objects.class);
+        return CodeBlock.of("$N = $T.requireNonNull(newValue)", resourceField, Objects.class);
     }
 
     private MethodSpec newReloadMethod(
@@ -499,46 +473,13 @@ class ServiceDefinitionGenerator {
                 .addJavadoc(CodeBlock
                         .builder()
                         .add("Reloads the content by clearing the cache and fetching available providers.\n")
-                        .add(getThreadSafetyComment())
                         .build())
                 .addModifiers(PUBLIC)
                 .addExceptions(getQuantifierException());
-
-        if (definition.getLifecycle().isAtomicReference()) {
-            result.beginControlFlow("synchronized($N)", sourceField);
-        }
 
         result.addStatement("$N.accept($N)", cleanerField, sourceField);
         batchField.ifPresent(fieldSpec -> result.addStatement("$N.accept($N)", cleanerField, fieldSpec));
         result.addStatement("set($N())", loaderMethod);
-
-        if (definition.getLifecycle().isAtomicReference()) {
-            result.endControlFlow();
-        }
-
-        return result.build();
-    }
-
-    private MethodSpec newResetMethod(FieldSpec sourceField, MethodSpec loaderMethod) {
-        MethodSpec.Builder result = MethodSpec
-                .methodBuilder("reset")
-                .addJavadoc(CodeBlock
-                        .builder()
-                        .add("Resets the content without clearing the cache.\n")
-                        .add(getThreadSafetyComment())
-                        .build())
-                .addModifiers(PUBLIC)
-                .addExceptions(getQuantifierException());
-
-        if (definition.getLifecycle().isAtomicReference()) {
-            result.beginControlFlow("synchronized($N)", sourceField);
-        }
-
-        result.addStatement("set($N())", loaderMethod);
-
-        if (definition.getLifecycle().isAtomicReference()) {
-            result.endControlFlow();
-        }
 
         return result.build();
     }
@@ -553,7 +494,6 @@ class ServiceDefinitionGenerator {
                         .add(getGetDescription())
                         .add("<br>This is equivalent to the following code: <code>$L</code>\n", mainStatement)
                         .add("<br>Therefore, the returned value might be different at each call.\n")
-                        .add(getThreadSafetyComment())
                         .add("@return a non-null value\n")
                         .build())
                 .addModifiers(PUBLIC, STATIC)
@@ -565,19 +505,14 @@ class ServiceDefinitionGenerator {
         return result.build();
     }
 
-
     private Optional<FieldSpec> getIdPatternField() {
-        return ids.size() == 1 && !ids.get(0).getPattern().isEmpty() ? Optional.of(FieldSpec
-                                                                                   .builder(Pattern.class, "ID_PATTERN")
-                                                                                   .addModifiers(PUBLIC, STATIC, FINAL)
-                                                                                   .initializer("$T.compile(\"$N\")", Pattern.class, ids.get(0).getPattern())
-                                                                                   .build()) : Optional.empty();
-    }
-
-    private CodeBlock getThreadSafetyComment() {
-        return definition.getLifecycle().isThreadSafe()
-                ? CodeBlock.of("<br>This method is thread-safe.\n")
-                : CodeBlock.of("<br>This method is not thread-safe.\n");
+        return ids.size() == 1 && !ids.get(0).getPattern().isEmpty()
+                ? Optional.of(FieldSpec
+                              .builder(Pattern.class, "ID_PATTERN")
+                              .addModifiers(PUBLIC, STATIC, FINAL)
+                              .initializer("$T.compile(\"$N\")", Pattern.class, ids.get(0).getPattern())
+                              .build())
+                : Optional.empty();
     }
 
     private static ParameterizedTypeName typeOf(Class<?> rawType, TypeName typeArgument) {

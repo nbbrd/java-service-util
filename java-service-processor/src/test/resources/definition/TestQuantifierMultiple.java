@@ -6,15 +6,7 @@ import nbbrd.service.ServiceDefinition;
 
 class TestQuantifierMultiple {
 
-    @ServiceDefinition(quantifier = MULTIPLE, mutability = NONE)
-    interface Immutable {
-    }
-
-    @ServiceDefinition(quantifier = MULTIPLE, mutability = BASIC)
+    @ServiceDefinition(quantifier = MULTIPLE)
     interface Mutable {
-    }
-
-    @ServiceDefinition(quantifier = MULTIPLE, mutability = CONCURRENT)
-    interface ThreadSafe {
     }
 }

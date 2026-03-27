@@ -6,15 +6,7 @@ import nbbrd.service.ServiceDefinition;
 
 class TestQuantifierOptional {
 
-    @ServiceDefinition(quantifier = OPTIONAL, mutability = NONE)
-    interface Immutable {
-    }
-
-    @ServiceDefinition(quantifier = OPTIONAL, mutability = BASIC)
+    @ServiceDefinition(quantifier = OPTIONAL)
     interface Mutable {
-    }
-
-    @ServiceDefinition(quantifier = OPTIONAL, mutability = CONCURRENT)
-    interface ThreadSafe {
     }
 }

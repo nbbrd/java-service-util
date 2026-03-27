@@ -113,7 +113,6 @@ final class ServiceDefinitionCollector {
         return LoadDefinition
                 .builder()
                 .quantifier(annotation.quantifier())
-                .lifecycle(Lifecycle.of(annotation.mutability()))
                 .serviceType(ClassName.get(serviceType))
                 .fallback(fallback)
                 .loaderName(annotation.loaderName())

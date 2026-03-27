@@ -3,8 +3,7 @@ package definition;
 import nbbrd.service.*;
 
 @ServiceDefinition(
-        quantifier = Quantifier.MULTIPLE,
-        mutability = Mutability.CONCURRENT
+        quantifier = Quantifier.MULTIPLE
 )
 interface TestAllOptions {
 

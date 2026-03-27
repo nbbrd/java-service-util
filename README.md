@@ -78,7 +78,6 @@ Main properties:
 - [`#batchType`](#batch-type-property): bridge different services and generate providers on the fly
 
 Advanced properties:
-- [`#mutability`](#mutability-property): on-demand set and reload
 - [`#backend` `#cleaner`](#backend-and-cleaner-properties): custom service loader
 
 #### Quantifier property
@@ -246,14 +245,6 @@ _Source: [nbbrd/service/examples/SwingColorScheme.java](java-service-examples/sr
 Constraints:
 1. Batch type must be an interface or an abstract class.
 2. Batch method must be unique.
-
-#### Mutability property
-
-The `#mutability` property allows **on-demand set and reload** of a loader.
-
-_Example: [nbbrd/service/examples/Messenger.java](java-service-examples/src/main/java/nbbrd/service/examples/Messenger.java)_
-
-⚠️ _This is a complex mechanism that targets specific usages. It will be removed and/or simplified in a future release._
 
 #### Backend and cleaner properties
 
