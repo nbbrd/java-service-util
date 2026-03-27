@@ -275,7 +275,7 @@ _Example: `TODO`_
 
 #### Backend and cleaner properties
 
-The `#backend` and `#cleaner` properties allow to use a **custom service loader** such as [NetBeans Lookup](https://search.maven.org/search?q=g:org.netbeans.api%20AND%20a:org-openide-util-lookup&core=gav) instead of JDK `ServiceLoader`.
+The `#backend` and `#cleaner` properties allow to use a **custom service loader** such as [NetBeans Lookup](https://bits.netbeans.org/dev/javadoc/org-openide-util-lookup/index.html) instead of JDK `ServiceLoader`.
 
 _Example: [nbbrd/service/examples/IconProvider.java](java-service-examples/src/main/java/nbbrd/service/examples/IconProvider.java)_
 
