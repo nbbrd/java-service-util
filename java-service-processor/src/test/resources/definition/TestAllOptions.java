@@ -4,9 +4,7 @@ import nbbrd.service.*;
 
 @ServiceDefinition(
         quantifier = Quantifier.MULTIPLE,
-        batch = true,
-        mutability = Mutability.CONCURRENT,
-        singleton = true
+        mutability = Mutability.CONCURRENT
 )
 interface TestAllOptions {
 

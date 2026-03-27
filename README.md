@@ -79,7 +79,6 @@ Main properties:
 
 Advanced properties:
 - [`#mutability`](#mutability-property): on-demand set and reload
-- [`#singleton`](#singleton-property): loader scope
 - [`#wrapper`](#wrapper-property): wrapper type on backend
 - [`#preprocessing`](#preprocessing-property): custom operations on backend
 - [`#backend` `#cleaner`](#backend-and-cleaner-properties): custom service loader
@@ -258,15 +257,6 @@ _Example: [nbbrd/service/examples/Messenger.java](java-service-examples/src/main
 
 ⚠️ _This is a complex mechanism that targets specific usages. It will be removed and/or simplified in a future release._
 
-#### Singleton property
-
-The `#singleton` property specifies the **loader scope**.
-
-_Example: [nbbrd/service/examples/StatefulAlgorithm.java](java-service-examples/src/main/java/nbbrd/service/examples/StatefulAlgorithm.java)
-and [nbbrd/service/examples/SystemSettings.java](java-service-examples/src/main/java/nbbrd/service/examples/SystemSettings.java)_
-
-⚠️ _This is a complex mechanism that targets specific usages. It will be removed and/or simplified in a future release._
-
 #### Wrapper property
 
 The `#wrapper` property allows **service decoration** before any map/filter/sort operation.
@@ -433,9 +423,11 @@ Here is an example on how to do it:
 ```java
 public final class FileType {
 
+  private static final FileTypeSpiLoader LOADER_INSTANCE = new FileTypeSpiLoader();
+
   // 💡 API: designed to be called and used
   public static Optional<String> probeContentType(Path file) throws IOException {
-    for (FileTypeSpi probe : FileTypeSpiLoader.get()) {
+    for (FileTypeSpi probe : LOADER_INSTANCE.get()) {
       String result = probe.getContentTypeOrNull(file);
       if (result != null) return Optional.of(result);
     }
@@ -451,8 +443,7 @@ public final class FileType {
   // 💡 SPI: designed to be extended and implemented
   @ServiceDefinition(
       quantifier = Quantifier.MULTIPLE,
-      loaderName = "internal.{{canonicalName}}Loader",
-      singleton = true
+      loaderName = "internal.{{canonicalName}}Loader"
   )
   public interface FileTypeSpi {
 

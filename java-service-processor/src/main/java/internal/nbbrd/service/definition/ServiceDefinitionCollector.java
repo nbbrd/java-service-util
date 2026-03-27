@@ -120,17 +120,15 @@ final class ServiceDefinitionCollector {
         return LoadDefinition
                 .builder()
                 .quantifier(annotation.quantifier())
-                .lifecycle(Lifecycle.of(annotation.mutability(), annotation.singleton()))
+                .lifecycle(Lifecycle.of(annotation.mutability()))
                 .serviceType(ClassName.get(serviceType))
                 .fallback(fallback)
-                .noFallback(annotation.noFallback())
+                .noFallback(false)
                 .wrapper(wrapper)
                 .preprocessor(preprocessor)
                 .loaderName(annotation.loaderName())
                 .backend(backend)
                 .cleaner(cleaner)
-                .batch(annotation.batch())
-                .batchName(annotation.batchName())
                 .batchType(batchType)
                 .build();
     }

@@ -27,31 +27,6 @@ import java.util.stream.Stream;
  * Declarative definition of a service that generates a specialized service
  * loader that takes care of the loading and enforces a specific usage.
  *
- * <p>
- * Internal storage summary:
- * <pre>
- * optional none                  :        final           Optional&lt;T&gt;
- * optional basic                 :                        Optional&lt;T&gt;
- * optional concurrent            :        final AtomicRef&lt;Optional&lt;T&gt;&gt;
- * optional none       +singleton : static final           Optional&lt;T&gt;
- * optional basic      +singleton : static                 Optional&lt;T&gt;
- * optional concurrent +singleton : static final AtomicRef&lt;Optional&lt;T&gt;&gt;
- *
- * single   none                  :        final           T
- * single   basic                 :                        T
- * single   concurrent            :        final AtomicRef&lt;T&gt;
- * single   none       +singleton : static final           T
- * single   basic      +singleton : static                 T
- * single   concurrent +singleton : static final AtomicRef&lt;T&gt;
- *
- * multiple none                  :        final           UmodifiableList&lt;T&gt;
- * multiple basic                 :                        UmodifiableList&lt;T&gt;
- * multiple concurrent            :        final AtomicRef&lt;UmodifiableList&lt;T&gt;&gt;
- * multiple none       +singleton : static final           UmodifiableList&lt;T&gt;
- * multiple basic      +singleton : static                 UmodifiableList&lt;T&gt;
- * multiple concurrent +singleton : static final AtomicRef&lt;UmodifiableList&lt;T&gt;&gt;
- * </pre>
- *
  * @author Philippe Charles
  */
 @Documented
@@ -74,15 +49,6 @@ public @interface ServiceDefinition {
     Mutability mutability() default Mutability.NONE;
 
     /**
-     * Specifies if the loader must be a singleton.
-     *
-     * @return true if the loader is a singleton, false otherwise
-     * @deprecated Don't use this option because it is the source of many class loading issues.
-     */
-    @Deprecated
-    boolean singleton() default false;
-
-    /**
      * Specifies the fallback class to use if no service is available.<br>This
      * option is only used in conjunction with {@link Quantifier#SINGLE}.
      * <p>
@@ -96,15 +62,6 @@ public @interface ServiceDefinition {
      * @return the fallback class if required, {@link Void} otherwise
      */
     Class<?> fallback() default Void.class;
-
-    /**
-     * Specifies if fallback class is unexpected.
-     *
-     * @return true if fallback class is expected, false otherwise
-     * @deprecated Use {@link #SINGLE_FALLBACK_NOT_EXPECTED} instead
-     */
-    @Deprecated
-    boolean noFallback() default false;
 
     /**
      * Specifies the wrapper class to be used in basic preprocessing.
@@ -182,31 +139,6 @@ public @interface ServiceDefinition {
      * otherwise
      */
     Class<? extends Consumer<? extends Iterable>> cleaner() default DefaultCleaner.class;
-
-    /**
-     * Specifies if batch loading should be allowed.
-     *
-     * @return true if batch loading should be allowed, false otherwise
-     * @deprecated use {@link #batchType()} instead
-     */
-    @Deprecated
-    boolean batch() default false;
-
-    /**
-     * Specifies the fully qualified name of the batch loading.
-     * An empty value generates an automatic name.
-     * A non-empty value is interpreted as a <a href="https://mustache.github.io/">Mustache template</a> with the following tags:
-     * <ul>
-     *     <li><code>{{packageName}}</code>: The package name of the service class, or "" if this is in the default package.</li>
-     *     <li><code>{{simpleName}}</code>: The service class name.</li>
-     *     <li><code>{{canonicalName}}</code>: The full service class name.</li>
-     * </ul>
-     *
-     * @return a fully qualified name
-     * @deprecated use {@link #batchType()} instead
-     */
-    @Deprecated
-    String batchName() default "";
 
     /**
      * Specifies the batch class to use in batch loading.

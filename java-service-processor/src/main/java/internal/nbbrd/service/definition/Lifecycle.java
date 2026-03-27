@@ -17,56 +17,37 @@
 package internal.nbbrd.service.definition;
 
 import internal.nbbrd.service.Unreachable;
-import nbbrd.service.Mutability;
 import lombok.NonNull;
+import nbbrd.service.Mutability;
 
 /**
  * @author Philippe Charles
  */
 enum Lifecycle {
 
-    IMMUTABLE, MUTABLE, CONCURRENT, CONSTANT, ATOMIC, UNSAFE_MUTABLE;
+    IMMUTABLE, MUTABLE, CONCURRENT;
 
-    static @NonNull Lifecycle of(@NonNull Mutability mutability, boolean singleton) {
+    static @NonNull Lifecycle of(@NonNull Mutability mutability) {
         switch (mutability) {
             case NONE:
-                return singleton ? CONSTANT : IMMUTABLE;
+                return IMMUTABLE;
             case BASIC:
-                return singleton ? UNSAFE_MUTABLE : MUTABLE;
+                return MUTABLE;
             case CONCURRENT:
-                return singleton ? ATOMIC : CONCURRENT;
+                return CONCURRENT;
             default:
                 throw new Unreachable();
         }
     }
 
-    boolean isSingleton() {
-        switch (this) {
-            case CONSTANT:
-            case UNSAFE_MUTABLE:
-            case ATOMIC:
-                return true;
-            default:
-                return false;
-        }
-    }
-
     boolean isAtomicReference() {
-        switch (this) {
-            case CONCURRENT:
-            case ATOMIC:
-                return true;
-            default:
-                return false;
-        }
+        return this == Lifecycle.CONCURRENT;
     }
 
     boolean isModifiable() {
         switch (this) {
             case MUTABLE:
-            case UNSAFE_MUTABLE:
             case CONCURRENT:
-            case ATOMIC:
                 return true;
             default:
                 return false;
@@ -77,24 +58,20 @@ enum Lifecycle {
         switch (this) {
             case IMMUTABLE:
             case CONCURRENT:
-            case CONSTANT:
-            case ATOMIC:
                 return true;
             default:
                 return false;
         }
     }
 
-    @NonNull Mutability toMutability() {
+    @NonNull
+    Mutability toMutability() {
         switch (this) {
             case IMMUTABLE:
-            case CONSTANT:
                 return Mutability.NONE;
             case MUTABLE:
-            case UNSAFE_MUTABLE:
                 return Mutability.BASIC;
             case CONCURRENT:
-            case ATOMIC:
                 return Mutability.CONCURRENT;
             default:
                 throw new Unreachable();

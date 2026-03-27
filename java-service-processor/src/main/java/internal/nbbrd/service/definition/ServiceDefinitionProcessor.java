@@ -31,7 +31,6 @@ import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 
 import static java.util.stream.Collectors.*;
@@ -108,7 +107,6 @@ public final class ServiceDefinitionProcessor extends AbstractProcessor {
 
     private void generateNotNested(ServiceDefinitionGenerator generator) {
         generateNotNestedLoader(generator);
-        generateNotNestedBatch(generator);
     }
 
     private void generateNotNestedLoader(ServiceDefinitionGenerator generator) {
@@ -117,15 +115,8 @@ public final class ServiceDefinitionProcessor extends AbstractProcessor {
         writeFile(loaderPackage, loaderClass);
     }
 
-    private void generateNotNestedBatch(ServiceDefinitionGenerator generator) {
-        String batchPackage = generator.getDefinition().resolveBatchName().packageName();
-        Optional<TypeSpec> batchClass = generator.generateBatch(false);
-        batchClass.ifPresent(batchSpec -> writeFile(batchPackage, batchSpec));
-    }
-
     private void generateNested(ClassName topLevel, List<ServiceDefinitionGenerator> generators) {
         generateNestedLoaders(topLevel, generators.stream().collect(partitioningBy(ServiceDefinitionGenerator::hasCustomLoaderName)));
-        generateNestedBatches(topLevel, generators.stream().collect(partitioningBy(ServiceDefinitionGenerator::hasCustomBatchName)));
     }
 
     private void generateNestedLoaders(ClassName topLevel, Map<Boolean, List<ServiceDefinitionGenerator>> loadersByHasCustomName) {
@@ -138,19 +129,6 @@ public final class ServiceDefinitionProcessor extends AbstractProcessor {
                     .addTypes(nestedLoaders)
                     .build();
             writeFile(topLevel.packageName(), loaderClass);
-        }
-    }
-
-    private void generateNestedBatches(ClassName topLevel, Map<Boolean, List<ServiceDefinitionGenerator>> batchesByHasCustomName) {
-        batchesByHasCustomName.get(true).forEach(this::generateNotNestedBatch);
-
-        List<TypeSpec> nestedBatches = batchesByHasCustomName.get(false).stream().map(o -> o.generateBatch(true)).filter(Optional::isPresent).map(Optional::get).collect(toList());
-        if (!nestedBatches.isEmpty()) {
-            TypeSpec batchClass = TypeSpec.classBuilder(ClassName.bestGuess(topLevel.canonicalName() + "Batch"))
-                    .addModifiers(Modifier.PUBLIC, Modifier.FINAL)
-                    .addTypes(nestedBatches)
-                    .build();
-            writeFile(topLevel.packageName(), batchClass);
         }
     }
 

@@ -4,13 +4,15 @@ import static nbbrd.service.Mutability.*;
 
 import nbbrd.service.ServiceDefinition;
 
+import java.util.stream.Stream;
+
 class TestBatchReloading {
 
-    @ServiceDefinition(batch = true, mutability = CONCURRENT)
+    @ServiceDefinition(batchType = Batch.class, mutability = CONCURRENT)
     interface Mutable {
     }
 
-    @ServiceDefinition(batch = true, mutability = CONCURRENT, singleton = true)
-    interface MutableSingleton {
+    interface Batch {
+        Stream<Mutable> getProviders();
     }
 }

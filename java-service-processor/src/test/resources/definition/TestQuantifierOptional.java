@@ -17,16 +17,4 @@ class TestQuantifierOptional {
     @ServiceDefinition(quantifier = OPTIONAL, mutability = CONCURRENT)
     interface ThreadSafe {
     }
-
-    @ServiceDefinition(quantifier = OPTIONAL, mutability = NONE, singleton = true)
-    interface ImmutableSingleton {
-    }
-
-    @ServiceDefinition(quantifier = OPTIONAL, mutability = BASIC, singleton = true)
-    interface MutableSingleton {
-    }
-
-    @ServiceDefinition(quantifier = OPTIONAL, mutability = CONCURRENT, singleton = true)
-    interface ThreadSafeSingleton {
-    }
 }

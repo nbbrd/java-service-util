@@ -69,20 +69,11 @@ class LoadDefinition {
     @lombok.NonNull
     Optional<TypeInstantiator> cleaner;
 
-    boolean batch;
-
-    @lombok.NonNull
-    String batchName;
-
     @lombok.NonNull
     Optional<TypeMirror> batchType;
 
     public @NonNull ClassName resolveLoaderName() {
         return resolveName(loaderName, serviceType, "Loader");
-    }
-
-    public @NonNull ClassName resolveBatchName() {
-        return resolveName(batchName, serviceType, "Batch");
     }
 
     // visible for testing

@@ -4,11 +4,11 @@ import nbbrd.service.ServiceDefinition;
 
 public class TestLoaderNameValid {
 
-    @ServiceDefinition(loaderName = "internal.FooLoader", batch = true)
+    @ServiceDefinition(loaderName = "internal.FooLoader")
     public interface FooService {
     }
 
-    @ServiceDefinition(batchName = "internal.BarBatch", batch = true)
+    @ServiceDefinition()
     public interface BarService {
     }
 }

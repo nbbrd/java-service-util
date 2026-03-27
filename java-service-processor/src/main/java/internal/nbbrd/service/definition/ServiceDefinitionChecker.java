@@ -188,9 +188,6 @@ final class ServiceDefinitionChecker {
         if (!checkCleaner(definition.getCleaner(), service, types)) {
             return false;
         }
-        if (!checkMutability(definition, service)) {
-            return false;
-        }
         if (!checkBatch(definition, service)) {
             return false;
         }
@@ -320,19 +317,8 @@ final class ServiceDefinitionChecker {
         return true;
     }
 
-    private boolean checkMutability(LoadDefinition definition, TypeElement service) {
-        if (definition.getLifecycle() == Lifecycle.UNSAFE_MUTABLE) {
-            env.warn(service, String.format(Locale.ROOT, "Thread-unsafe singleton for '%1$s'", service));
-        }
-        return true;
-    }
-
     private boolean checkBatch(LoadDefinition definition, TypeElement service) {
         if (definition.getBatchType().isPresent()) {
-            if (definition.isBatch()) {
-                env.error(service, "Batch type cannot be used with batch property");
-                return false;
-            }
             TypeElement x = env.asTypeElement(definition.getBatchType().get());
             if (x.getKind() != ElementKind.INTERFACE && !x.getModifiers().contains(ABSTRACT)) {
                 env.error(service, "[RULE_B1] Batch type must be an interface or an abstract class");

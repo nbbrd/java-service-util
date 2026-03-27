@@ -17,16 +17,4 @@ class TestQuantifierMultiple {
     @ServiceDefinition(quantifier = MULTIPLE, mutability = CONCURRENT)
     interface ThreadSafe {
     }
-
-    @ServiceDefinition(quantifier = MULTIPLE, mutability = NONE, singleton = true)
-    interface ImmutableSingleton {
-    }
-
-    @ServiceDefinition(quantifier = MULTIPLE, mutability = BASIC, singleton = true)
-    interface MutableSingleton {
-    }
-
-    @ServiceDefinition(quantifier = MULTIPLE, mutability = CONCURRENT, singleton = true)
-    interface ThreadSafeSingleton {
-    }
 }

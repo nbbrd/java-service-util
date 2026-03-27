@@ -14,12 +14,10 @@ import java.util.stream.StreamSupport;
  * <li>Fallback: null</li>
  * <li>Preprocessing: null</li>
  * <li>Mutability: NONE</li>
- * <li>Singleton: false</li>
  * <li>Name: null</li>
  * <li>Backend: null</li>
  * <li>Cleaner: null</li>
- * <li>Batch: false</li>
- * <li>Batch name: null</li>
+ * <li>Batch type: null</li>
  * </ul>
  */
 public final class TestNonNestedDefLoader {

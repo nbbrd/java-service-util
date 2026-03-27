@@ -11,7 +11,6 @@ import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 /**
@@ -23,36 +22,29 @@ import java.util.stream.StreamSupport;
  * <li>Fallback: null</li>
  * <li>Preprocessing: wrapper: none filters:[isAvailable+isDisabled] sorters:[getCost1+getCost2]</li>
  * <li>Mutability: CONCURRENT</li>
- * <li>Singleton: true</li>
  * <li>Name: null</li>
  * <li>Backend: null</li>
  * <li>Cleaner: null</li>
- * <li>Batch: true</li>
- * <li>Batch name: null</li>
+ * <li>Batch type: null</li>
  * </ul>
  */
 public final class TestAllOptionsLoader {
-  private static final Iterable<TestAllOptions> SOURCE = ServiceLoader.load(TestAllOptions.class);
-
   public static final Pattern ID_PATTERN = Pattern.compile("^[A-Z0-9]+(?:_[A-Z0-9]+)*$");
 
-  private static final Iterable<TestAllOptionsBatch> BATCH = ServiceLoader.load(TestAllOptionsBatch.class);
+  private final Iterable<TestAllOptions> source = ServiceLoader.load(TestAllOptions.class);
 
-  private static final Predicate<TestAllOptions> FILTER = ((Predicate<TestAllOptions>)o -> ID_PATTERN.matcher(o.getName()).matches()).and(TestAllOptions::isAvailable).and(((Predicate<TestAllOptions>)TestAllOptions::isDisabled).negate());
+  private final Predicate<TestAllOptions> filter = ((Predicate<TestAllOptions>)o -> ID_PATTERN.matcher(o.getName()).matches()).and(TestAllOptions::isAvailable).and(((Predicate<TestAllOptions>)TestAllOptions::isDisabled).negate());
 
-  private static final Comparator<TestAllOptions> SORTER = ((Comparator<TestAllOptions>)Comparator.comparingInt(TestAllOptions::getCost1)).thenComparing(Collections.reverseOrder(Comparator.comparingInt(TestAllOptions::getCost2)));
+  private final Comparator<TestAllOptions> sorter = ((Comparator<TestAllOptions>)Comparator.comparingInt(TestAllOptions::getCost1)).thenComparing(Collections.reverseOrder(Comparator.comparingInt(TestAllOptions::getCost2)));
 
-  private static final AtomicReference<List<TestAllOptions>> RESOURCE = new AtomicReference<>(doLoad());
+  private final AtomicReference<List<TestAllOptions>> resource = new AtomicReference<>(doLoad());
 
-  private static final Consumer<Iterable> CLEANER = loader -> ((ServiceLoader)loader).reload();
+  private final Consumer<Iterable> cleaner = loader -> ((ServiceLoader)loader).reload();
 
-  private TestAllOptionsLoader() {
-  }
-
-  private static List<TestAllOptions> doLoad() {
-    return Stream.concat(StreamSupport.stream(SOURCE.spliterator(), false), StreamSupport.stream(BATCH.spliterator(), false).flatMap(o -> o.getProviders()))
-        .filter(FILTER)
-        .sorted(SORTER)
+  private List<TestAllOptions> doLoad() {
+    return StreamSupport.stream(source.spliterator(), false)
+        .filter(filter)
+        .sorted(sorter)
         .collect(Collectors.collectingAndThen(Collectors.toList(), Collections::unmodifiableList));
   }
 
@@ -61,8 +53,8 @@ public final class TestAllOptionsLoader {
    * <br>This method is thread-safe.
    * @return the current non-null value
    */
-  public static List<TestAllOptions> get() {
-    return RESOURCE.get();
+  public List<TestAllOptions> get() {
+    return resource.get();
   }
 
   /**
@@ -70,18 +62,17 @@ public final class TestAllOptionsLoader {
    * <br>This method is thread-safe.
    * @param newValue new non-null value
    */
-  public static void set(List<TestAllOptions> newValue) {
-    RESOURCE.set(Objects.requireNonNull(newValue));
+  public void set(List<TestAllOptions> newValue) {
+    resource.set(Objects.requireNonNull(newValue));
   }
 
   /**
    * Reloads the content by clearing the cache and fetching available providers.
    * <br>This method is thread-safe.
    */
-  public static void reload() {
-    synchronized(SOURCE) {
-      CLEANER.accept(SOURCE);
-      CLEANER.accept(BATCH);
+  public void reload() {
+    synchronized(source) {
+      cleaner.accept(source);
       set(doLoad());
     }
   }
@@ -90,8 +81,8 @@ public final class TestAllOptionsLoader {
    * Resets the content without clearing the cache.
    * <br>This method is thread-safe.
    */
-  public static void reset() {
-    synchronized(SOURCE) {
+  public void reset() {
+    synchronized(source) {
       set(doLoad());
     }
   }

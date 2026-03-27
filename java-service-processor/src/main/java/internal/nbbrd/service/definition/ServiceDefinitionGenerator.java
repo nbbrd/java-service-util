@@ -20,7 +20,7 @@ import com.squareup.javapoet.*;
 import internal.nbbrd.service.*;
 import nbbrd.service.Quantifier;
 
-import javax.lang.model.element.Modifier;
+import javax.lang.model.type.TypeMirror;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
@@ -28,7 +28,6 @@ import java.util.function.Predicate;
 import java.util.regex.Pattern;
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import static internal.nbbrd.service.Blocks.*;
 import static java.util.Collections.emptyList;
@@ -79,10 +78,6 @@ class ServiceDefinitionGenerator {
         return !definition.getLoaderName().isEmpty();
     }
 
-    public boolean hasCustomBatchName() {
-        return !definition.getBatchName().isEmpty();
-    }
-
     public TypeSpec generateLoader(boolean nested) {
         String className = definition.resolveLoaderName().simpleName();
 
@@ -121,10 +116,6 @@ class ServiceDefinitionGenerator {
             result.addModifiers(STATIC).build();
         }
 
-        if (definition.getLifecycle().isSingleton()) {
-            result.addMethod(MethodSpec.constructorBuilder().addModifiers(PRIVATE).build());
-        }
-
         if (definition.getLifecycle().isModifiable()) {
             FieldSpec cleanerField = newCleanerField();
             result.addField(cleanerField);
@@ -140,29 +131,6 @@ class ServiceDefinitionGenerator {
         return result.build();
     }
 
-    public Optional<TypeSpec> generateBatch(boolean nested) {
-        if (!definition.isBatch()) {
-            return Optional.empty();
-        }
-
-        String className = definition.resolveBatchName().simpleName();
-
-        TypeSpec.Builder result = TypeSpec
-                .interfaceBuilder(className)
-                .addModifiers(PUBLIC)
-                .addMethod(MethodSpec
-                        .methodBuilder("getProviders")
-                        .addModifiers(PUBLIC, ABSTRACT)
-                        .returns(typeOf(Stream.class, definition.getServiceType()))
-                        .build());
-
-        if (nested) {
-            result.addModifiers(STATIC).build();
-        }
-
-        return Optional.of(result.build());
-    }
-
     private CodeBlock getMainJavadoc() {
         return CodeBlock
                 .builder()
@@ -174,12 +142,10 @@ class ServiceDefinitionGenerator {
                 .add("<li>Fallback: $L</li>\n", toJavadocLink(definition.getFallback()))
                 .add("<li>Preprocessing: $L</li>\n", getPreprocessingJavadoc())
                 .add("<li>Mutability: $L</li>\n", definition.getLifecycle().toMutability())
-                .add("<li>Singleton: $L</li>\n", definition.getLifecycle().isSingleton())
                 .add("<li>Name: $L</li>\n", definition.getLoaderName().isEmpty() ? "null" : definition.getLoaderName())
                 .add("<li>Backend: $L</li>\n", definition.getBackend().map(HasTypeMirror::getTypeName).orElse("null"))
                 .add("<li>Cleaner: $L</li>\n", definition.getCleaner().map(HasTypeMirror::getTypeName).orElse("null"))
-                .add("<li>Batch: $L</li>\n", definition.isBatch())
-                .add("<li>Batch name: $L</li>\n", definition.getBatchName().isEmpty() ? "null" : definition.getBatchName())
+                .add("<li>Batch type: $L</li>\n", definition.getBatchType().map(TypeMirror::toString).orElse("null"))
                 .add("</ul>\n")
                 .build();
     }
@@ -213,7 +179,6 @@ class ServiceDefinitionGenerator {
         return MethodSpec
                 .methodBuilder("doLoad")
                 .addModifiers(PRIVATE)
-                .addModifiers(getSingletonModifiers())
                 .returns(quantifierType)
                 .addExceptions(getQuantifierException())
                 .addStatement(CodeBlock
@@ -416,28 +381,18 @@ class ServiceDefinitionGenerator {
 
     private FieldSpec getSourceField() {
         return FieldSpec
-                .builder(typeOf(Iterable.class, definition.getServiceType()), fieldName("source"))
+                .builder(typeOf(Iterable.class, definition.getServiceType()), "source")
                 .addModifiers(PRIVATE, FINAL)
-                .addModifiers(getSingletonModifiers())
                 .initializer("$L", getBackendInitCode(definition.getServiceType()))
                 .build();
     }
 
     private Optional<FieldSpec> getBatchField() {
-        if (definition.isBatch()) {
-            return Optional.of(FieldSpec
-                    .builder(typeOf(Iterable.class, definition.resolveBatchName()), fieldName("batch"))
-                    .addModifiers(PRIVATE, FINAL)
-                    .addModifiers(getSingletonModifiers())
-                    .initializer("$L", getBackendInitCode(definition.resolveBatchName()))
-                    .build());
-        }
         if (definition.getBatchType().isPresent()) {
             ClassName batchTypeName = ClassName.bestGuess(definition.getBatchType().get().toString());
             return Optional.of(FieldSpec
-                    .builder(typeOf(Iterable.class, batchTypeName), fieldName("batch"))
+                    .builder(typeOf(Iterable.class, batchTypeName), "batch")
                     .addModifiers(PRIVATE, FINAL)
-                    .addModifiers(getSingletonModifiers())
                     .initializer("$L", getBackendInitCode(batchTypeName))
                     .build());
         }
@@ -448,22 +403,20 @@ class ServiceDefinitionGenerator {
     private Optional<FieldSpec> getFilterField(Optional<FieldSpec> idPatternField) {
         return !filters.isEmpty() || idPatternField.isPresent()
                 ? Optional.of(FieldSpec
-                .builder(typeOf(Predicate.class, definition.getServiceType()), fieldName("filter"))
-                .addModifiers(PRIVATE, FINAL)
-                .addModifiers(getSingletonModifiers())
-                .initializer("$L", getFiltersCode(idPatternField))
-                .build())
+                              .builder(typeOf(Predicate.class, definition.getServiceType()), "filter")
+                              .addModifiers(PRIVATE, FINAL)
+                              .initializer("$L", getFiltersCode(idPatternField))
+                              .build())
                 : Optional.empty();
     }
 
     private Optional<FieldSpec> getSorterField() {
         return !sorters.isEmpty()
                 ? Optional.of(FieldSpec
-                .builder(typeOf(Comparator.class, definition.getServiceType()), fieldName("sorter"))
-                .addModifiers(PRIVATE, FINAL)
-                .addModifiers(getSingletonModifiers())
-                .initializer("$L", getSortersCode())
-                .build())
+                              .builder(typeOf(Comparator.class, definition.getServiceType()), "sorter")
+                              .addModifiers(PRIVATE, FINAL)
+                              .initializer("$L", getSortersCode())
+                              .build())
                 : Optional.empty();
     }
 
@@ -475,9 +428,8 @@ class ServiceDefinitionGenerator {
 
     private FieldSpec newCleanerField() {
         return FieldSpec
-                .builder(typeOf(Consumer.class, ClassName.get(Iterable.class)), fieldName("cleaner"))
+                .builder(typeOf(Consumer.class, ClassName.get(Iterable.class)), "cleaner")
                 .addModifiers(PRIVATE, FINAL)
-                .addModifiers(getSingletonModifiers())
                 .initializer("$L", getCleanerInitCode())
                 .build();
     }
@@ -490,22 +442,18 @@ class ServiceDefinitionGenerator {
 
     private FieldSpec getResourceField(MethodSpec doLoadMethod, TypeName quantifierType) {
         return getResourceFieldBuilder(quantifierType)
-                .addModifiers(getSingletonModifiers())
                 .initializer(getResourceInitializer(doLoadMethod))
                 .build();
     }
 
     private FieldSpec.Builder getResourceFieldBuilder(TypeName quantifierType) {
-        String name = fieldName("resource");
+        String name = "resource";
         switch (definition.getLifecycle()) {
             case IMMUTABLE:
-            case CONSTANT:
                 return FieldSpec.builder(quantifierType, name, PRIVATE, FINAL);
             case MUTABLE:
-            case UNSAFE_MUTABLE:
                 return FieldSpec.builder(quantifierType, name, PRIVATE);
             case CONCURRENT:
-            case ATOMIC:
                 return FieldSpec.builder(typeOf(AtomicReference.class, quantifierType), name, PRIVATE, FINAL);
             default:
                 throw new Unreachable();
@@ -528,7 +476,6 @@ class ServiceDefinitionGenerator {
                         .add("@return the current non-null value\n")
                         .build())
                 .addModifiers(PUBLIC)
-                .addModifiers(getSingletonModifiers())
                 .returns(quantifierType)
                 .addStatement(getGetterStatement(resourceField))
                 .build();
@@ -563,7 +510,6 @@ class ServiceDefinitionGenerator {
                         .add("@param newValue new non-null value\n")
                         .build())
                 .addModifiers(PUBLIC)
-                .addModifiers(getSingletonModifiers())
                 .addParameter(quantifierType, "newValue")
                 .addStatement(getSetterStatement(resourceField))
                 .build();
@@ -602,7 +548,6 @@ class ServiceDefinitionGenerator {
                         .add(getThreadSafetyComment())
                         .build())
                 .addModifiers(PUBLIC)
-                .addModifiers(getSingletonModifiers())
                 .addExceptions(getQuantifierException());
 
         if (definition.getLifecycle().isAtomicReference()) {
@@ -629,7 +574,6 @@ class ServiceDefinitionGenerator {
                         .add(getThreadSafetyComment())
                         .build())
                 .addModifiers(PUBLIC)
-                .addModifiers(getSingletonModifiers())
                 .addExceptions(getQuantifierException());
 
         if (definition.getLifecycle().isAtomicReference()) {
@@ -669,21 +613,11 @@ class ServiceDefinitionGenerator {
 
 
     private Optional<FieldSpec> getIdPatternField() {
-        return ids.size() == 1 && !ids.get(0).getPattern().isEmpty()
-                ? Optional.of(FieldSpec
-                .builder(Pattern.class, fieldName("ID_PATTERN"))
-                .addModifiers(PUBLIC, STATIC, FINAL)
-                .initializer("$T.compile(\"$N\")", Pattern.class, ids.get(0).getPattern())
-                .build())
-                : Optional.empty();
-    }
-
-    private Modifier[] getSingletonModifiers() {
-        return definition.getLifecycle().isSingleton() ? SINGLETON_MODIFIER : NO_MODIFIER;
-    }
-
-    private String fieldName(String name) {
-        return definition.getLifecycle().isSingleton() ? name.toUpperCase(Locale.ROOT) : name;
+        return ids.size() == 1 && !ids.get(0).getPattern().isEmpty() ? Optional.of(FieldSpec
+                                                                                   .builder(Pattern.class, "ID_PATTERN")
+                                                                                   .addModifiers(PUBLIC, STATIC, FINAL)
+                                                                                   .initializer("$T.compile(\"$N\")", Pattern.class, ids.get(0).getPattern())
+                                                                                   .build()) : Optional.empty();
     }
 
     private CodeBlock getThreadSafetyComment() {
@@ -708,7 +642,5 @@ class ServiceDefinitionGenerator {
         return Collectors.mapping(HasMethod::getMethodName, Collectors.joining("+", "[", "]"));
     }
 
-    private static final Modifier[] NO_MODIFIER = new Modifier[0];
-    private static final Modifier[] SINGLETON_MODIFIER = new Modifier[]{STATIC};
     private static final CodeBlock NEW_LINE = CodeBlock.of("\n");
 }
