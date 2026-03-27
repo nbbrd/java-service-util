@@ -17,8 +17,6 @@ public final class TestBatchReloadingLoader {
    * <li>Fallback: null</li>
    * <li>Preprocessing: null</li>
    * <li>Name: null</li>
-   * <li>Backend: null</li>
-   * <li>Cleaner: null</li>
    * <li>Batch type: definition.TestBatchReloading.Batch</li>
    * </ul>
    */

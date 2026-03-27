@@ -18,17 +18,13 @@ package internal.nbbrd.service.definition;
 
 import com.github.mustachejava.DefaultMustacheFactory;
 import com.squareup.javapoet.ClassName;
-import internal.nbbrd.service.ExtEnvironment;
 import lombok.NonNull;
 import nbbrd.service.Quantifier;
 
 import javax.lang.model.type.TypeMirror;
-import javax.lang.model.util.Types;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.util.Optional;
-import java.util.function.Consumer;
-import java.util.function.Function;
 
 /**
  * @author Philippe Charles
@@ -49,12 +45,6 @@ class LoadDefinition {
 
     @lombok.NonNull
     String loaderName;
-
-    @lombok.NonNull
-    Optional<TypeInstantiator> backend;
-
-    @lombok.NonNull
-    Optional<TypeInstantiator> cleaner;
 
     @lombok.NonNull
     Optional<TypeMirror> batchType;
@@ -85,21 +75,6 @@ class LoadDefinition {
             return topLoader;
         }
         return topLoader.nestedClass(serviceType.simpleName());
-    }
-
-    static @NonNull TypeMirror getBackendType(@NonNull ExtEnvironment env, @NonNull TypeMirror service) {
-        Types types = env.getTypeUtils();
-        TypeMirror classOf = types.getDeclaredType(env.asTypeElement(Class.class));
-        TypeMirror iterableOf = types.getDeclaredType(env.asTypeElement(Iterable.class));
-        TypeMirror extendsIterableOf = types.getWildcardType(iterableOf, null);
-        return types.getDeclaredType(env.asTypeElement(Function.class), classOf, extendsIterableOf);
-    }
-
-    static @NonNull TypeMirror getCleanerType(@NonNull ExtEnvironment env, @NonNull TypeMirror service) {
-        Types types = env.getTypeUtils();
-        TypeMirror iterableOf = types.getDeclaredType(env.asTypeElement(Iterable.class));
-        TypeMirror extendsIterableOf = types.getWildcardType(iterableOf, null);
-        return types.getDeclaredType(env.asTypeElement(Consumer.class), extendsIterableOf);
     }
 
     public static final String NO_NAME = "";

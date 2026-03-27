@@ -20,8 +20,6 @@ import java.util.stream.StreamSupport;
  * <li>Fallback: null</li>
  * <li>Preprocessing: filters:[isAvailable+isDisabled] sorters:[getCost1+getCost2]</li>
  * <li>Name: null</li>
- * <li>Backend: null</li>
- * <li>Cleaner: null</li>
  * <li>Batch type: null</li>
  * </ul>
  */

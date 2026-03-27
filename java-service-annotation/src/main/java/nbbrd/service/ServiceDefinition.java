@@ -17,9 +17,6 @@
 package nbbrd.service;
 
 import java.lang.annotation.*;
-import java.util.ServiceLoader;
-import java.util.function.Consumer;
-import java.util.function.Function;
 
 /**
  * Declarative definition of a service that generates a specialized service
@@ -80,63 +77,6 @@ public @interface ServiceDefinition {
      * @return the batch class if required, {@link Void} otherwise
      */
     Class<?> batchType() default Void.class;
-
-    /**
-     * Specifies the class that creates a service loader.
-     * <br>The default backend uses {@link ServiceLoader#load(Class)}.
-     * <p>
-     * Requirements:
-     * <ul>
-     * <li>must be assignable to {@code Function<Class, ? extends Iterable>}
-     * <li>must be instantiable either by constructor, static method, enum field
-     * or static final field
-     * </ul>
-     *
-     * @return the backend class if required, {@link DefaultBackend}
-     * otherwise
-     * @deprecated This is a complex mechanism that targets specific usages. It will be removed and/or simplified in a future release.
-     */
-    @Deprecated
-    Class<? extends Function<? extends Class, ? extends Iterable>> backend() default DefaultBackend.class;
-
-    /**
-     * Specifies the class that deals with the cache cleaning.
-     * <br>The default cleaner uses {@link ServiceLoader#reload()}.
-     * <p>
-     * Requirements:
-     * <ul>
-     * <li>must be assignable to {@code Consumer<? extends Iterable>}
-     * <li>must be instantiable either by constructor, static method, enum field
-     * or static final field
-     * </ul>
-     *
-     * @return the backend class if required, {@link DefaultCleaner}
-     * otherwise
-     * @deprecated This is a complex mechanism that targets specific usages. It will be removed and/or simplified in a future release.
-     */
-    @Deprecated
-    Class<? extends Consumer<? extends Iterable>> cleaner() default DefaultCleaner.class;
-
-    @SuppressWarnings("rawtypes")
-    @Deprecated
-    final class DefaultBackend implements Function<Class, Iterable> {
-
-        @SuppressWarnings("unchecked")
-        @Override
-        public Iterable apply(Class type) {
-            return ServiceLoader.load(type);
-        }
-    }
-
-    @SuppressWarnings("rawtypes")
-    @Deprecated
-    final class DefaultCleaner implements Consumer<Iterable> {
-
-        @Override
-        public void accept(Iterable serviceLoader) {
-            ((ServiceLoader) serviceLoader).reload();
-        }
-    }
 
     /**
      * Name to suppress single-fallback warning using @{@link SuppressWarnings}

@@ -66,19 +66,15 @@ Features:
 - allows [identification](#serviceid)
 - allows [filtering](#servicefilter) and [sorting](#servicesorter)
 - allows [batch loading](#batch-type-property) 
-- allows [custom backend](#backend-and-cleaner-properties)
 
 Limitations:
 - does not support [type inspection before instantiation](https://github.com/nbbrd/java-service-util/issues/13)
 
-Main properties:
+Properties:
 - [`#quantifier`](#quantifier-property): number of services expected at runtime
 - [`#loaderName`](#loader-name-property): custom qualified name of the loader
 - [`#fallback`](#fallback-property): fallback type for `SINGLE` quantifier
 - [`#batchType`](#batch-type-property): bridge different services and generate providers on the fly
-
-Advanced properties:
-- [`#backend` `#cleaner`](#backend-and-cleaner-properties): custom service loader
 
 #### Quantifier property
 
@@ -245,14 +241,6 @@ _Source: [nbbrd/service/examples/SwingColorScheme.java](java-service-examples/sr
 Constraints:
 1. Batch type must be an interface or an abstract class.
 2. Batch method must be unique.
-
-#### Backend and cleaner properties
-
-The `#backend` and `#cleaner` properties allow to use a **custom service loader** such as [NetBeans Lookup](https://bits.netbeans.org/dev/javadoc/org-openide-util-lookup/index.html) instead of JDK `ServiceLoader`.
-
-_Example: [nbbrd/service/examples/IconProvider.java](java-service-examples/src/main/java/nbbrd/service/examples/IconProvider.java)_
-
-⚠️ _This is a complex mechanism that targets specific usages. It will be removed and/or simplified in a future release._
 
 ### @ServiceId
 

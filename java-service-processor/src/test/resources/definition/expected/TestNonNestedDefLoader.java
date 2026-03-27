@@ -15,8 +15,6 @@ import java.util.stream.StreamSupport;
  * <li>Fallback: null</li>
  * <li>Preprocessing: null</li>
  * <li>Name: null</li>
- * <li>Backend: null</li>
- * <li>Cleaner: null</li>
  * <li>Batch type: null</li>
  * </ul>
  */

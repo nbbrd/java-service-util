@@ -531,34 +531,6 @@ public class ServiceDefinitionProcessorTest {
     }
 
     @Nested
-    class BackendTest {
-
-        @Test
-        public void testNetBeans() {
-            assertThat(compile(forResource("definition/TestBackendNetBeans.java")))
-                    .has(succeededWithoutWarnings())
-                    .extracting(Compilation::generatedSourceFiles, JAVA_FILE_OBJECTS)
-                    .filteredOn(sourceFileNamed("definition", "TestBackendNetBeansLoader.java"))
-                    .singleElement()
-                    .extracting(Compilations::contentsAsUtf8String, STRING)
-                    .contains("private final Iterable<TestBackendNetBeans> source = TestBackendNetBeans.NetBeansLookup.INSTANCE.apply(TestBackendNetBeans.class);");
-        }
-
-        @Test
-        public void testNonAssignable() {
-            JavaFileObject file = forResource("definition/TestBackendNonAssignable.java");
-
-            assertThat(compile(file))
-                    .has(failed())
-                    .extracting(Compilation::errors, DIAGNOSTICS)
-                    .singleElement()
-                    .returns("Backend 'definition.TestBackendNonAssignable.HelloProc' doesn't extend nor implement 'java.util.function.Function<java.lang.Class,? extends java.lang.Iterable>'", Compilations::getDefaultMessage)
-                    .returns(file, Diagnostic::getSource)
-                    .returns(11L, Diagnostic::getLineNumber);
-        }
-    }
-
-    @Nested
     class BatchTest {
 
         @Test

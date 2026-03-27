@@ -102,12 +102,6 @@ final class ServiceDefinitionCollector {
         Optional<TypeInstantiator> fallback = nonNull(annotation::fallback, Void.class)
                 .map(fallbackType -> new TypeInstantiator(fallbackType, Instantiator.allOf(types, serviceType, env.asTypeElement(fallbackType))));
 
-        Optional<TypeInstantiator> backend = nonNull(annotation::backend, ServiceDefinition.DefaultBackend.class)
-                .map(type -> new TypeInstantiator(type, Instantiator.allOf(types, env.asTypeElement(type), env.asTypeElement(type))));
-
-        Optional<TypeInstantiator> cleaner = nonNull(annotation::cleaner, ServiceDefinition.DefaultCleaner.class)
-                .map(type -> new TypeInstantiator(type, Instantiator.allOf(types, env.asTypeElement(type), env.asTypeElement(type))));
-
         Optional<TypeMirror> batchType = nonNull(annotation::batchType, Void.class);
 
         return LoadDefinition
@@ -116,8 +110,6 @@ final class ServiceDefinitionCollector {
                 .serviceType(ClassName.get(serviceType))
                 .fallback(fallback)
                 .loaderName(annotation.loaderName())
-                .backend(backend)
-                .cleaner(cleaner)
                 .batchType(batchType)
                 .build();
     }

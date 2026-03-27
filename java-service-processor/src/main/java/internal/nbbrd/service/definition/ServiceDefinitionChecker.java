@@ -176,12 +176,6 @@ final class ServiceDefinitionChecker {
         if (!checkFallback(definition.getQuantifier(), definition.getFallback(), isSingleFallbackNotExpected(service), service, types)) {
             return false;
         }
-        if (!checkBackend(definition.getBackend(), service, types)) {
-            return false;
-        }
-        if (!checkCleaner(definition.getCleaner(), service, types)) {
-            return false;
-        }
         if (!checkBatch(definition, service)) {
             return false;
         }
@@ -215,50 +209,6 @@ final class ServiceDefinitionChecker {
     private boolean checkFallbackTypeHandler(TypeInstantiator handler, TypeElement service, Types types) {
         if (!types.isAssignable(handler.getType(), types.erasure(service.asType()))) {
             env.error(service, String.format(Locale.ROOT, "Fallback '%1$s' doesn't extend nor implement service '%2$s'", handler.getType(), service));
-            return false;
-        }
-
-        if (!checkInstanceFactories(service, handler.getType(), handler)) {
-            return false;
-        }
-        return true;
-    }
-
-    private boolean checkBackend(Optional<TypeInstantiator> backend, TypeElement service, Types types) {
-        if (backend.isPresent()) {
-            if (!checkBackendTypeHandler(backend.get(), service, types)) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    private boolean checkBackendTypeHandler(TypeInstantiator handler, TypeElement service, Types types) {
-        TypeMirror expectedType = LoadDefinition.getBackendType(env, service.asType());
-        if (!types.isAssignable(handler.getType(), expectedType)) {
-            env.error(service, String.format(Locale.ROOT, "Backend '%1$s' doesn't extend nor implement '%2$s'", handler.getType(), expectedType));
-            return false;
-        }
-
-        if (!checkInstanceFactories(service, handler.getType(), handler)) {
-            return false;
-        }
-        return true;
-    }
-
-    private boolean checkCleaner(Optional<TypeInstantiator> cleaner, TypeElement service, Types types) {
-        if (cleaner.isPresent()) {
-            if (!checkCleanerTypeHandler(cleaner.get(), service, types)) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    private boolean checkCleanerTypeHandler(TypeInstantiator handler, TypeElement service, Types types) {
-        TypeMirror expectedType = LoadDefinition.getCleanerType(env, service.asType());
-        if (!types.isAssignable(handler.getType(), expectedType)) {
-            env.error(service, String.format(Locale.ROOT, "Cleaner '%1$s' doesn't extend nor implement '%2$s'", handler.getType(), expectedType));
             return false;
         }
 

@@ -18,7 +18,6 @@ package internal.nbbrd.service.definition;
 
 import com.squareup.javapoet.*;
 import internal.nbbrd.service.HasMethod;
-import internal.nbbrd.service.HasTypeMirror;
 import internal.nbbrd.service.Instantiator;
 import internal.nbbrd.service.Unreachable;
 import nbbrd.service.Quantifier;
@@ -138,8 +137,6 @@ class ServiceDefinitionGenerator {
                 .add("<li>Fallback: $L</li>\n", toJavadocLink(definition.getFallback()))
                 .add("<li>Preprocessing: $L</li>\n", getPreprocessingJavadoc())
                 .add("<li>Name: $L</li>\n", definition.getLoaderName().isEmpty() ? "null" : definition.getLoaderName())
-                .add("<li>Backend: $L</li>\n", definition.getBackend().map(HasTypeMirror::getTypeName).orElse("null"))
-                .add("<li>Cleaner: $L</li>\n", definition.getCleaner().map(HasTypeMirror::getTypeName).orElse("null"))
                 .add("<li>Batch type: $L</li>\n", definition.getBatchType().map(TypeMirror::toString).orElse("null"))
                 .add("</ul>\n")
                 .build();
@@ -367,9 +364,7 @@ class ServiceDefinitionGenerator {
     }
 
     private CodeBlock getBackendInitCode(ClassName serviceType) {
-        return definition.getBackend().isPresent()
-                ? CodeBlock.of("$L.apply($T.class)", getInstantiatorCode(definition.getBackend().get()), serviceType)
-                : CodeBlock.of("$T.load($T.class)", ServiceLoader.class, serviceType);
+        return CodeBlock.of("$T.load($T.class)", ServiceLoader.class, serviceType);
     }
 
     private FieldSpec newCleanerField() {
@@ -381,9 +376,7 @@ class ServiceDefinitionGenerator {
     }
 
     private CodeBlock getCleanerInitCode() {
-        return definition.getCleaner().isPresent()
-                ? CodeBlock.of("$L", getInstantiatorCode(definition.getCleaner().get()))
-                : CodeBlock.of("loader -> (($T)loader).reload()", ServiceLoader.class);
+        return CodeBlock.of("loader -> (($T)loader).reload()", ServiceLoader.class);
     }
 
     private FieldSpec getResourceField(MethodSpec doLoadMethod, TypeName quantifierType) {
