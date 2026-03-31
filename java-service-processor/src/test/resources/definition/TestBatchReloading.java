@@ -1,7 +1,5 @@
 package definition;
 
-import static nbbrd.service.Mutability.*;
-
 import nbbrd.service.ServiceDefinition;
 
 import java.util.stream.Stream;
