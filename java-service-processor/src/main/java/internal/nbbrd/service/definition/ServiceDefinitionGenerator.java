@@ -93,9 +93,7 @@ class ServiceDefinitionGenerator {
 
         CodeBlock rawStreamCode = getRawStreamCode(sourceField, batchField);
 
-        MethodSpec doLoadMethod = getDoLoadMethod(rawStreamCode, filterField, sorterField, quantifierType);
-        FieldSpec resourceField = getResourceField(doLoadMethod, quantifierType);
-        MethodSpec getMethod = getGetMethod(resourceField, quantifierType);
+        MethodSpec getMethod = getGetMethod(rawStreamCode, filterField, sorterField, quantifierType);
 
         TypeSpec.Builder result = TypeSpec
                 .classBuilder(className)
@@ -108,10 +106,7 @@ class ServiceDefinitionGenerator {
         filterField.ifPresent(result::addField);
         sorterField.ifPresent(result::addField);
 
-        result
-                .addMethod(doLoadMethod)
-                .addField(resourceField)
-                .addMethod(getMethod);
+        result.addMethod(getMethod);
 
         if (nested) {
             result.addModifiers(STATIC).build();
@@ -119,9 +114,7 @@ class ServiceDefinitionGenerator {
 
         FieldSpec cleanerField = newCleanerField();
         result.addField(cleanerField);
-        result.addMethod(newSetMethod(resourceField, quantifierType));
-        result.addMethod(newReloadMethod(sourceField, batchField, cleanerField, doLoadMethod));
-
+        result.addMethod(newReloadMethod(sourceField, batchField, cleanerField));
         result.addMethod(newLoadMethod(className, quantifierType, getMethod));
 
         return result.build();
@@ -148,27 +141,6 @@ class ServiceDefinitionGenerator {
                     + " sorters:" + sorters.stream().collect(toMethodNames());
         }
         return "null";
-    }
-
-    @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
-    private MethodSpec getDoLoadMethod(
-            CodeBlock rawStreamCode,
-            Optional<FieldSpec> filterField,
-            Optional<FieldSpec> sorterField,
-            TypeName quantifierType
-    ) {
-        return MethodSpec
-                .methodBuilder("doLoad")
-                .addModifiers(PRIVATE)
-                .returns(quantifierType)
-                .addExceptions(getQuantifierException())
-                .addStatement(CodeBlock
-                        .builder()
-                        .add("return ")
-                        .add(getPreprocessingCode(rawStreamCode, filterField, sorterField))
-                        .add(getQuantifierCode())
-                        .build())
-                .build();
     }
 
     @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
@@ -379,31 +351,24 @@ class ServiceDefinitionGenerator {
         return CodeBlock.of("loader -> (($T)loader).reload()", ServiceLoader.class);
     }
 
-    private FieldSpec getResourceField(MethodSpec doLoadMethod, TypeName quantifierType) {
-        return getResourceFieldBuilder(quantifierType)
-                .initializer(getResourceInitializer(doLoadMethod))
-                .build();
-    }
-
-    private FieldSpec.Builder getResourceFieldBuilder(TypeName quantifierType) {
-        return FieldSpec.builder(quantifierType, "resource", PRIVATE);
-    }
-
-    private CodeBlock getResourceInitializer(MethodSpec doLoadMethod) {
-        return CodeBlock.of("$N()", doLoadMethod);
-    }
-
-    private MethodSpec getGetMethod(FieldSpec resourceField, TypeName quantifierType) {
+    @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
+    private MethodSpec getGetMethod(
+            CodeBlock rawStreamCode,
+            Optional<FieldSpec> filterField,
+            Optional<FieldSpec> sorterField,
+            TypeName quantifierType
+    ) {
         return MethodSpec
                 .methodBuilder("get")
-                .addJavadoc(CodeBlock
-                        .builder()
-                        .add(getGetDescription())
-                        .add("@return the current non-null value\n")
-                        .build())
                 .addModifiers(PUBLIC)
                 .returns(quantifierType)
-                .addStatement(getGetterStatement(resourceField))
+                .addExceptions(getQuantifierException())
+                .addStatement(CodeBlock
+                        .builder()
+                        .add("return ")
+                        .add(getPreprocessingCode(rawStreamCode, filterField, sorterField))
+                        .add(getQuantifierCode())
+                        .build())
                 .build();
     }
 
@@ -420,46 +385,10 @@ class ServiceDefinitionGenerator {
         }
     }
 
-    private CodeBlock getGetterStatement(FieldSpec resourceField) {
-        return CodeBlock.of("return $N", resourceField);
-    }
-
-    private MethodSpec newSetMethod(FieldSpec resourceField, TypeName quantifierType) {
-        return MethodSpec
-                .methodBuilder("set")
-                .addJavadoc(CodeBlock
-                        .builder()
-                        .add(getSetDescription())
-                        .add("@param newValue new non-null value\n")
-                        .build())
-                .addModifiers(PRIVATE)
-                .addParameter(quantifierType, "newValue")
-                .addStatement(getSetterStatement(resourceField))
-                .build();
-    }
-
-    private CodeBlock getSetDescription() {
-        switch (definition.getQuantifier()) {
-            case OPTIONAL:
-                return CodeBlock.of("Sets an optional $L instance.\n", toJavadocLink(definition.getServiceType()));
-            case SINGLE:
-                return CodeBlock.of("Sets a $L instance.\n", toJavadocLink(definition.getServiceType()));
-            case MULTIPLE:
-                return CodeBlock.of("Sets a list of $L instances.\n", toJavadocLink(definition.getServiceType()));
-            default:
-                throw new Unreachable();
-        }
-    }
-
-    private CodeBlock getSetterStatement(FieldSpec resourceField) {
-        return CodeBlock.of("$N = $T.requireNonNull(newValue)", resourceField, Objects.class);
-    }
-
     private MethodSpec newReloadMethod(
             FieldSpec sourceField,
             @SuppressWarnings("OptionalUsedAsFieldOrParameterType") Optional<FieldSpec> batchField,
-            FieldSpec cleanerField,
-            MethodSpec loaderMethod
+            FieldSpec cleanerField
     ) {
         MethodSpec.Builder result = MethodSpec
                 .methodBuilder("reload")
@@ -472,7 +401,6 @@ class ServiceDefinitionGenerator {
 
         result.addStatement("$N.accept($N)", cleanerField, sourceField);
         batchField.ifPresent(fieldSpec -> result.addStatement("$N.accept($N)", cleanerField, fieldSpec));
-        result.addStatement("set($N())", loaderMethod);
 
         return result.build();
     }

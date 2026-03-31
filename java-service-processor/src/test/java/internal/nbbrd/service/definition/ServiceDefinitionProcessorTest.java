@@ -114,8 +114,7 @@ public class ServiceDefinitionProcessorTest {
                     .has(sourceFileNamed("definition", "TestQuantifierSingleLoader.java"))
                     .extracting(Compilations::contentsAsUtf8String, STRING)
                     .contains(
-                            "public static TestQuantifierSingle.Mutable load()",
-                            "private TestQuantifierSingle.Mutable resource = doLoad();"
+                            "public static TestQuantifierSingle.Mutable load()"
                     );
         }
 
@@ -133,8 +132,7 @@ public class ServiceDefinitionProcessorTest {
                     .has(sourceFileNamed("definition", "TestQuantifierOptionalLoader.java"))
                     .extracting(Compilations::contentsAsUtf8String, STRING)
                     .contains(
-                            "public static Optional<TestQuantifierOptional.Mutable> load()",
-                            "private Optional<TestQuantifierOptional.Mutable> resource = doLoad();"
+                            "public static Optional<TestQuantifierOptional.Mutable> load()"
                     );
         }
 
@@ -152,8 +150,7 @@ public class ServiceDefinitionProcessorTest {
                     .has(sourceFileNamed("definition", "TestQuantifierMultipleLoader.java"))
                     .extracting(Compilations::contentsAsUtf8String, STRING)
                     .contains(
-                            "public static List<TestQuantifierMultiple.Mutable> load()",
-                            "private List<TestQuantifierMultiple.Mutable> resource = doLoad();"
+                            "public static List<TestQuantifierMultiple.Mutable> load()"
                     );
         }
     }
@@ -200,13 +197,9 @@ public class ServiceDefinitionProcessorTest {
                     .extracting(Compilations::contentsAsUtf8String, STRING)
                     .contains(
                             ".filter(filter)",
-                            "private Optional<TestFilterValid.SingleFilter> resource = doLoad();",
                             "private final Predicate<TestFilterValid.SingleFilter> filter = TestFilterValid.SingleFilter::isAvailable",
-                            "private Optional<TestFilterValid.MultiFilter> resource = doLoad();",
                             "private final Predicate<TestFilterValid.MultiFilter> filter = ((Predicate<TestFilterValid.MultiFilter>)TestFilterValid.MultiFilter::isAvailable).and(TestFilterValid.MultiFilter::isFastEnough)",
-                            "private Optional<TestFilterValid.ReversedFilter> resource = doLoad();",
                             "private final Predicate<TestFilterValid.ReversedFilter> filter = ((Predicate<TestFilterValid.ReversedFilter>)TestFilterValid.ReversedFilter::isAvailable).negate()",
-                            "private Optional<TestFilterValid.MultiFilterWithPosition> resource = doLoad();",
                             "private final Predicate<TestFilterValid.MultiFilterWithPosition> filter = ((Predicate<TestFilterValid.MultiFilterWithPosition>)TestFilterValid.MultiFilterWithPosition::isFastEnough).and(TestFilterValid.MultiFilterWithPosition::isAvailable)"
                     );
         }
@@ -300,19 +293,12 @@ public class ServiceDefinitionProcessorTest {
                     .extracting(Compilations::contentsAsUtf8String, STRING)
                     .contains(
                             ".sorted(sorter)",
-                            "private Optional<TestSorterValid.IntSorter> resource = doLoad();",
                             "Comparator.comparingInt(TestSorterValid.IntSorter::getCost)",
-                            "private Optional<TestSorterValid.LongSorter> resource = doLoad();",
                             "Comparator.comparingLong(TestSorterValid.LongSorter::getCost)",
-                            "private Optional<TestSorterValid.DoubleSorter> resource = doLoad();",
                             "Comparator.comparingDouble(TestSorterValid.DoubleSorter::getCost)",
-                            "private Optional<TestSorterValid.ComparableSorter> resource = doLoad();",
                             "Comparator.comparing(TestSorterValid.ComparableSorter::getCost)",
-                            "private Optional<TestSorterValid.MultiSorter> resource = doLoad();",
                             "((Comparator<TestSorterValid.MultiSorter>)Comparator.comparingInt(TestSorterValid.MultiSorter::getCost)).thenComparing(Comparator.comparingDouble(TestSorterValid.MultiSorter::getAccuracy))",
-                            "private Optional<TestSorterValid.ReversedSorter> resource = doLoad();",
                             "Collections.reverseOrder(Comparator.comparingInt(TestSorterValid.ReversedSorter::getCost))",
-                            "private Optional<TestSorterValid.MultiSorterWithPosition> resource = doLoad();",
                             "((Comparator<TestSorterValid.MultiSorterWithPosition>)Comparator.comparingDouble(TestSorterValid.MultiSorterWithPosition::getAccuracy)).thenComparing(Comparator.comparingInt(TestSorterValid.MultiSorterWithPosition::getCost))"
                     );
         }

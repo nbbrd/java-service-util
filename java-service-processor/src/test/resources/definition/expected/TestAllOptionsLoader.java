@@ -4,7 +4,6 @@ import java.lang.Iterable;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Objects;
 import java.util.ServiceLoader;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
@@ -32,11 +31,9 @@ public final class TestAllOptionsLoader {
 
   private final Comparator<TestAllOptions> sorter = ((Comparator<TestAllOptions>)Comparator.comparingInt(TestAllOptions::getCost1)).thenComparing(Collections.reverseOrder(Comparator.comparingInt(TestAllOptions::getCost2)));
 
-  private List<TestAllOptions> resource = doLoad();
-
   private final Consumer<Iterable> cleaner = loader -> ((ServiceLoader)loader).reload();
 
-  private List<TestAllOptions> doLoad() {
+  public List<TestAllOptions> get() {
     return StreamSupport.stream(source.spliterator(), false)
         .filter(filter)
         .sorted(sorter)
@@ -44,27 +41,10 @@ public final class TestAllOptionsLoader {
   }
 
   /**
-   * Gets a list of {@link definition.TestAllOptions} instances.
-   * @return the current non-null value
-   */
-  public List<TestAllOptions> get() {
-    return resource;
-  }
-
-  /**
-   * Sets a list of {@link definition.TestAllOptions} instances.
-   * @param newValue new non-null value
-   */
-  private void set(List<TestAllOptions> newValue) {
-    resource = Objects.requireNonNull(newValue);
-  }
-
-  /**
    * Reloads the content by clearing the cache and fetching available providers.
    */
   public void reload() {
     cleaner.accept(source);
-    set(doLoad());
   }
 
   /**
