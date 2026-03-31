@@ -85,15 +85,15 @@ class ServiceDefinitionGenerator {
         TypeName quantifierType = getQuantifierType();
 
         FieldSpec sourceField = getSourceField();
-        Optional<FieldSpec> batchField = getBatchField();
+        FieldSpec batchFieldOrNull = getBatchFieldOrNull();
 
-        Optional<FieldSpec> idPatternField = getIdPatternField();
-        Optional<FieldSpec> filterField = getFilterField(idPatternField);
-        Optional<FieldSpec> sorterField = getSorterField();
+        FieldSpec idPatternFieldOrNull = getIdPatternFieldOrNull();
+        FieldSpec filterFieldOrNull = getFilterFieldOrNull(idPatternFieldOrNull);
+        FieldSpec sorterFieldOrNull = getSorterFieldOrNull();
 
-        CodeBlock rawStreamCode = getRawStreamCode(sourceField, batchField);
+        CodeBlock rawStreamCode = getRawStreamCode(sourceField, batchFieldOrNull);
 
-        MethodSpec getMethod = getGetMethod(rawStreamCode, filterField, sorterField, quantifierType);
+        MethodSpec getMethod = getGetMethod(rawStreamCode, filterFieldOrNull, sorterFieldOrNull, quantifierType);
 
         TypeSpec.Builder result = TypeSpec
                 .classBuilder(className)
@@ -101,10 +101,10 @@ class ServiceDefinitionGenerator {
                 .addModifiers(PUBLIC, FINAL)
                 .addField(sourceField);
 
-        idPatternField.ifPresent(result::addField);
-        batchField.ifPresent(result::addField);
-        filterField.ifPresent(result::addField);
-        sorterField.ifPresent(result::addField);
+        if (idPatternFieldOrNull != null) result.addField(idPatternFieldOrNull);
+        if (batchFieldOrNull != null) result.addField(batchFieldOrNull);
+        if (filterFieldOrNull != null) result.addField(filterFieldOrNull);
+        if (sorterFieldOrNull != null) result.addField(sorterFieldOrNull);
 
         result.addMethod(getMethod);
 
@@ -114,7 +114,7 @@ class ServiceDefinitionGenerator {
 
         FieldSpec cleanerField = newCleanerField();
         result.addField(cleanerField);
-        result.addMethod(newReloadMethod(sourceField, batchField, cleanerField));
+        result.addMethod(newReloadMethod(sourceField, batchFieldOrNull, cleanerField));
         result.addMethod(newLoadMethod(className, quantifierType, getMethod));
 
         return result.build();
@@ -127,7 +127,7 @@ class ServiceDefinitionGenerator {
                 .add("<p>Properties:\n")
                 .add("<ul>\n")
                 .add("<li>Quantifier: $L</li>\n", definition.getQuantifier())
-                .add("<li>Fallback: $L</li>\n", toJavadocLink(definition.getFallback()))
+                .add("<li>Fallback: $L</li>\n", toJavadocLink(definition.getFallback().orElse(null)))
                 .add("<li>Preprocessing: $L</li>\n", getPreprocessingJavadoc())
                 .add("<li>Name: $L</li>\n", definition.getLoaderName().isEmpty() ? "null" : definition.getLoaderName())
                 .add("<li>Batch type: $L</li>\n", definition.getBatchType().map(TypeMirror::toString).orElse("null"))
@@ -143,25 +143,23 @@ class ServiceDefinitionGenerator {
         return "null";
     }
 
-    @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
     private CodeBlock getPreprocessingCode(
             CodeBlock rawStreamCode,
-            Optional<FieldSpec> filterField,
-            Optional<FieldSpec> sorterField
+            FieldSpec filterFieldOrNull,
+            FieldSpec sorterFieldOrNull
     ) {
         CodeBlock.Builder result = CodeBlock.builder();
         result.add(rawStreamCode);
-        filterField.ifPresent(field -> result.add(NEW_LINE).add(".filter($L)", field.name));
-        sorterField.ifPresent(field -> result.add(NEW_LINE).add(".sorted($L)", field.name));
+        if (filterFieldOrNull != null) result.add(NEW_LINE).add(".filter($L)", filterFieldOrNull.name);
+        if (sorterFieldOrNull != null) result.add(NEW_LINE).add(".sorted($L)", sorterFieldOrNull.name);
         return result.build();
     }
 
-    @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
-    private CodeBlock getRawStreamCode(FieldSpec sourceField, Optional<FieldSpec> batchField) {
+    private CodeBlock getRawStreamCode(FieldSpec sourceField, FieldSpec batchFieldOrNull) {
         final CodeBlock stream = iterableToStream(sourceField);
-        return batchField
-                .map(field -> concatStreams(stream, getBatchStreamCode(field)))
-                .orElse(stream);
+        return batchFieldOrNull != null
+                ? concatStreams(stream, getBatchStreamCode(batchFieldOrNull))
+                : stream;
     }
 
     private CodeBlock getBatchStreamCode(FieldSpec field) {
@@ -172,9 +170,9 @@ class ServiceDefinitionGenerator {
         return CodeBlock.of("o -> $N.matcher(o.$L()).matches()", field, ids.get(0).getMethod().getSimpleName());
     }
 
-    private CodeBlock getFiltersCode(Optional<FieldSpec> idPatternField) {
+    private CodeBlock getFiltersCode(FieldSpec idPatternFieldOrNull) {
         List<CodeBlock> blocks = new ArrayList<>();
-        idPatternField.map(this::getIdPredicateCode).ifPresent(blocks::add);
+        if (idPatternFieldOrNull != null) blocks.add(getIdPredicateCode(idPatternFieldOrNull));
         filters.stream()
                 .sorted(Comparator.comparingInt(LoadFilter::getPosition))
                 .map(this::getFilterCode)
@@ -231,7 +229,7 @@ class ServiceDefinitionGenerator {
     }
 
     private String getComparatorMethod(LoadSorter sorter) {
-        switch (sorter.getKeyType().get()) {
+        switch (sorter.getKeyType().orElseThrow(Unreachable::new)) {
             case COMPARABLE:
                 return "comparing";
             case DOUBLE:
@@ -302,37 +300,36 @@ class ServiceDefinitionGenerator {
                 .build();
     }
 
-    private Optional<FieldSpec> getBatchField() {
+    private FieldSpec getBatchFieldOrNull() {
         if (definition.getBatchType().isPresent()) {
             ClassName batchTypeName = ClassName.bestGuess(definition.getBatchType().get().toString());
-            return Optional.of(FieldSpec
+            return FieldSpec
                     .builder(typeOf(Iterable.class, batchTypeName), "batch")
                     .addModifiers(PRIVATE, FINAL)
                     .initializer("$L", getBackendInitCode(batchTypeName))
-                    .build());
+                    .build();
         }
-        return Optional.empty();
+        return null;
     }
 
-    @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
-    private Optional<FieldSpec> getFilterField(Optional<FieldSpec> idPatternField) {
-        return !filters.isEmpty() || idPatternField.isPresent()
-                ? Optional.of(FieldSpec
-                              .builder(typeOf(Predicate.class, definition.getServiceType()), "filter")
-                              .addModifiers(PRIVATE, FINAL)
-                              .initializer("$L", getFiltersCode(idPatternField))
-                              .build())
-                : Optional.empty();
+    private FieldSpec getFilterFieldOrNull(FieldSpec idPatternFieldOrNull) {
+        return !filters.isEmpty() || idPatternFieldOrNull != null
+                ? FieldSpec
+                  .builder(typeOf(Predicate.class, definition.getServiceType()), "filter")
+                  .addModifiers(PRIVATE, FINAL)
+                  .initializer("$L", getFiltersCode(idPatternFieldOrNull))
+                  .build()
+                : null;
     }
 
-    private Optional<FieldSpec> getSorterField() {
+    private FieldSpec getSorterFieldOrNull() {
         return !sorters.isEmpty()
-                ? Optional.of(FieldSpec
-                              .builder(typeOf(Comparator.class, definition.getServiceType()), "sorter")
-                              .addModifiers(PRIVATE, FINAL)
-                              .initializer("$L", getSortersCode())
-                              .build())
-                : Optional.empty();
+                ? FieldSpec
+                  .builder(typeOf(Comparator.class, definition.getServiceType()), "sorter")
+                  .addModifiers(PRIVATE, FINAL)
+                  .initializer("$L", getSortersCode())
+                  .build()
+                : null;
     }
 
     private CodeBlock getBackendInitCode(ClassName serviceType) {
@@ -351,11 +348,10 @@ class ServiceDefinitionGenerator {
         return CodeBlock.of("loader -> (($T)loader).reload()", ServiceLoader.class);
     }
 
-    @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
     private MethodSpec getGetMethod(
             CodeBlock rawStreamCode,
-            Optional<FieldSpec> filterField,
-            Optional<FieldSpec> sorterField,
+            FieldSpec filterFieldOrNull,
+            FieldSpec sorterFieldOrNull,
             TypeName quantifierType
     ) {
         return MethodSpec
@@ -366,7 +362,7 @@ class ServiceDefinitionGenerator {
                 .addStatement(CodeBlock
                         .builder()
                         .add("return ")
-                        .add(getPreprocessingCode(rawStreamCode, filterField, sorterField))
+                        .add(getPreprocessingCode(rawStreamCode, filterFieldOrNull, sorterFieldOrNull))
                         .add(getQuantifierCode())
                         .build())
                 .build();
@@ -387,7 +383,7 @@ class ServiceDefinitionGenerator {
 
     private MethodSpec newReloadMethod(
             FieldSpec sourceField,
-            @SuppressWarnings("OptionalUsedAsFieldOrParameterType") Optional<FieldSpec> batchField,
+            FieldSpec batchFieldOrNull,
             FieldSpec cleanerField
     ) {
         MethodSpec.Builder result = MethodSpec
@@ -400,7 +396,7 @@ class ServiceDefinitionGenerator {
                 .addExceptions(getQuantifierException());
 
         result.addStatement("$N.accept($N)", cleanerField, sourceField);
-        batchField.ifPresent(fieldSpec -> result.addStatement("$N.accept($N)", cleanerField, fieldSpec));
+        if (batchFieldOrNull != null) result.addStatement("$N.accept($N)", cleanerField, batchFieldOrNull);
 
         return result.build();
     }
@@ -426,14 +422,14 @@ class ServiceDefinitionGenerator {
         return result.build();
     }
 
-    private Optional<FieldSpec> getIdPatternField() {
+    private FieldSpec getIdPatternFieldOrNull() {
         return ids.size() == 1 && !ids.get(0).getPattern().isEmpty()
-                ? Optional.of(FieldSpec
-                              .builder(Pattern.class, "ID_PATTERN")
-                              .addModifiers(PUBLIC, STATIC, FINAL)
-                              .initializer("$T.compile(\"$N\")", Pattern.class, ids.get(0).getPattern())
-                              .build())
-                : Optional.empty();
+                ? FieldSpec
+                  .builder(Pattern.class, "ID_PATTERN")
+                  .addModifiers(PUBLIC, STATIC, FINAL)
+                  .initializer("$T.compile(\"$N\")", Pattern.class, ids.get(0).getPattern())
+                  .build()
+                : null;
     }
 
     private static ParameterizedTypeName typeOf(Class<?> rawType, TypeName typeArgument) {
@@ -444,8 +440,8 @@ class ServiceDefinitionGenerator {
         return "{@link " + type + "}";
     }
 
-    private static String toJavadocLink(Optional<TypeInstantiator> type) {
-        return type.map(o -> "{@link " + o.getType() + "}").orElse("null");
+    private static String toJavadocLink(TypeInstantiator typeOrNull) {
+        return typeOrNull != null ? ("{@link " + typeOrNull.getType() + "}") : "null";
     }
 
     private static Collector<HasMethod, ?, String> toMethodNames() {
