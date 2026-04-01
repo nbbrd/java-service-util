@@ -8,7 +8,7 @@ public class LoggerFinderTest {
 
     @Test
     public void test() {
-        LoggerFinderLoader x = new LoggerFinderLoader();
+        LoggerFinderLoader x = LoggerFinderLoader.builder().build();
 
         assertThat(x.get())
 //                .isEqualTo(x.get())

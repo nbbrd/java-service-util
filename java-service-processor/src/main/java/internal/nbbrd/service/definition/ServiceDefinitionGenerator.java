@@ -19,18 +19,22 @@ package internal.nbbrd.service.definition;
 import com.squareup.javapoet.*;
 import internal.nbbrd.service.HasMethod;
 import internal.nbbrd.service.Instantiator;
+import internal.nbbrd.service.TypeNames;
 import internal.nbbrd.service.Unreachable;
 import nbbrd.service.Quantifier;
 
 import javax.lang.model.type.TypeMirror;
 import java.util.*;
-import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
+import static com.squareup.javapoet.ClassName.OBJECT;
+import static com.squareup.javapoet.TypeName.VOID;
 import static internal.nbbrd.service.Blocks.*;
+import static internal.nbbrd.service.TypeNames.*;
 import static java.util.Collections.emptyList;
 import static javax.lang.model.element.Modifier.*;
 
@@ -39,6 +43,8 @@ import static javax.lang.model.element.Modifier.*;
  */
 @lombok.Value
 class ServiceDefinitionGenerator {
+
+    private static final TypeVariableName BACKEND = TypeVariableName.get("BACKEND");
 
     public static List<ServiceDefinitionGenerator> allOf(
             List<LoadDefinition> definitions,
@@ -80,44 +86,230 @@ class ServiceDefinitionGenerator {
     }
 
     public TypeSpec generateLoader(boolean nested) {
-        String className = definition.resolveLoaderName().simpleName();
-
+        ClassName loaderName = ClassName.bestGuess(definition.resolveLoaderName().simpleName());
+        ClassName builderName = ClassName.bestGuess("Builder");
+        ClassName providerType = definition.getServiceType();
+        ClassName batchTypeOrNull = definition.getBatchType().map(o -> ClassName.bestGuess(o.toString())).orElse(null);
         TypeName quantifierType = getQuantifierType();
 
-        FieldSpec sourceField = getSourceField();
-        FieldSpec batchFieldOrNull = getBatchFieldOrNull();
+        TypeSpec.Builder result = TypeSpec
+                .classBuilder(loaderName)
+                .addJavadoc(getMainJavadoc())
+                .addModifiers(PUBLIC, FINAL);
+
+        FieldSpec providerSource = FieldSpec
+                .builder(iterableOf(WILDCARD), "providerSource", PRIVATE, FINAL)
+                .build();
+
+        FieldSpec providerReloader = FieldSpec
+                .builder(Runnable.class, "providerReloader", PRIVATE, FINAL)
+                .build();
+
+        result.addField(providerSource);
+        result.addField(providerReloader);
+
+        MethodSpec reloadMethod;
+        MethodSpec streamMethod;
+        MethodSpec constructor;
+
+        if (batchTypeOrNull != null) {
+            FieldSpec batchSource = FieldSpec
+                    .builder(iterableOf(WILDCARD), "batchSource", PRIVATE, FINAL)
+                    .build();
+
+            FieldSpec batchReloader = FieldSpec
+                    .builder(Runnable.class, "batchReloader", PRIVATE, FINAL)
+                    .build();
+
+            reloadMethod = MethodSpec
+                    .methodBuilder("reload")
+                    .addJavadoc(CodeBlock
+                            .builder()
+                            .add("Reloads the content by clearing the cache and fetching available providers.\n")
+                            .build())
+                    .addModifiers(PUBLIC)
+                    .returns(VOID)
+                    .addStatement("$N.run()", providerReloader)
+                    .addStatement("$N.run()", batchReloader)
+                    .build();
+
+            streamMethod = MethodSpec
+                    .methodBuilder("stream")
+                    .addModifiers(PRIVATE)
+                    .returns(TypeNames.typeOf(Stream.class, providerType))
+                    .addStatement(
+                            CodeBlock
+                                    .builder()
+                                    .add("return ")
+                                    .add(concatStreams(
+                                            iterableToStream(providerSource, providerType),
+                                            flatMapStream(iterableToStream(batchSource, batchTypeOrNull), CodeBlock.of("o -> o.getProviders()"))
+                                    )).build())
+                    .build();
+
+            constructor = MethodSpec
+                    .constructorBuilder()
+                    .addModifiers(PRIVATE)
+                    .addParameter(providerSource.type, providerSource.name)
+                    .addParameter(providerReloader.type, providerReloader.name)
+                    .addParameter(batchSource.type, batchSource.name)
+                    .addParameter(batchReloader.type, batchReloader.name)
+                    .addStatement("this.$N = $N", providerSource, providerSource)
+                    .addStatement("this.$N = $N", providerReloader, providerReloader)
+                    .addStatement("this.$N = $N", batchSource, batchSource)
+                    .addStatement("this.$N = $N", batchReloader, batchReloader)
+                    .build();
+
+            result.addField(batchSource);
+            result.addField(batchReloader);
+        } else {
+            reloadMethod = MethodSpec
+                    .methodBuilder("reload")
+                    .addJavadoc(CodeBlock
+                            .builder()
+                            .add("Reloads the content by clearing the cache and fetching available providers.\n")
+                            .build())
+                    .addModifiers(PUBLIC)
+                    .returns(VOID)
+                    .addStatement("$N.run()", providerReloader)
+                    .build();
+
+            streamMethod = MethodSpec
+                    .methodBuilder("stream")
+                    .addModifiers(PRIVATE)
+                    .returns(TypeNames.typeOf(Stream.class, providerType))
+                    .addStatement(
+                            CodeBlock
+                                    .builder()
+                                    .add("return ")
+                                    .add(iterableToStream(providerSource, providerType))
+                                    .build())
+                    .build();
+
+            constructor = MethodSpec
+                    .constructorBuilder()
+                    .addModifiers(PRIVATE)
+                    .addParameter(providerSource.type, providerSource.name)
+                    .addParameter(providerReloader.type, providerReloader.name)
+                    .addStatement("this.$N = $N", providerSource, providerSource)
+                    .addStatement("this.$N = $N", providerReloader, providerReloader)
+                    .build();
+        }
+
+        result.addMethod(reloadMethod);
+        result.addMethod(streamMethod);
+        result.addMethod(constructor);
 
         FieldSpec idPatternFieldOrNull = getIdPatternFieldOrNull();
         FieldSpec filterFieldOrNull = getFilterFieldOrNull(idPatternFieldOrNull);
         FieldSpec sorterFieldOrNull = getSorterFieldOrNull();
 
-        CodeBlock rawStreamCode = getRawStreamCode(sourceField, batchFieldOrNull);
-
-        MethodSpec getMethod = getGetMethod(rawStreamCode, filterFieldOrNull, sorterFieldOrNull, quantifierType);
-
-        TypeSpec.Builder result = TypeSpec
-                .classBuilder(className)
-                .addJavadoc(getMainJavadoc())
-                .addModifiers(PUBLIC, FINAL)
-                .addField(sourceField);
-
         if (idPatternFieldOrNull != null) result.addField(idPatternFieldOrNull);
-        if (batchFieldOrNull != null) result.addField(batchFieldOrNull);
         if (filterFieldOrNull != null) result.addField(filterFieldOrNull);
         if (sorterFieldOrNull != null) result.addField(sorterFieldOrNull);
 
+        MethodSpec getMethod = MethodSpec
+                .methodBuilder("get")
+                .addJavadoc(getGetDescription())
+                .addModifiers(PUBLIC)
+                .returns(quantifierType)
+                .addExceptions(getQuantifierException())
+                .addStatement(CodeBlock
+                        .builder()
+                        .add("return ")
+                        .add(getPreprocessingCode("stream", filterFieldOrNull, sorterFieldOrNull))
+                        .add(getQuantifierCode())
+                        .build())
+                .build();
+
         result.addMethod(getMethod);
 
-        if (nested) {
-            result.addModifiers(STATIC).build();
+        MethodSpec builderMethod = MethodSpec
+                .methodBuilder("builder")
+                .addModifiers(PUBLIC, STATIC)
+                .returns(builderName)
+                .addStatement("return new $T()", builderName)
+                .build();
+
+        result.addMethod(newLoadMethod(quantifierType, getMethod));
+        result.addMethod(builderMethod);
+        result.addType(generateBuilder());
+
+        return nested ? result.addModifiers(STATIC).build() : result.build();
+    }
+
+    public TypeSpec generateBuilder() {
+        ClassName loaderName = ClassName.bestGuess(definition.resolveLoaderName().simpleName());
+        ClassName builderName = ClassName.bestGuess("Builder");
+        ClassName batchTypeOrNull = definition.getBatchType().map(o -> ClassName.bestGuess(o.toString())).orElse(null);
+
+        FieldSpec factoryField = FieldSpec
+                .builder(functionOf(WILDCARD_CLASS, OBJECT), "factory", PRIVATE)
+                .initializer("$T::load", ServiceLoader.class)
+                .build();
+
+        FieldSpec streamerField = FieldSpec
+                .builder(functionOf(OBJECT, iterableOf(WILDCARD)), "streamer", PRIVATE)
+                .initializer("backend -> (($T) backend)", ServiceLoader.class)
+                .build();
+
+        FieldSpec reloaderField = FieldSpec
+                .builder(consumerOf(OBJECT), "reloader", PRIVATE)
+                .initializer("backend -> (($T) backend).reload()", ServiceLoader.class)
+                .build();
+
+        MethodSpec backendMethod = MethodSpec
+                .methodBuilder("backend")
+                .addModifiers(PUBLIC)
+                .addTypeVariable(BACKEND)
+                .returns(builderName)
+                .addParameter(functionOf(WILDCARD_CLASS, BACKEND), "factory")
+                .addParameter(functionOf(BACKEND, iterableOf(WILDCARD)), "streamer")
+                .addParameter(consumerOf(BACKEND), "reloader")
+                .addStatement("this.$N = ($T) factory", factoryField, functionOf(WILDCARD_CLASS, OBJECT))
+                .addStatement("this.$N = ($T) streamer", streamerField, functionOf(OBJECT, iterableOf(WILDCARD)))
+                .addStatement("this.$N = ($T) reloader", reloaderField, consumerOf(OBJECT))
+                .addStatement("return this")
+                .build();
+
+        MethodSpec.Builder buildMethod = MethodSpec
+                .methodBuilder("build")
+                .addModifiers(PUBLIC)
+                .returns(loaderName);
+
+        if (batchTypeOrNull != null) {
+            buildMethod.addStatement("$T providerBackend = factory.apply($T.class)", OBJECT, definition.getServiceType());
+            buildMethod.addStatement("$T batchBackend = factory.apply($T.class)", OBJECT, batchTypeOrNull);
+            buildMethod.addStatement(
+                    CodeBlock
+                            .builder()
+                            .add("return new $T(", loaderName).add(NEW_LINE)
+                            .add("$N.apply(providerBackend), () -> $N.accept(providerBackend),", streamerField, reloaderField).add(NEW_LINE)
+                            .add("$N.apply(batchBackend), () -> $N.accept(batchBackend)", streamerField, reloaderField).add(NEW_LINE)
+                            .add(")")
+                            .build()
+            );
+        } else {
+            buildMethod.addStatement("$T providerBackend = factory.apply($T.class)", OBJECT, definition.getServiceType());
+            buildMethod.addStatement(
+                    CodeBlock
+                            .builder()
+                            .add("return new $T(", loaderName).add(NEW_LINE)
+                            .add("$N.apply(providerBackend), () -> $N.accept(providerBackend)", streamerField, reloaderField).add(NEW_LINE)
+                            .add(")")
+                            .build()
+            );
         }
 
-        FieldSpec cleanerField = newCleanerField();
-        result.addField(cleanerField);
-        result.addMethod(newReloadMethod(sourceField, batchFieldOrNull, cleanerField));
-        result.addMethod(newLoadMethod(className, quantifierType, getMethod));
-
-        return result.build();
+        return TypeSpec
+                .classBuilder(builderName)
+                .addModifiers(PUBLIC, STATIC, FINAL)
+                .addField(factoryField)
+                .addField(streamerField)
+                .addField(reloaderField)
+                .addMethod(backendMethod)
+                .addMethod(buildMethod.build())
+                .build();
     }
 
     private CodeBlock getMainJavadoc() {
@@ -144,26 +336,15 @@ class ServiceDefinitionGenerator {
     }
 
     private CodeBlock getPreprocessingCode(
-            CodeBlock rawStreamCode,
+            String gatherMethod,
             FieldSpec filterFieldOrNull,
             FieldSpec sorterFieldOrNull
     ) {
         CodeBlock.Builder result = CodeBlock.builder();
-        result.add(rawStreamCode);
+        result.add("$L()", gatherMethod);
         if (filterFieldOrNull != null) result.add(NEW_LINE).add(".filter($L)", filterFieldOrNull.name);
         if (sorterFieldOrNull != null) result.add(NEW_LINE).add(".sorted($L)", sorterFieldOrNull.name);
         return result.build();
-    }
-
-    private CodeBlock getRawStreamCode(FieldSpec sourceField, FieldSpec batchFieldOrNull) {
-        final CodeBlock stream = iterableToStream(sourceField);
-        return batchFieldOrNull != null
-                ? concatStreams(stream, getBatchStreamCode(batchFieldOrNull))
-                : stream;
-    }
-
-    private CodeBlock getBatchStreamCode(FieldSpec field) {
-        return flatMapStream(iterableToStream(field), CodeBlock.of("o -> o.getProviders()"));
     }
 
     private CodeBlock getIdPredicateCode(FieldSpec field) {
@@ -187,7 +368,7 @@ class ServiceDefinitionGenerator {
         }
 
         CodeBlock.Builder result = CodeBlock.builder();
-        result.add(casting(typeOf(Predicate.class, definition.getServiceType()), first));
+        result.add(casting(TypeNames.typeOf(Predicate.class, definition.getServiceType()), first));
         while (iterator.hasNext()) {
             result.add(".and($L)", iterator.next());
         }
@@ -197,7 +378,7 @@ class ServiceDefinitionGenerator {
     private CodeBlock getFilterCode(LoadFilter filter) {
         CodeBlock result = CodeBlock.of("$T::$L", filter.getServiceType().orElseThrow(Unreachable::new), filter.getMethodName());
         return filter.isNegate()
-                ? CodeBlock.of("$L.negate()", casting(typeOf(Predicate.class, definition.getServiceType()), result))
+                ? CodeBlock.of("$L.negate()", casting(TypeNames.typeOf(Predicate.class, definition.getServiceType()), result))
                 : result;
     }
 
@@ -214,7 +395,7 @@ class ServiceDefinitionGenerator {
         }
 
         CodeBlock.Builder result = CodeBlock.builder();
-        result.add(casting(typeOf(Comparator.class, definition.getServiceType()), first));
+        result.add(casting(TypeNames.typeOf(Comparator.class, definition.getServiceType()), first));
         while (iter.hasNext()) {
             result.add(".thenComparing($L)", iter.next());
         }
@@ -276,11 +457,11 @@ class ServiceDefinitionGenerator {
     private TypeName getQuantifierType() {
         switch (definition.getQuantifier()) {
             case OPTIONAL:
-                return typeOf(Optional.class, definition.getServiceType());
+                return TypeNames.typeOf(Optional.class, definition.getServiceType());
             case SINGLE:
                 return definition.getServiceType();
             case MULTIPLE:
-                return typeOf(List.class, definition.getServiceType());
+                return TypeNames.typeOf(List.class, definition.getServiceType());
             default:
                 throw new Unreachable();
         }
@@ -294,7 +475,7 @@ class ServiceDefinitionGenerator {
 
     private FieldSpec getSourceField() {
         return FieldSpec
-                .builder(typeOf(Iterable.class, definition.getServiceType()), "source")
+                .builder(TypeNames.typeOf(Iterable.class, definition.getServiceType()), "source")
                 .addModifiers(PRIVATE, FINAL)
                 .initializer("$L", getBackendInitCode(definition.getServiceType()))
                 .build();
@@ -304,7 +485,7 @@ class ServiceDefinitionGenerator {
         if (definition.getBatchType().isPresent()) {
             ClassName batchTypeName = ClassName.bestGuess(definition.getBatchType().get().toString());
             return FieldSpec
-                    .builder(typeOf(Iterable.class, batchTypeName), "batch")
+                    .builder(TypeNames.typeOf(Iterable.class, batchTypeName), "batch")
                     .addModifiers(PRIVATE, FINAL)
                     .initializer("$L", getBackendInitCode(batchTypeName))
                     .build();
@@ -315,7 +496,7 @@ class ServiceDefinitionGenerator {
     private FieldSpec getFilterFieldOrNull(FieldSpec idPatternFieldOrNull) {
         return !filters.isEmpty() || idPatternFieldOrNull != null
                 ? FieldSpec
-                  .builder(typeOf(Predicate.class, definition.getServiceType()), "filter")
+                  .builder(TypeNames.typeOf(Predicate.class, definition.getServiceType()), "filter")
                   .addModifiers(PRIVATE, FINAL)
                   .initializer("$L", getFiltersCode(idPatternFieldOrNull))
                   .build()
@@ -325,7 +506,7 @@ class ServiceDefinitionGenerator {
     private FieldSpec getSorterFieldOrNull() {
         return !sorters.isEmpty()
                 ? FieldSpec
-                  .builder(typeOf(Comparator.class, definition.getServiceType()), "sorter")
+                  .builder(TypeNames.typeOf(Comparator.class, definition.getServiceType()), "sorter")
                   .addModifiers(PRIVATE, FINAL)
                   .initializer("$L", getSortersCode())
                   .build()
@@ -334,38 +515,6 @@ class ServiceDefinitionGenerator {
 
     private CodeBlock getBackendInitCode(ClassName serviceType) {
         return CodeBlock.of("$T.load($T.class)", ServiceLoader.class, serviceType);
-    }
-
-    private FieldSpec newCleanerField() {
-        return FieldSpec
-                .builder(typeOf(Consumer.class, ClassName.get(Iterable.class)), "cleaner")
-                .addModifiers(PRIVATE, FINAL)
-                .initializer("$L", getCleanerInitCode())
-                .build();
-    }
-
-    private CodeBlock getCleanerInitCode() {
-        return CodeBlock.of("loader -> (($T)loader).reload()", ServiceLoader.class);
-    }
-
-    private MethodSpec getGetMethod(
-            CodeBlock rawStreamCode,
-            FieldSpec filterFieldOrNull,
-            FieldSpec sorterFieldOrNull,
-            TypeName quantifierType
-    ) {
-        return MethodSpec
-                .methodBuilder("get")
-                .addModifiers(PUBLIC)
-                .returns(quantifierType)
-                .addExceptions(getQuantifierException())
-                .addStatement(CodeBlock
-                        .builder()
-                        .add("return ")
-                        .add(getPreprocessingCode(rawStreamCode, filterFieldOrNull, sorterFieldOrNull))
-                        .add(getQuantifierCode())
-                        .build())
-                .build();
     }
 
     private CodeBlock getGetDescription() {
@@ -381,28 +530,8 @@ class ServiceDefinitionGenerator {
         }
     }
 
-    private MethodSpec newReloadMethod(
-            FieldSpec sourceField,
-            FieldSpec batchFieldOrNull,
-            FieldSpec cleanerField
-    ) {
-        MethodSpec.Builder result = MethodSpec
-                .methodBuilder("reload")
-                .addJavadoc(CodeBlock
-                        .builder()
-                        .add("Reloads the content by clearing the cache and fetching available providers.\n")
-                        .build())
-                .addModifiers(PUBLIC)
-                .addExceptions(getQuantifierException());
-
-        result.addStatement("$N.accept($N)", cleanerField, sourceField);
-        if (batchFieldOrNull != null) result.addStatement("$N.accept($N)", cleanerField, batchFieldOrNull);
-
-        return result.build();
-    }
-
-    private MethodSpec newLoadMethod(String className, TypeName quantifierType, MethodSpec getter) {
-        CodeBlock mainStatement = CodeBlock.of("new $L().$N()", className, getter);
+    private MethodSpec newLoadMethod(TypeName quantifierType, MethodSpec getter) {
+        CodeBlock mainStatement = CodeBlock.of("builder().build().$N()", getter);
 
         MethodSpec.Builder result = MethodSpec
                 .methodBuilder("load")
@@ -430,10 +559,6 @@ class ServiceDefinitionGenerator {
                   .initializer("$T.compile(\"$N\")", Pattern.class, ids.get(0).getPattern())
                   .build()
                 : null;
-    }
-
-    private static ParameterizedTypeName typeOf(Class<?> rawType, TypeName typeArgument) {
-        return ParameterizedTypeName.get(ClassName.get(rawType), typeArgument);
     }
 
     private static String toJavadocLink(ClassName type) {

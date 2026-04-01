@@ -541,8 +541,12 @@ public class ServiceDefinitionProcessorTest {
                     .singleElement()
                     .extracting(Compilations::contentsAsUtf8String, STRING)
                     .contains(
-                            "private final Iterable<TestBatchValidType.SomeBatch> batch = ServiceLoader.load(TestBatchValidType.SomeBatch.class);",
-                            "Stream.concat(StreamSupport.stream(source.spliterator(), false), StreamSupport.stream(batch.spliterator(), false).flatMap(o -> o.getProviders()))"
+                            "private final Iterable<?> batchSource;",
+                            "private final Runnable batchReloader;",
+                            "Stream.concat(",
+                            "StreamSupport.stream(providerSource.spliterator(), false)",
+                            "StreamSupport.stream(batchSource.spliterator(), false)",
+                            ".flatMap(o -> o.getProviders()))"
                     );
         }
 

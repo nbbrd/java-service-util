@@ -42,7 +42,7 @@ public final class FileType {
         // static class
     }
 
-    private static final FileTypeSpiLoader LOADER_INSTANCE = new FileTypeSpiLoader();
+    private static final FileTypeSpiLoader LOADER_INSTANCE = FileTypeSpiLoader.builder().build();
 
     // 💡 API: designed to be called and used
     public static Optional<String> probeContentType(Path file) throws IOException {

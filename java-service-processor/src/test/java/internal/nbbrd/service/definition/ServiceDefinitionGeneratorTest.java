@@ -90,19 +90,11 @@ public class ServiceDefinitionGeneratorTest {
         }
 
         @Test
-        public void alwaysIncludesSourceField() {
+        public void alwaysIncludesProviderSourceField() {
             TypeSpec typeSpec = generatorOf(baseDefinition(SERVICE_TYPE, Quantifier.OPTIONAL)).generateLoader(false);
             assertThat(typeSpec.fieldSpecs)
                     .extracting(f -> f.name)
-                    .contains("source");
-        }
-
-        @Test
-        public void alwaysIncludesCleanerField() {
-            TypeSpec typeSpec = generatorOf(baseDefinition(SERVICE_TYPE, Quantifier.OPTIONAL)).generateLoader(false);
-            assertThat(typeSpec.fieldSpecs)
-                    .extracting(f -> f.name)
-                    .contains("cleaner");
+                    .contains("providerSource");
         }
 
         @Test

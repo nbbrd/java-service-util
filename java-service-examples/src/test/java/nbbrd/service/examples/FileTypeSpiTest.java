@@ -15,7 +15,7 @@ public class FileTypeSpiTest {
 
     @Test
     public void test() {
-        FileTypeSpiLoader x = new FileTypeSpiLoader();
+        FileTypeSpiLoader x = FileTypeSpiLoader.builder().build();
 
         assertThat(x.get())
                 .containsExactlyElementsOf(x.get())

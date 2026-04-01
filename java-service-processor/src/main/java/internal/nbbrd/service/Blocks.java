@@ -21,6 +21,10 @@ public final class Blocks {
         return CodeBlock.of("$T.stream($N.spliterator(), false)", StreamSupport.class, iterable);
     }
 
+    public static CodeBlock iterableToStream(FieldSpec iterable, TypeName type) {
+        return CodeBlock.of("$T.stream($N.spliterator(), false).filter($T.class::isInstance).map($T.class::cast)", StreamSupport.class, iterable, type, type);
+    }
+
     public static CodeBlock concatStreams(CodeBlock first, CodeBlock second) {
         return CodeBlock.of("$T.concat($L, $L)", Stream.class, first, second);
     }
