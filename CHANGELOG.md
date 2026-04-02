@@ -1,10 +1,13 @@
 # Changelog
+
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## [2.0.0] - 2026-04-02
 
 This major release simplifies usage by removing deprecated properties and features.
 It also introduces a builder pattern for the loader, enabling greater flexibility in configuration and supporting future enhancements.
@@ -19,7 +22,7 @@ It also introduces a builder pattern for the loader, enabling greater flexibilit
 - Remove `preprocessing` property (use annotation-based preprocessing instead)
 - Remove `mutability` property
 - Remove `backend` and `cleaner` properties (use builder pattern instead)
-- Remove internal caching since default backend does it already 
+- Remove internal caching since default backend does it already
 - Replace loader constructor with a builder pattern to allow more flexibility
 
 ## [1.9.0] - 2024-02-06
@@ -178,7 +181,8 @@ It also introduces a builder pattern for the loader, enabling greater flexibilit
 
 - Initial release
 
-[Unreleased]: https://github.com/nbbrd/java-service-util/compare/v1.9.0...HEAD
+[Unreleased]: https://github.com/nbbrd/java-service-util/compare/v2.0.0...HEAD
+[2.0.0]: https://github.com/nbbrd/java-service-util/compare/v1.9.0...v2.0.0
 [1.9.0]: https://github.com/nbbrd/java-service-util/compare/v1.8.0...v1.9.0
 [1.8.0]: https://github.com/nbbrd/java-service-util/compare/v1.7.0...v1.8.0
 [1.7.0]: https://github.com/nbbrd/java-service-util/compare/v1.6.1...v1.7.0
