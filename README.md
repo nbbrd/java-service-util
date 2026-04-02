@@ -384,7 +384,7 @@ Here is an example on how to do it:
 ```java
 public final class FileType {
 
-  private static final FileTypeSpiLoader LOADER_INSTANCE = new FileTypeSpiLoader();
+  private static final FileTypeSpiLoader LOADER_INSTANCE = FileTypeSpiLoader.builder().build();
 
   // 💡 API: designed to be called and used
   public static Optional<String> probeContentType(Path file) throws IOException {

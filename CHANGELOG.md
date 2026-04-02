@@ -6,10 +6,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+This major release simplifies usage by removing deprecated properties and features.
+It also introduces a builder pattern for the loader, enabling greater flexibility in configuration and supporting future enhancements.
+
 ### Changed
 
-- Deprecate `@ServiceDefinition#singleton` option to avoid class loading issues
 - Migrate OSSRH to Central Portal
+- Remove `singleton` property to avoid class loading issues
+- Remove `noFallback` property (use `SuppressWarnings` annotation instead)
+- Remove `batch` and `batchName` properties (use `batchType` property instead)
+- Remove `wrapper` property (will be replaced by a dedicated annotation in the future)
+- Remove `preprocessing` property (use annotation-based preprocessing instead)
+- Remove `mutability` property
+- Remove `backend` and `cleaner` properties (use builder pattern instead)
+- Remove internal caching since default backend does it already 
+- Replace loader constructor with a builder pattern to allow more flexibility
 
 ## [1.9.0] - 2024-02-06
 
