@@ -18,19 +18,13 @@ package internal.nbbrd.service.definition;
 
 import com.github.mustachejava.DefaultMustacheFactory;
 import com.squareup.javapoet.ClassName;
-import internal.nbbrd.service.ExtEnvironment;
+import lombok.NonNull;
 import nbbrd.service.Quantifier;
-import org.checkerframework.checker.nullness.qual.NonNull;
 
 import javax.lang.model.type.TypeMirror;
-import javax.lang.model.util.Types;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.util.Optional;
-import java.util.function.Consumer;
-import java.util.function.Function;
-import java.util.function.UnaryOperator;
-import java.util.stream.Stream;
 
 /**
  * @author Philippe Charles
@@ -44,45 +38,19 @@ class LoadDefinition {
     Quantifier quantifier;
 
     @lombok.NonNull
-    Lifecycle lifecycle;
-
-    @lombok.NonNull
     ClassName serviceType;
 
     @lombok.NonNull
     Optional<TypeInstantiator> fallback;
 
-    boolean noFallback;
-
-    @lombok.NonNull
-    Optional<TypeWrapper> wrapper;
-
-    @lombok.NonNull
-    Optional<TypeInstantiator> preprocessor;
-
     @lombok.NonNull
     String loaderName;
-
-    @lombok.NonNull
-    Optional<TypeInstantiator> backend;
-
-    @lombok.NonNull
-    Optional<TypeInstantiator> cleaner;
-
-    boolean batch;
-
-    @lombok.NonNull
-    String batchName;
 
     @lombok.NonNull
     Optional<TypeMirror> batchType;
 
     public @NonNull ClassName resolveLoaderName() {
         return resolveName(loaderName, serviceType, "Loader");
-    }
-
-    public @NonNull ClassName resolveBatchName() {
-        return resolveName(batchName, serviceType, "Batch");
     }
 
     // visible for testing
@@ -107,27 +75,6 @@ class LoadDefinition {
             return topLoader;
         }
         return topLoader.nestedClass(serviceType.simpleName());
-    }
-
-    static @NonNull TypeMirror getPreprocessorType(@NonNull ExtEnvironment env, @NonNull TypeMirror service) {
-        Types types = env.getTypeUtils();
-        TypeMirror streamOf = types.getDeclaredType(env.asTypeElement(Stream.class), service);
-        return types.getDeclaredType(env.asTypeElement(UnaryOperator.class), streamOf);
-    }
-
-    static @NonNull TypeMirror getBackendType(@NonNull ExtEnvironment env, @NonNull TypeMirror service) {
-        Types types = env.getTypeUtils();
-        TypeMirror classOf = types.getDeclaredType(env.asTypeElement(Class.class));
-        TypeMirror iterableOf = types.getDeclaredType(env.asTypeElement(Iterable.class));
-        TypeMirror extendsIterableOf = types.getWildcardType(iterableOf, null);
-        return types.getDeclaredType(env.asTypeElement(Function.class), classOf, extendsIterableOf);
-    }
-
-    static @NonNull TypeMirror getCleanerType(@NonNull ExtEnvironment env, @NonNull TypeMirror service) {
-        Types types = env.getTypeUtils();
-        TypeMirror iterableOf = types.getDeclaredType(env.asTypeElement(Iterable.class));
-        TypeMirror extendsIterableOf = types.getWildcardType(iterableOf, null);
-        return types.getDeclaredType(env.asTypeElement(Consumer.class), extendsIterableOf);
     }
 
     public static final String NO_NAME = "";

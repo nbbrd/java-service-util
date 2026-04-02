@@ -1,54 +1,90 @@
 package definition;
 
+import java.lang.Class;
 import java.lang.Iterable;
+import java.lang.Object;
+import java.lang.Runnable;
 import java.util.Optional;
 import java.util.ServiceLoader;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 /**
  * Custom service loader for {@link definition.TestNonNestedDef}.
- * <br>This class is thread-safe.
  * <p>Properties:
  * <ul>
  * <li>Quantifier: OPTIONAL</li>
  * <li>Fallback: null</li>
  * <li>Preprocessing: null</li>
- * <li>Mutability: NONE</li>
- * <li>Singleton: false</li>
  * <li>Name: null</li>
- * <li>Backend: null</li>
- * <li>Cleaner: null</li>
- * <li>Batch: false</li>
- * <li>Batch name: null</li>
+ * <li>Batch type: null</li>
  * </ul>
  */
 public final class TestNonNestedDefLoader {
-  private final Iterable<TestNonNestedDef> source = ServiceLoader.load(TestNonNestedDef.class);
+  private final Iterable<?> providerSource;
 
-  private final Optional<TestNonNestedDef> resource = doLoad();
+  private final Runnable providerReloader;
 
-  private Optional<TestNonNestedDef> doLoad() {
-    return StreamSupport.stream(source.spliterator(), false)
+  private TestNonNestedDefLoader(Iterable<?> providerSource, Runnable providerReloader) {
+    this.providerSource = providerSource;
+    this.providerReloader = providerReloader;
+  }
+
+  /**
+   * Reloads the content by clearing the cache and fetching available providers.
+   */
+  public void reload() {
+    providerReloader.run();
+  }
+
+  private Stream<TestNonNestedDef> stream() {
+    return StreamSupport.stream(providerSource.spliterator(), false).filter(TestNonNestedDef.class::isInstance).map(TestNonNestedDef.class::cast);
+  }
+
+  /**
+   * Gets an optional {@link definition.TestNonNestedDef} instance.
+   */
+  public Optional<TestNonNestedDef> get() {
+    return stream()
         .findFirst();
   }
 
   /**
    * Gets an optional {@link definition.TestNonNestedDef} instance.
-   * <br>This method is thread-safe.
-   * @return the current non-null value
-   */
-  public Optional<TestNonNestedDef> get() {
-    return resource;
-  }
-
-  /**
-   * Gets an optional {@link definition.TestNonNestedDef} instance.
-   * <br>This is equivalent to the following code: <code>new TestNonNestedDefLoader().get()</code>
+   * <br>This is equivalent to the following code: <code>builder().build().get()</code>
    * <br>Therefore, the returned value might be different at each call.
-   * <br>This method is thread-safe.
    * @return a non-null value
    */
   public static Optional<TestNonNestedDef> load() {
-    return new TestNonNestedDefLoader().get();
+    return builder().build().get();
+  }
+
+  public static Builder builder() {
+    return new Builder();
+  }
+
+  public static final class Builder {
+    private Function<Class<?>, Object> factory = ServiceLoader::load;
+
+    private Function<Object, Iterable<?>> streamer = backend -> ((ServiceLoader) backend);
+
+    private Consumer<Object> reloader = backend -> ((ServiceLoader) backend).reload();
+
+    public <BACKEND> Builder backend(Function<Class<?>, BACKEND> factory,
+        Function<BACKEND, Iterable<?>> streamer, Consumer<BACKEND> reloader) {
+      this.factory = (Function<Class<?>, Object>) factory;
+      this.streamer = (Function<Object, Iterable<?>>) streamer;
+      this.reloader = (Consumer<Object>) reloader;
+      return this;
+    }
+
+    public TestNonNestedDefLoader build() {
+      Object providerBackend = factory.apply(TestNonNestedDef.class);
+      return new TestNonNestedDefLoader(
+          streamer.apply(providerBackend), () -> reloader.accept(providerBackend)
+          );
+    }
   }
 }

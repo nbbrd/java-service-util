@@ -1,6 +1,7 @@
 # Java service utilities
 
 [![Download](https://img.shields.io/github/release/nbbrd/java-service-util.svg)](https://github.com/nbbrd/java-service-util/releases/latest)
+[![Changes](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fnbbrd%2Fjava-service-util%2Fbadges%2Funreleased-changes.json)](https://github.com/nbbrd/java-service-util/blob/develop/CHANGELOG.md)
 
 This library provides some **utilities for Java SPI** ([Service Provider Interface](https://www.baeldung.com/java-spi)).
 
@@ -65,23 +66,15 @@ Features:
 - allows [identification](#serviceid)
 - allows [filtering](#servicefilter) and [sorting](#servicesorter)
 - allows [batch loading](#batch-type-property) 
-- allows [custom backend](#backend-and-cleaner-properties)
 
 Limitations:
 - does not support [type inspection before instantiation](https://github.com/nbbrd/java-service-util/issues/13)
 
-Main properties:
+Properties:
 - [`#quantifier`](#quantifier-property): number of services expected at runtime
 - [`#loaderName`](#loader-name-property): custom qualified name of the loader
 - [`#fallback`](#fallback-property): fallback type for `SINGLE` quantifier
 - [`#batchType`](#batch-type-property): bridge different services and generate providers on the fly
-
-Advanced properties:
-- [`#mutability`](#mutability-property): on-demand set and reload
-- [`#singleton`](#singleton-property): loader scope
-- [`#wrapper`](#wrapper-property): wrapper type on backend
-- [`#preprocessing`](#preprocessing-property): custom operations on backend
-- [`#backend` `#cleaner`](#backend-and-cleaner-properties): custom service loader
 
 #### Quantifier property
 
@@ -249,47 +242,6 @@ Constraints:
 1. Batch type must be an interface or an abstract class.
 2. Batch method must be unique.
 
-#### Mutability property
-
-The `#mutability` property allows **on-demand set and reload** of a loader.
-
-_Example: [nbbrd/service/examples/Messenger.java](java-service-examples/src/main/java/nbbrd/service/examples/Messenger.java)_
-
-⚠️ _This is a complex mechanism that targets specific usages. It will be removed and/or simplified in a future release._
-
-#### Singleton property
-
-The `#singleton` property specifies the **loader scope**.
-
-_Example: [nbbrd/service/examples/StatefulAlgorithm.java](java-service-examples/src/main/java/nbbrd/service/examples/StatefulAlgorithm.java)
-and [nbbrd/service/examples/SystemSettings.java](java-service-examples/src/main/java/nbbrd/service/examples/SystemSettings.java)_
-
-⚠️ _This is a complex mechanism that targets specific usages. It will be removed and/or simplified in a future release._
-
-#### Wrapper property
-
-The `#wrapper` property allows **service decoration** before any map/filter/sort operation.
-
-_Example: `TODO`_
-
-⚠️ _This is a complex mechanism that targets specific usages. It will be removed and/or simplified in a future release._
-
-#### Preprocessing property
-
-The `#preprocessor` property allows **custom operations on backend** before any map/filter/sort operation.
-
-_Example: `TODO`_
-
-⚠️ _This is a complex mechanism that targets specific usages. It will be removed and/or simplified in a future release._
-
-#### Backend and cleaner properties
-
-The `#backend` and `#cleaner` properties allow to use a **custom service loader** such as [NetBeans Lookup](https://search.maven.org/search?q=g:org.netbeans.api%20AND%20a:org-openide-util-lookup&core=gav) instead of JDK `ServiceLoader`.
-
-_Example: [nbbrd/service/examples/IconProvider.java](java-service-examples/src/main/java/nbbrd/service/examples/IconProvider.java)_
-
-⚠️ _This is a complex mechanism that targets specific usages. It will be removed and/or simplified in a future release._
-
 ### @ServiceId
 
 The `@ServiceId` annotation **specifies the method used to identify a service provider**.
@@ -432,9 +384,11 @@ Here is an example on how to do it:
 ```java
 public final class FileType {
 
+  private static final FileTypeSpiLoader LOADER_INSTANCE = FileTypeSpiLoader.builder().build();
+
   // 💡 API: designed to be called and used
   public static Optional<String> probeContentType(Path file) throws IOException {
-    for (FileTypeSpi probe : FileTypeSpiLoader.get()) {
+    for (FileTypeSpi probe : LOADER_INSTANCE.get()) {
       String result = probe.getContentTypeOrNull(file);
       if (result != null) return Optional.of(result);
     }
@@ -450,8 +404,7 @@ public final class FileType {
   // 💡 SPI: designed to be extended and implemented
   @ServiceDefinition(
       quantifier = Quantifier.MULTIPLE,
-      loaderName = "internal.{{canonicalName}}Loader",
-      singleton = true
+      loaderName = "internal.{{canonicalName}}Loader"
   )
   public interface FileTypeSpi {
 
@@ -532,10 +485,12 @@ The code of this project is licensed under the [European Union Public Licence (E
 
 ## Related work
 
-This project is not the only one using with the SPI mechanism. Here is a non-exhaustive list of related work:
-- [NetBeans Lookup](https://search.maven.org/search?q=g:org.netbeans.api%20AND%20a:org-openide-util-lookup&core=gav)
+This project is not the only one using with the SPI mechanism.  
+Here is a non-exhaustive list of related work:
+- [NetBeans Lookup](https://bits.netbeans.org/dev/javadoc/org-openide-util-lookup/index.html)
 - [Google AutoService](https://www.baeldung.com/google-autoservice)
 - [TOOListicon SPI-Annotation-Processor](https://github.com/toolisticon/SPI-Annotation-Processor)
+- [Kordamp Jipsy](https://github.com/kordamp/jipsy)
 
 ## Alternatives
 

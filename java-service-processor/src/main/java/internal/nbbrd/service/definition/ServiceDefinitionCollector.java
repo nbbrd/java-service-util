@@ -20,7 +20,6 @@ import com.squareup.javapoet.ClassName;
 import internal.nbbrd.service.ExtEnvironment;
 import internal.nbbrd.service.Instantiator;
 import internal.nbbrd.service.ProcessorUtil;
-import internal.nbbrd.service.Wrapper;
 import nbbrd.service.ServiceDefinition;
 import nbbrd.service.ServiceFilter;
 import nbbrd.service.ServiceId;
@@ -103,34 +102,14 @@ final class ServiceDefinitionCollector {
         Optional<TypeInstantiator> fallback = nonNull(annotation::fallback, Void.class)
                 .map(fallbackType -> new TypeInstantiator(fallbackType, Instantiator.allOf(types, serviceType, env.asTypeElement(fallbackType))));
 
-        Optional<TypeWrapper> wrapper = nonNull(annotation::wrapper, Void.class)
-                .map(wrapperType -> new TypeWrapper(wrapperType, Wrapper.allOf(types, serviceType, env.asTypeElement(wrapperType))));
-
-        Optional<TypeInstantiator> preprocessor = nonNull(annotation::preprocessor, ServiceDefinition.NoProcessing.class)
-                .map(preprocessorType -> new TypeInstantiator(preprocessorType, Instantiator.allOf(types, env.asTypeElement(preprocessorType), env.asTypeElement(preprocessorType))));
-
-        Optional<TypeInstantiator> backend = nonNull(annotation::backend, ServiceDefinition.DefaultBackend.class)
-                .map(type -> new TypeInstantiator(type, Instantiator.allOf(types, env.asTypeElement(type), env.asTypeElement(type))));
-
-        Optional<TypeInstantiator> cleaner = nonNull(annotation::cleaner, ServiceDefinition.DefaultCleaner.class)
-                .map(type -> new TypeInstantiator(type, Instantiator.allOf(types, env.asTypeElement(type), env.asTypeElement(type))));
-
         Optional<TypeMirror> batchType = nonNull(annotation::batchType, Void.class);
 
         return LoadDefinition
                 .builder()
                 .quantifier(annotation.quantifier())
-                .lifecycle(Lifecycle.of(annotation.mutability(), annotation.singleton()))
                 .serviceType(ClassName.get(serviceType))
                 .fallback(fallback)
-                .noFallback(annotation.noFallback())
-                .wrapper(wrapper)
-                .preprocessor(preprocessor)
                 .loaderName(annotation.loaderName())
-                .backend(backend)
-                .cleaner(cleaner)
-                .batch(annotation.batch())
-                .batchName(annotation.batchName())
                 .batchType(batchType)
                 .build();
     }

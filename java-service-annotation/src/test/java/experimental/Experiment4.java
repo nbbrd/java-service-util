@@ -3,7 +3,6 @@ package experimental;
 import experimental.Experiment4.Generated.ConfigurationLoader;
 import experimental.Experiment4.Generated.SwingColorSchemeLoader;
 import experimental.Experiment4.Generated.WinRegistryLoader;
-import nbbrd.service.Mutability;
 import nbbrd.service.ServiceFilter;
 import nbbrd.service.ServiceSorter;
 import org.openide.util.Lookup;
@@ -638,6 +637,30 @@ public class Experiment4 {
 
         private static void printColors(Example.SwingColorScheme colorScheme) {
             System.out.println(colorScheme.getColors());
+        }
+    }
+
+    /**
+     * Specifies the type of mutability of a class.
+     *
+     * @author Philippe Charles
+     */
+    public enum Mutability {
+        /**
+         * Not mutable
+         */
+        NONE,
+        /**
+         * Mutable but not thread-safe
+         */
+        BASIC,
+        /**
+         * Mutable and thread-safe
+         */
+        CONCURRENT;
+
+        public boolean isThreadSafe() {
+            return this != BASIC;
         }
     }
 }

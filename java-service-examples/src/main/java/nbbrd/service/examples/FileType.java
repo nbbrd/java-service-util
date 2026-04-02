@@ -42,9 +42,11 @@ public final class FileType {
         // static class
     }
 
+    private static final FileTypeSpiLoader LOADER_INSTANCE = FileTypeSpiLoader.builder().build();
+
     // 💡 API: designed to be called and used
     public static Optional<String> probeContentType(Path file) throws IOException {
-        for (FileTypeSpi probe : FileTypeSpiLoader.get()) {
+        for (FileTypeSpi probe : LOADER_INSTANCE.get()) {
             String result = probe.getContentTypeOrNull(file);
             if (result != null) return Optional.of(result);
         }
@@ -60,8 +62,7 @@ public final class FileType {
     // 💡 SPI: designed to be extended and implemented
     @ServiceDefinition(
             quantifier = Quantifier.MULTIPLE,
-            loaderName = "internal.{{canonicalName}}Loader",
-            singleton = true
+            loaderName = "internal.{{canonicalName}}Loader"
     )
     public interface FileTypeSpi {
 

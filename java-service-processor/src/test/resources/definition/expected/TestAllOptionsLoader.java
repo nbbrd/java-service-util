@@ -1,13 +1,15 @@
 package definition;
 
+import java.lang.Class;
 import java.lang.Iterable;
+import java.lang.Object;
+import java.lang.Runnable;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Objects;
 import java.util.ServiceLoader;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -16,83 +18,86 @@ import java.util.stream.StreamSupport;
 
 /**
  * Custom service loader for {@link definition.TestAllOptions}.
- * <br>This class is thread-safe.
  * <p>Properties:
  * <ul>
  * <li>Quantifier: MULTIPLE</li>
  * <li>Fallback: null</li>
- * <li>Preprocessing: wrapper: none filters:[isAvailable+isDisabled] sorters:[getCost1+getCost2]</li>
- * <li>Mutability: CONCURRENT</li>
- * <li>Singleton: true</li>
+ * <li>Preprocessing: filters:[isAvailable+isDisabled] sorters:[getCost1+getCost2]</li>
  * <li>Name: null</li>
- * <li>Backend: null</li>
- * <li>Cleaner: null</li>
- * <li>Batch: true</li>
- * <li>Batch name: null</li>
+ * <li>Batch type: null</li>
  * </ul>
  */
 public final class TestAllOptionsLoader {
-  private static final Iterable<TestAllOptions> SOURCE = ServiceLoader.load(TestAllOptions.class);
-
   public static final Pattern ID_PATTERN = Pattern.compile("^[A-Z0-9]+(?:_[A-Z0-9]+)*$");
 
-  private static final Iterable<TestAllOptionsBatch> BATCH = ServiceLoader.load(TestAllOptionsBatch.class);
+  private final Iterable<?> providerSource;
 
-  private static final Predicate<TestAllOptions> FILTER = ((Predicate<TestAllOptions>)o -> ID_PATTERN.matcher(o.getName()).matches()).and(TestAllOptions::isAvailable).and(((Predicate<TestAllOptions>)TestAllOptions::isDisabled).negate());
+  private final Runnable providerReloader;
 
-  private static final Comparator<TestAllOptions> SORTER = ((Comparator<TestAllOptions>)Comparator.comparingInt(TestAllOptions::getCost1)).thenComparing(Collections.reverseOrder(Comparator.comparingInt(TestAllOptions::getCost2)));
+  private final Predicate<TestAllOptions> filter = ((Predicate<TestAllOptions>)o -> ID_PATTERN.matcher(o.getName()).matches()).and(TestAllOptions::isAvailable).and(((Predicate<TestAllOptions>)TestAllOptions::isDisabled).negate());
 
-  private static final AtomicReference<List<TestAllOptions>> RESOURCE = new AtomicReference<>(doLoad());
+  private final Comparator<TestAllOptions> sorter = ((Comparator<TestAllOptions>)Comparator.comparingInt(TestAllOptions::getCost1)).thenComparing(Collections.reverseOrder(Comparator.comparingInt(TestAllOptions::getCost2)));
 
-  private static final Consumer<Iterable> CLEANER = loader -> ((ServiceLoader)loader).reload();
-
-  private TestAllOptionsLoader() {
+  private TestAllOptionsLoader(Iterable<?> providerSource, Runnable providerReloader) {
+    this.providerSource = providerSource;
+    this.providerReloader = providerReloader;
   }
 
-  private static List<TestAllOptions> doLoad() {
-    return Stream.concat(StreamSupport.stream(SOURCE.spliterator(), false), StreamSupport.stream(BATCH.spliterator(), false).flatMap(o -> o.getProviders()))
-        .filter(FILTER)
-        .sorted(SORTER)
+  /**
+   * Reloads the content by clearing the cache and fetching available providers.
+   */
+  public void reload() {
+    providerReloader.run();
+  }
+
+  private Stream<TestAllOptions> stream() {
+    return StreamSupport.stream(providerSource.spliterator(), false).filter(TestAllOptions.class::isInstance).map(TestAllOptions.class::cast);
+  }
+
+  /**
+   * Gets a list of {@link definition.TestAllOptions} instances.
+   */
+  public List<TestAllOptions> get() {
+    return stream()
+        .filter(filter)
+        .sorted(sorter)
         .collect(Collectors.collectingAndThen(Collectors.toList(), Collections::unmodifiableList));
   }
 
   /**
    * Gets a list of {@link definition.TestAllOptions} instances.
-   * <br>This method is thread-safe.
-   * @return the current non-null value
+   * <br>This is equivalent to the following code: <code>builder().build().get()</code>
+   * <br>Therefore, the returned value might be different at each call.
+   * @return a non-null value
    */
-  public static List<TestAllOptions> get() {
-    return RESOURCE.get();
+  public static List<TestAllOptions> load() {
+    return builder().build().get();
   }
 
-  /**
-   * Sets a list of {@link definition.TestAllOptions} instances.
-   * <br>This method is thread-safe.
-   * @param newValue new non-null value
-   */
-  public static void set(List<TestAllOptions> newValue) {
-    RESOURCE.set(Objects.requireNonNull(newValue));
+  public static Builder builder() {
+    return new Builder();
   }
 
-  /**
-   * Reloads the content by clearing the cache and fetching available providers.
-   * <br>This method is thread-safe.
-   */
-  public static void reload() {
-    synchronized(SOURCE) {
-      CLEANER.accept(SOURCE);
-      CLEANER.accept(BATCH);
-      set(doLoad());
+  public static final class Builder {
+    private Function<Class<?>, Object> factory = ServiceLoader::load;
+
+    private Function<Object, Iterable<?>> streamer = backend -> ((ServiceLoader) backend);
+
+    private Consumer<Object> reloader = backend -> ((ServiceLoader) backend).reload();
+
+    public <BACKEND> Builder backend(Function<Class<?>, BACKEND> factory,
+        Function<BACKEND, Iterable<?>> streamer, Consumer<BACKEND> reloader) {
+      this.factory = (Function<Class<?>, Object>) factory;
+      this.streamer = (Function<Object, Iterable<?>>) streamer;
+      this.reloader = (Consumer<Object>) reloader;
+      return this;
     }
-  }
 
-  /**
-   * Resets the content without clearing the cache.
-   * <br>This method is thread-safe.
-   */
-  public static void reset() {
-    synchronized(SOURCE) {
-      set(doLoad());
+    public TestAllOptionsLoader build() {
+      Object providerBackend = factory.apply(TestAllOptions.class);
+      return new TestAllOptionsLoader(
+          streamer.apply(providerBackend), () -> reloader.accept(providerBackend)
+          );
     }
   }
 }

@@ -1,158 +1,101 @@
 package definition;
 
+import java.lang.Class;
 import java.lang.Iterable;
-import java.util.Objects;
+import java.lang.Object;
+import java.lang.Runnable;
 import java.util.Optional;
 import java.util.ServiceLoader;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 public final class TestBatchReloadingLoader {
   /**
    * Custom service loader for {@link definition.TestBatchReloading.Mutable}.
-   * <br>This class is thread-safe.
    * <p>Properties:
    * <ul>
    * <li>Quantifier: OPTIONAL</li>
    * <li>Fallback: null</li>
    * <li>Preprocessing: null</li>
-   * <li>Mutability: CONCURRENT</li>
-   * <li>Singleton: false</li>
    * <li>Name: null</li>
-   * <li>Backend: null</li>
-   * <li>Cleaner: null</li>
-   * <li>Batch: true</li>
-   * <li>Batch name: null</li>
+   * <li>Batch type: definition.TestBatchReloading.Batch</li>
    * </ul>
    */
   public static final class Mutable {
-    private final Iterable<TestBatchReloading.Mutable> source = ServiceLoader.load(TestBatchReloading.Mutable.class);
+    private final Iterable<?> providerSource;
 
-    private final Iterable<TestBatchReloadingBatch.Mutable> batch = ServiceLoader.load(TestBatchReloadingBatch.Mutable.class);
+    private final Runnable providerReloader;
 
-    private final AtomicReference<Optional<TestBatchReloading.Mutable>> resource = new AtomicReference<>(doLoad());
+    private final Iterable<?> batchSource;
 
-    private final Consumer<Iterable> cleaner = loader -> ((ServiceLoader)loader).reload();
+    private final Runnable batchReloader;
 
-    private Optional<TestBatchReloading.Mutable> doLoad() {
-      return Stream.concat(StreamSupport.stream(source.spliterator(), false), StreamSupport.stream(batch.spliterator(), false).flatMap(o -> o.getProviders()))
+    private Mutable(Iterable<?> providerSource, Runnable providerReloader, Iterable<?> batchSource,
+        Runnable batchReloader) {
+      this.providerSource = providerSource;
+      this.providerReloader = providerReloader;
+      this.batchSource = batchSource;
+      this.batchReloader = batchReloader;
+    }
+
+    /**
+     * Reloads the content by clearing the cache and fetching available providers.
+     */
+    public void reload() {
+      providerReloader.run();
+      batchReloader.run();
+    }
+
+    private Stream<TestBatchReloading.Mutable> stream() {
+      return Stream.concat(StreamSupport.stream(providerSource.spliterator(), false).filter(TestBatchReloading.Mutable.class::isInstance).map(TestBatchReloading.Mutable.class::cast), StreamSupport.stream(batchSource.spliterator(), false).filter(TestBatchReloading.Batch.class::isInstance).map(TestBatchReloading.Batch.class::cast).flatMap(o -> o.getProviders()));
+    }
+
+    /**
+     * Gets an optional {@link definition.TestBatchReloading.Mutable} instance.
+     */
+    public Optional<TestBatchReloading.Mutable> get() {
+      return stream()
           .findFirst();
     }
 
     /**
      * Gets an optional {@link definition.TestBatchReloading.Mutable} instance.
-     * <br>This method is thread-safe.
-     * @return the current non-null value
+     * <br>This is equivalent to the following code: <code>builder().build().get()</code>
+     * <br>Therefore, the returned value might be different at each call.
+     * @return a non-null value
      */
-    public Optional<TestBatchReloading.Mutable> get() {
-      return resource.get();
+    public static Optional<TestBatchReloading.Mutable> load() {
+      return builder().build().get();
     }
 
-    /**
-     * Sets an optional {@link definition.TestBatchReloading.Mutable} instance.
-     * <br>This method is thread-safe.
-     * @param newValue new non-null value
-     */
-    public void set(Optional<TestBatchReloading.Mutable> newValue) {
-      resource.set(Objects.requireNonNull(newValue));
+    public static Builder builder() {
+      return new Builder();
     }
 
-    /**
-     * Reloads the content by clearing the cache and fetching available providers.
-     * <br>This method is thread-safe.
-     */
-    public void reload() {
-      synchronized(source) {
-        cleaner.accept(source);
-        cleaner.accept(batch);
-        set(doLoad());
+    public static final class Builder {
+      private Function<Class<?>, Object> factory = ServiceLoader::load;
+
+      private Function<Object, Iterable<?>> streamer = backend -> ((ServiceLoader) backend);
+
+      private Consumer<Object> reloader = backend -> ((ServiceLoader) backend).reload();
+
+      public <BACKEND> Builder backend(Function<Class<?>, BACKEND> factory,
+          Function<BACKEND, Iterable<?>> streamer, Consumer<BACKEND> reloader) {
+        this.factory = (Function<Class<?>, Object>) factory;
+        this.streamer = (Function<Object, Iterable<?>>) streamer;
+        this.reloader = (Consumer<Object>) reloader;
+        return this;
       }
-    }
 
-    /**
-     * Resets the content without clearing the cache.
-     * <br>This method is thread-safe.
-     */
-    public void reset() {
-      synchronized(source) {
-        set(doLoad());
-      }
-    }
-  }
-
-  /**
-   * Custom service loader for {@link definition.TestBatchReloading.MutableSingleton}.
-   * <br>This class is thread-safe.
-   * <p>Properties:
-   * <ul>
-   * <li>Quantifier: OPTIONAL</li>
-   * <li>Fallback: null</li>
-   * <li>Preprocessing: null</li>
-   * <li>Mutability: CONCURRENT</li>
-   * <li>Singleton: true</li>
-   * <li>Name: null</li>
-   * <li>Backend: null</li>
-   * <li>Cleaner: null</li>
-   * <li>Batch: true</li>
-   * <li>Batch name: null</li>
-   * </ul>
-   */
-  public static final class MutableSingleton {
-    private static final Iterable<TestBatchReloading.MutableSingleton> SOURCE = ServiceLoader.load(TestBatchReloading.MutableSingleton.class);
-
-    private static final Iterable<TestBatchReloadingBatch.MutableSingleton> BATCH = ServiceLoader.load(TestBatchReloadingBatch.MutableSingleton.class);
-
-    private static final AtomicReference<Optional<TestBatchReloading.MutableSingleton>> RESOURCE = new AtomicReference<>(doLoad());
-
-    private static final Consumer<Iterable> CLEANER = loader -> ((ServiceLoader)loader).reload();
-
-    private MutableSingleton() {
-    }
-
-    private static Optional<TestBatchReloading.MutableSingleton> doLoad() {
-      return Stream.concat(StreamSupport.stream(SOURCE.spliterator(), false), StreamSupport.stream(BATCH.spliterator(), false).flatMap(o -> o.getProviders()))
-          .findFirst();
-    }
-
-    /**
-     * Gets an optional {@link definition.TestBatchReloading.MutableSingleton} instance.
-     * <br>This method is thread-safe.
-     * @return the current non-null value
-     */
-    public static Optional<TestBatchReloading.MutableSingleton> get() {
-      return RESOURCE.get();
-    }
-
-    /**
-     * Sets an optional {@link definition.TestBatchReloading.MutableSingleton} instance.
-     * <br>This method is thread-safe.
-     * @param newValue new non-null value
-     */
-    public static void set(Optional<TestBatchReloading.MutableSingleton> newValue) {
-      RESOURCE.set(Objects.requireNonNull(newValue));
-    }
-
-    /**
-     * Reloads the content by clearing the cache and fetching available providers.
-     * <br>This method is thread-safe.
-     */
-    public static void reload() {
-      synchronized(SOURCE) {
-        CLEANER.accept(SOURCE);
-        CLEANER.accept(BATCH);
-        set(doLoad());
-      }
-    }
-
-    /**
-     * Resets the content without clearing the cache.
-     * <br>This method is thread-safe.
-     */
-    public static void reset() {
-      synchronized(SOURCE) {
-        set(doLoad());
+      public Mutable build() {
+        Object providerBackend = factory.apply(TestBatchReloading.Mutable.class);
+        Object batchBackend = factory.apply(TestBatchReloading.Batch.class);
+        return new Mutable(
+            streamer.apply(providerBackend), () -> reloader.accept(providerBackend),
+            streamer.apply(batchBackend), () -> reloader.accept(batchBackend)
+            );
       }
     }
   }

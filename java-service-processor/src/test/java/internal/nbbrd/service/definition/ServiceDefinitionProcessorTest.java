@@ -75,15 +75,6 @@ public class ServiceDefinitionProcessorTest {
     }
 
     @Test
-    public void testAlternateFactories() {
-        JavaFileObject file = forResource("definition/AlternateFactories.java");
-        Compilation compilation = compile(file);
-
-        assertThat(compilation)
-                .has(succeededWithoutWarnings());
-    }
-
-    @Test
     public void testMultiRoundProcessing() {
         JavaFileObject file = forResource("definition/TestMultiRoundProcessing.java");
 
@@ -118,23 +109,12 @@ public class ServiceDefinitionProcessorTest {
                     .has(succeeded());
 
             assertThat(compilation)
-                    .extracting(Compilation::warnings, DIAGNOSTICS)
-                    .extracting(Compilations::getDefaultMessage)
-                    .contains("Thread-unsafe singleton for 'definition.TestQuantifierSingle.MutableSingleton'");
-
-            assertThat(compilation)
                     .extracting(Compilation::generatedSourceFiles, JAVA_FILE_OBJECTS)
                     .singleElement()
                     .has(sourceFileNamed("definition", "TestQuantifierSingleLoader.java"))
                     .extracting(Compilations::contentsAsUtf8String, STRING)
                     .contains(
-                            "private final TestQuantifierSingle.Immutable resource = doLoad();",
-                            "public static TestQuantifierSingle.Immutable load()",
-                            "private TestQuantifierSingle.Mutable resource = doLoad();",
-                            "private final AtomicReference<TestQuantifierSingle.ThreadSafe> resource = new AtomicReference<>(doLoad());",
-                            "private static final TestQuantifierSingle.ImmutableSingleton RESOURCE = doLoad();",
-                            "private static TestQuantifierSingle.MutableSingleton RESOURCE = doLoad();",
-                            "private static final AtomicReference<TestQuantifierSingle.ThreadSafeSingleton> RESOURCE = new AtomicReference<>(doLoad());"
+                            "public static TestQuantifierSingle.Mutable load()"
                     );
         }
 
@@ -147,23 +127,12 @@ public class ServiceDefinitionProcessorTest {
                     .has(succeeded());
 
             assertThat(compilation)
-                    .extracting(Compilation::warnings, DIAGNOSTICS)
-                    .extracting(Compilations::getDefaultMessage)
-                    .contains("Thread-unsafe singleton for 'definition.TestQuantifierOptional.MutableSingleton'");
-
-            assertThat(compilation)
                     .extracting(Compilation::generatedSourceFiles, JAVA_FILE_OBJECTS)
                     .singleElement()
                     .has(sourceFileNamed("definition", "TestQuantifierOptionalLoader.java"))
                     .extracting(Compilations::contentsAsUtf8String, STRING)
                     .contains(
-                            "private final Optional<TestQuantifierOptional.Immutable> resource = doLoad();",
-                            "public static Optional<TestQuantifierOptional.Immutable> load()",
-                            "private Optional<TestQuantifierOptional.Mutable> resource = doLoad();",
-                            "private final AtomicReference<Optional<TestQuantifierOptional.ThreadSafe>> resource = new AtomicReference<>(doLoad());",
-                            "private static final Optional<TestQuantifierOptional.ImmutableSingleton> RESOURCE = doLoad();",
-                            "private static Optional<TestQuantifierOptional.MutableSingleton> RESOURCE = doLoad();",
-                            "private static final AtomicReference<Optional<TestQuantifierOptional.ThreadSafeSingleton>> RESOURCE = new AtomicReference<>(doLoad());"
+                            "public static Optional<TestQuantifierOptional.Mutable> load()"
                     );
         }
 
@@ -176,23 +145,12 @@ public class ServiceDefinitionProcessorTest {
                     .has(succeeded());
 
             assertThat(compilation)
-                    .extracting(Compilation::warnings, DIAGNOSTICS)
-                    .extracting(Compilations::getDefaultMessage)
-                    .contains("Thread-unsafe singleton for 'definition.TestQuantifierMultiple.MutableSingleton'");
-
-            assertThat(compilation)
                     .extracting(Compilation::generatedSourceFiles, JAVA_FILE_OBJECTS)
                     .singleElement()
                     .has(sourceFileNamed("definition", "TestQuantifierMultipleLoader.java"))
                     .extracting(Compilations::contentsAsUtf8String, STRING)
                     .contains(
-                            "private final List<TestQuantifierMultiple.Immutable> resource = doLoad();",
-                            "public static List<TestQuantifierMultiple.Immutable> load()",
-                            "private List<TestQuantifierMultiple.Mutable> resource = doLoad();",
-                            "private final AtomicReference<List<TestQuantifierMultiple.ThreadSafe>> resource = new AtomicReference<>(doLoad());",
-                            "private static final List<TestQuantifierMultiple.ImmutableSingleton> RESOURCE = doLoad();",
-                            "private static List<TestQuantifierMultiple.MutableSingleton> RESOURCE = doLoad();",
-                            "private static final AtomicReference<List<TestQuantifierMultiple.ThreadSafeSingleton>> RESOURCE = new AtomicReference<>(doLoad());"
+                            "public static List<TestQuantifierMultiple.Mutable> load()"
                     );
         }
     }
@@ -205,11 +163,9 @@ public class ServiceDefinitionProcessorTest {
             assertThat(compile(forResource("definition/TestLoaderNameValid.java")))
                     .has(succeededWithoutWarnings())
                     .extracting(Compilation::generatedSourceFiles, JAVA_FILE_OBJECTS)
-                    .hasSize(4)
+                    .hasSize(2)
                     .haveAtLeastOne(sourceFileNamed("definition", "TestLoaderNameValidLoader.java"))
-                    .haveAtLeastOne(sourceFileNamed("definition", "TestLoaderNameValidBatch.java"))
-                    .haveAtLeastOne(sourceFileNamed("internal", "FooLoader.java"))
-                    .haveAtLeastOne(sourceFileNamed("internal", "BarBatch.java"));
+                    .haveAtLeastOne(sourceFileNamed("internal", "FooLoader.java"));
         }
 
         @Test
@@ -241,13 +197,9 @@ public class ServiceDefinitionProcessorTest {
                     .extracting(Compilations::contentsAsUtf8String, STRING)
                     .contains(
                             ".filter(filter)",
-                            "private final Optional<TestFilterValid.SingleFilter> resource = doLoad();",
                             "private final Predicate<TestFilterValid.SingleFilter> filter = TestFilterValid.SingleFilter::isAvailable",
-                            "private final Optional<TestFilterValid.MultiFilter> resource = doLoad();",
                             "private final Predicate<TestFilterValid.MultiFilter> filter = ((Predicate<TestFilterValid.MultiFilter>)TestFilterValid.MultiFilter::isAvailable).and(TestFilterValid.MultiFilter::isFastEnough)",
-                            "private final Optional<TestFilterValid.ReversedFilter> resource = doLoad();",
                             "private final Predicate<TestFilterValid.ReversedFilter> filter = ((Predicate<TestFilterValid.ReversedFilter>)TestFilterValid.ReversedFilter::isAvailable).negate()",
-                            "private final Optional<TestFilterValid.MultiFilterWithPosition> resource = doLoad();",
                             "private final Predicate<TestFilterValid.MultiFilterWithPosition> filter = ((Predicate<TestFilterValid.MultiFilterWithPosition>)TestFilterValid.MultiFilterWithPosition::isFastEnough).and(TestFilterValid.MultiFilterWithPosition::isAvailable)"
                     );
         }
@@ -341,19 +293,12 @@ public class ServiceDefinitionProcessorTest {
                     .extracting(Compilations::contentsAsUtf8String, STRING)
                     .contains(
                             ".sorted(sorter)",
-                            "private final Optional<TestSorterValid.IntSorter> resource = doLoad();",
                             "Comparator.comparingInt(TestSorterValid.IntSorter::getCost)",
-                            "private final Optional<TestSorterValid.LongSorter> resource = doLoad();",
                             "Comparator.comparingLong(TestSorterValid.LongSorter::getCost)",
-                            "private final Optional<TestSorterValid.DoubleSorter> resource = doLoad();",
                             "Comparator.comparingDouble(TestSorterValid.DoubleSorter::getCost)",
-                            "private final Optional<TestSorterValid.ComparableSorter> resource = doLoad();",
                             "Comparator.comparing(TestSorterValid.ComparableSorter::getCost)",
-                            "private final Optional<TestSorterValid.MultiSorter> resource = doLoad();",
                             "((Comparator<TestSorterValid.MultiSorter>)Comparator.comparingInt(TestSorterValid.MultiSorter::getCost)).thenComparing(Comparator.comparingDouble(TestSorterValid.MultiSorter::getAccuracy))",
-                            "private final Optional<TestSorterValid.ReversedSorter> resource = doLoad();",
                             "Collections.reverseOrder(Comparator.comparingInt(TestSorterValid.ReversedSorter::getCost))",
-                            "private final Optional<TestSorterValid.MultiSorterWithPosition> resource = doLoad();",
                             "((Comparator<TestSorterValid.MultiSorterWithPosition>)Comparator.comparingDouble(TestSorterValid.MultiSorterWithPosition::getAccuracy)).thenComparing(Comparator.comparingInt(TestSorterValid.MultiSorterWithPosition::getCost))"
                     );
         }
@@ -572,124 +517,7 @@ public class ServiceDefinitionProcessorTest {
     }
 
     @Nested
-    class BackendTest {
-
-        @Test
-        public void testNetBeans() {
-            assertThat(compile(forResource("definition/TestBackendNetBeans.java")))
-                    .has(succeededWithoutWarnings())
-                    .extracting(Compilation::generatedSourceFiles, JAVA_FILE_OBJECTS)
-                    .filteredOn(sourceFileNamed("definition", "TestBackendNetBeansLoader.java"))
-                    .singleElement()
-                    .extracting(Compilations::contentsAsUtf8String, STRING)
-                    .contains("private final Iterable<TestBackendNetBeans> source = TestBackendNetBeans.NetBeansLookup.INSTANCE.apply(TestBackendNetBeans.class);");
-        }
-
-        @Test
-        public void testNonAssignable() {
-            JavaFileObject file = forResource("definition/TestBackendNonAssignable.java");
-
-            assertThat(compile(file))
-                    .has(failed())
-                    .extracting(Compilation::errors, DIAGNOSTICS)
-                    .singleElement()
-                    .returns("Backend 'definition.TestBackendNonAssignable.HelloProc' doesn't extend nor implement 'java.util.function.Function<java.lang.Class,? extends java.lang.Iterable>'", Compilations::getDefaultMessage)
-                    .returns(file, Diagnostic::getSource)
-                    .returns(11L, Diagnostic::getLineNumber);
-        }
-    }
-
-    @Nested
     class BatchTest {
-
-        @Test
-        public void testNestedNames() {
-            assertThat(compile(nested("@ServiceDefinition ( batch = true )")))
-                    .extracting(Compilation::generatedSourceFiles, JAVA_FILE_OBJECTS)
-                    .hasSize(2)
-                    .haveAtLeastOne(sourceFileNamed("definition", "NestedLoader.java"))
-                    .haveAtLeastOne(sourceFileNamed("definition", "NestedBatch.java"));
-
-            assertThat(compile(nested("@ServiceDefinition ( batch = true, batchName = \"internal.BATCH\" )")))
-                    .extracting(Compilation::generatedSourceFiles, JAVA_FILE_OBJECTS)
-                    .hasSize(2)
-                    .haveAtLeastOne(sourceFileNamed("definition", "NestedLoader.java"))
-                    .haveAtLeastOne(sourceFileNamed("internal", "BATCH.java"));
-        }
-
-        @Test
-        public void testNonNested() {
-            JavaFileObject file = forResource("definition/TestBatchNonNested.java");
-            Compilation compilation = compile(file);
-
-            assertThat(compilation)
-                    .has(succeededWithoutWarnings());
-
-            assertThat(compilation)
-                    .extracting(Compilation::generatedSourceFiles, JAVA_FILE_OBJECTS)
-                    .filteredOn(sourceFileNamed("definition", "TestBatchNonNestedLoader.java"))
-                    .singleElement()
-                    .extracting(Compilations::contentsAsUtf8String, STRING)
-                    .contains(
-                            "private final Iterable<TestBatchNonNested> source = ServiceLoader.load(TestBatchNonNested.class);",
-                            "private final Iterable<TestBatchNonNestedBatch> batch = ServiceLoader.load(TestBatchNonNestedBatch.class);"
-                    );
-
-            assertThat(compilation)
-                    .extracting(Compilation::generatedSourceFiles, JAVA_FILE_OBJECTS)
-                    .filteredOn(sourceFileNamed("definition", "TestBatchNonNestedBatch.java"))
-                    .singleElement()
-                    .extracting(Compilations::contentsAsUtf8String, STRING)
-                    .contains(
-                            "Stream<TestBatchNonNested> getProviders();"
-                    );
-
-            assertThat(compilation)
-                    .extracting(Compilation::generatedFiles, JAVA_FILE_OBJECTS)
-                    .filteredOn(fileNamed("/CLASS_OUTPUT/META-INF/services/definition.TestBatchNonNestedBatch"))
-                    .singleElement()
-                    .extracting(Compilations::contentsAsUtf8String, STRING)
-                    .contains(
-                            "definition.TestBatchNonNested$ABC"
-                    );
-        }
-
-        @Test
-        public void testNested() {
-            JavaFileObject file = forResource("definition/TestBatchNested.java");
-            Compilation compilation = compile(file);
-
-            assertThat(compilation)
-                    .has(succeededWithoutWarnings());
-
-            assertThat(compilation)
-                    .extracting(Compilation::generatedSourceFiles, JAVA_FILE_OBJECTS)
-                    .filteredOn(sourceFileNamed("definition", "TestBatchNestedLoader.java"))
-                    .singleElement()
-                    .extracting(Compilations::contentsAsUtf8String, STRING)
-                    .contains(
-                            "private final Iterable<TestBatchNested.HelloService> source = ServiceLoader.load(TestBatchNested.HelloService.class);",
-                            "private final Iterable<TestBatchNestedBatch.HelloService> batch = ServiceLoader.load(TestBatchNestedBatch.HelloService.class);"
-                    );
-
-            assertThat(compilation)
-                    .extracting(Compilation::generatedSourceFiles, JAVA_FILE_OBJECTS)
-                    .filteredOn(sourceFileNamed("definition", "TestBatchNestedBatch.java"))
-                    .singleElement()
-                    .extracting(Compilations::contentsAsUtf8String, STRING)
-                    .contains(
-                            "Stream<TestBatchNested.HelloService> getProviders();"
-                    );
-
-            assertThat(compilation)
-                    .extracting(Compilation::generatedFiles, JAVA_FILE_OBJECTS)
-                    .filteredOn(fileNamed("/CLASS_OUTPUT/META-INF/services/definition.TestBatchNestedBatch$HelloService"))
-                    .singleElement()
-                    .extracting(Compilations::contentsAsUtf8String, STRING)
-                    .contains(
-                            "definition.TestBatchNested$ABC"
-                    );
-        }
 
         @Test
         public void testReloading() {
@@ -713,22 +541,13 @@ public class ServiceDefinitionProcessorTest {
                     .singleElement()
                     .extracting(Compilations::contentsAsUtf8String, STRING)
                     .contains(
-                            "private final Iterable<TestBatchValidType.SomeBatch> batch = ServiceLoader.load(TestBatchValidType.SomeBatch.class);",
-                            "Stream.concat(StreamSupport.stream(source.spliterator(), false), StreamSupport.stream(batch.spliterator(), false).flatMap(o -> o.getProviders()))"
+                            "private final Iterable<?> batchSource;",
+                            "private final Runnable batchReloader;",
+                            "Stream.concat(",
+                            "StreamSupport.stream(providerSource.spliterator(), false)",
+                            "StreamSupport.stream(batchSource.spliterator(), false)",
+                            ".flatMap(o -> o.getProviders()))"
                     );
-        }
-
-        @Test
-        public void testPropertyType() {
-            JavaFileObject file = forResource("definition/TestBatchPropertyType.java");
-
-            assertThat(compile(file))
-                    .has(failed())
-                    .extracting(Compilation::errors, DIAGNOSTICS)
-                    .singleElement()
-                    .returns("Batch type cannot be used with batch property", Compilations::getDefaultMessage)
-                    .returns(file, Diagnostic::getSource)
-                    .returns(8L, Diagnostic::getLineNumber);
         }
 
         @Test
@@ -818,20 +637,6 @@ public class ServiceDefinitionProcessorTest {
         }
 
         @Test
-        public void testUnexpected() {
-            JavaFileObject file = forResource("definition/TestFallbackUnexpected.java");
-            Compilation compilation = compile(file);
-
-            assertThat(compilation)
-                    .has(succeededWithoutWarnings());
-
-            assertThat(compilation)
-                    .extracting(Compilation::generatedSourceFiles, JAVA_FILE_OBJECTS)
-                    .singleElement()
-                    .has(sourceFileNamed("definition", "TestFallbackUnexpectedLoader.java"));
-        }
-
-        @Test
         public void testSuppressWarning() {
             JavaFileObject file = forResource("definition/TestFallbackSuppressWarning.java");
             Compilation compilation = compile(file);
@@ -843,108 +648,6 @@ public class ServiceDefinitionProcessorTest {
                     .extracting(Compilation::generatedSourceFiles, JAVA_FILE_OBJECTS)
                     .singleElement()
                     .has(sourceFileNamed("definition", "TestFallbackSuppressWarningLoader.java"));
-        }
-    }
-
-    @Nested
-    class WrapperTest {
-
-        @Test
-        public void testValid() {
-            JavaFileObject file = forResource("definition/TestWrapperValid.java");
-            Compilation compilation = compile(file);
-
-            assertThat(compilation)
-                    .has(succeededWithoutWarnings());
-
-            assertThat(compilation)
-                    .extracting(Compilation::generatedSourceFiles, JAVA_FILE_OBJECTS)
-                    .singleElement()
-                    .has(sourceFileNamed("definition", "TestWrapperValidLoader.java"))
-                    .extracting(Compilations::contentsAsUtf8String, STRING)
-                    .contains(
-                            "private final Optional<TestWrapperValid.ByConstructor> resource = doLoad();",
-                            ".map(TestWrapperValid.WrapperByConstructor::new)",
-                            "private final Optional<TestWrapperValid.ByStaticMethod> resource = doLoad();",
-                            ".map(TestWrapperValid.WrapperByStaticMethod::wrap)",
-                            "private final Optional<TestWrapperValid.ByStaticMethodX> resource = doLoad();",
-                            ".map(TestWrapperValid.WrapperByStaticMethodX::wrap)"
-                    );
-        }
-
-        @Test
-        public void testNonAssignable() {
-            JavaFileObject file = forResource("definition/TestWrapperNonAssignable.java");
-            Compilation compilation = compile(file);
-
-            assertThat(compilation)
-                    .has(failed());
-
-            assertThat(compilation)
-                    .extracting(Compilation::errors, DIAGNOSTICS)
-                    .hasSize(1)
-                    .extracting(Compilations::getDefaultMessage, Diagnostic::getSource, Diagnostic::getLineNumber)
-                    .containsOnly(
-                            tuple("Wrapper 'java.lang.String' doesn't extend nor implement service 'definition.TestWrapperNonAssignable.HelloService'", file, 8L)
-                    );
-        }
-
-        @Test
-        public void testNonInstantiable() {
-            JavaFileObject file = forResource("definition/TestWrapperNonInstantiable.java");
-            Compilation compilation = compile(file);
-
-            assertThat(compilation)
-                    .has(failed());
-
-            assertThat(compilation)
-                    .extracting(Compilation::errors, DIAGNOSTICS)
-                    .hasSize(4)
-                    .extracting(Compilations::getDefaultMessage, Diagnostic::getSource, Diagnostic::getLineNumber)
-                    .containsOnly(
-                            tuple("Don't know how to wrap 'definition.TestWrapperNonInstantiable.WrapperByPrivateConstructor'", file, 8L),
-                            tuple("Don't know how to wrap 'definition.TestWrapperNonInstantiable.WrapperByNoArgConstructor'", file, 18L),
-                            tuple("Don't know how to wrap 'definition.TestWrapperNonInstantiable.WrapperByInvalidArgConstructor'", file, 28L),
-                            tuple("Don't know how to wrap 'definition.TestWrapperNonInstantiable.WrapperByToManyStaticMethods'", file, 38L)
-                    );
-        }
-    }
-
-    @Nested
-    class PreprocessingTest {
-
-        @Test
-        public void testNonInstantiable() {
-            JavaFileObject file = forResource("definition/TestPreprocessorNonInstantiable.java");
-            Compilation compilation = compile(file);
-
-            assertThat(compilation)
-                    .has(failed());
-
-            assertThat(compilation)
-                    .extracting(Compilation::errors, DIAGNOSTICS)
-                    .hasSize(1)
-                    .extracting(Compilations::getDefaultMessage, Diagnostic::getSource, Diagnostic::getLineNumber)
-                    .containsOnly(
-                            tuple("Don't know how to instantiate 'definition.TestPreprocessorNonInstantiable.SomePreprocessor'", file, 11L)
-                    );
-        }
-
-        @Test
-        public void testNonAssignable() {
-            JavaFileObject file = forResource("definition/TestPreprocessorNonAssignable.java");
-            Compilation compilation = compile(file);
-
-            assertThat(compilation)
-                    .has(failed());
-
-            assertThat(compilation)
-                    .extracting(Compilation::errors, DIAGNOSTICS)
-                    .hasSize(1)
-                    .extracting(Compilations::getDefaultMessage, Diagnostic::getSource, Diagnostic::getLineNumber)
-                    .containsOnly(
-                            tuple("Preprocessor 'definition.TestPreprocessorNonAssignable.HelloProc' doesn't extend nor implement 'java.util.function.UnaryOperator<java.util.stream.Stream<definition.TestPreprocessorNonAssignable.HelloService>>'", file, 10L)
-                    );
         }
     }
 

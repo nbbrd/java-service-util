@@ -173,22 +173,7 @@ final class ServiceDefinitionChecker {
         Types types = env.getTypeUtils();
         TypeElement service = env.asTypeElement(definition.getServiceType());
 
-        if (!checkFallback(definition.getQuantifier(), definition.getFallback(), definition.isNoFallback() || isSingleFallbackNotExpected(service), service, types)) {
-            return false;
-        }
-        if (!checkWrapper(definition.getWrapper(), service, types)) {
-            return false;
-        }
-        if (!checkPreprocessor(definition.getPreprocessor(), service, types)) {
-            return false;
-        }
-        if (!checkBackend(definition.getBackend(), service, types)) {
-            return false;
-        }
-        if (!checkCleaner(definition.getCleaner(), service, types)) {
-            return false;
-        }
-        if (!checkMutability(definition, service)) {
+        if (!checkFallback(definition.getQuantifier(), definition.getFallback(), isSingleFallbackNotExpected(service), service, types)) {
             return false;
         }
         if (!checkBatch(definition, service)) {
@@ -233,106 +218,8 @@ final class ServiceDefinitionChecker {
         return true;
     }
 
-    private boolean checkWrapper(Optional<TypeWrapper> wrapper, TypeElement service, Types types) {
-        if (wrapper.isPresent()) {
-            if (!checkWrapperTypeHandler(wrapper.get(), service, types)) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    private boolean checkWrapperTypeHandler(TypeWrapper handler, TypeElement service, Types types) {
-        if (!types.isAssignable(handler.getType(), types.erasure(service.asType()))) {
-            env.error(service, String.format(Locale.ROOT, "Wrapper '%1$s' doesn't extend nor implement service '%2$s'", handler.getType(), service));
-            return false;
-        }
-
-        if (!checkWrapperFactories(service, handler.getType(), handler)) {
-            return false;
-        }
-        return true;
-    }
-
-    private boolean checkPreprocessor(Optional<TypeInstantiator> preprocessor, TypeElement service, Types types) {
-        if (preprocessor.isPresent()) {
-            if (!checkPreprocessorTypeHandler(preprocessor.get(), service, types)) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    private boolean checkPreprocessorTypeHandler(TypeInstantiator handler, TypeElement service, Types types) {
-        TypeMirror expectedType = LoadDefinition.getPreprocessorType(env, service.asType());
-        if (!types.isAssignable(handler.getType(), expectedType)) {
-            env.error(service, String.format(Locale.ROOT, "Preprocessor '%1$s' doesn't extend nor implement '%2$s'", handler.getType(), expectedType));
-            return false;
-        }
-
-        if (!checkInstanceFactories(service, handler.getType(), handler)) {
-            return false;
-        }
-        return true;
-    }
-
-    private boolean checkBackend(Optional<TypeInstantiator> backend, TypeElement service, Types types) {
-        if (backend.isPresent()) {
-            if (!checkBackendTypeHandler(backend.get(), service, types)) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    private boolean checkBackendTypeHandler(TypeInstantiator handler, TypeElement service, Types types) {
-        TypeMirror expectedType = LoadDefinition.getBackendType(env, service.asType());
-        if (!types.isAssignable(handler.getType(), expectedType)) {
-            env.error(service, String.format(Locale.ROOT, "Backend '%1$s' doesn't extend nor implement '%2$s'", handler.getType(), expectedType));
-            return false;
-        }
-
-        if (!checkInstanceFactories(service, handler.getType(), handler)) {
-            return false;
-        }
-        return true;
-    }
-
-    private boolean checkCleaner(Optional<TypeInstantiator> cleaner, TypeElement service, Types types) {
-        if (cleaner.isPresent()) {
-            if (!checkCleanerTypeHandler(cleaner.get(), service, types)) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    private boolean checkCleanerTypeHandler(TypeInstantiator handler, TypeElement service, Types types) {
-        TypeMirror expectedType = LoadDefinition.getCleanerType(env, service.asType());
-        if (!types.isAssignable(handler.getType(), expectedType)) {
-            env.error(service, String.format(Locale.ROOT, "Cleaner '%1$s' doesn't extend nor implement '%2$s'", handler.getType(), expectedType));
-            return false;
-        }
-
-        if (!checkInstanceFactories(service, handler.getType(), handler)) {
-            return false;
-        }
-        return true;
-    }
-
-    private boolean checkMutability(LoadDefinition definition, TypeElement service) {
-        if (definition.getLifecycle() == Lifecycle.UNSAFE_MUTABLE) {
-            env.warn(service, String.format(Locale.ROOT, "Thread-unsafe singleton for '%1$s'", service));
-        }
-        return true;
-    }
-
     private boolean checkBatch(LoadDefinition definition, TypeElement service) {
         if (definition.getBatchType().isPresent()) {
-            if (definition.isBatch()) {
-                env.error(service, "Batch type cannot be used with batch property");
-                return false;
-            }
             TypeElement x = env.asTypeElement(definition.getBatchType().get());
             if (x.getKind() != ElementKind.INTERFACE && !x.getModifiers().contains(ABSTRACT)) {
                 env.error(service, "[RULE_B1] Batch type must be an interface or an abstract class");
@@ -359,14 +246,6 @@ final class ServiceDefinitionChecker {
     private boolean checkInstanceFactories(TypeElement annotatedElement, TypeMirror type, TypeInstantiator instance) {
         if (!instance.select().isPresent()) {
             env.error(annotatedElement, String.format(Locale.ROOT, "Don't know how to instantiate '%1$s'", type));
-            return false;
-        }
-        return true;
-    }
-
-    private boolean checkWrapperFactories(TypeElement annotatedElement, TypeMirror type, TypeWrapper instance) {
-        if (!instance.select().isPresent()) {
-            env.error(annotatedElement, String.format(Locale.ROOT, "Don't know how to wrap '%1$s'", type));
             return false;
         }
         return true;

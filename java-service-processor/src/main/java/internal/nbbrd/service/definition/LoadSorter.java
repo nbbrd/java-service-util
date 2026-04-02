@@ -17,7 +17,6 @@
 package internal.nbbrd.service.definition;
 
 import internal.nbbrd.service.HasMethod;
-import org.checkerframework.checker.index.qual.NonNegative;
 
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
@@ -38,7 +37,7 @@ class LoadSorter implements HasMethod {
 
     boolean reverse;
 
-    @NonNegative
+//    @NonNegative
     int position;
 
     @lombok.NonNull
