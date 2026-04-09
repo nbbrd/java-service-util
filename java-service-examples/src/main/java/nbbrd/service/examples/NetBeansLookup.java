@@ -2,42 +2,25 @@ package nbbrd.service.examples;
 
 import org.openide.util.Lookup;
 
-import java.util.Collection;
-import java.util.Iterator;
+import java.util.Optional;
 import java.util.function.Consumer;
-import java.util.function.Function;
 
-public enum NetBeansLookup implements Function<Class, Iterable>, Consumer<Iterable> {
+import static nbbrd.service.examples.WinRegistry.HKEY_LOCAL_MACHINE;
 
-    INSTANCE;
+public interface NetBeansLookup {
 
-    @Override
-    public Iterable apply(Class type) {
-        return new NetBeansLookupResult(type);
-    }
+    static void main(String[] args) {
+        Optional<WinRegistry> optional = WinRegistryLoader
+                .builder()
+                // 💡 NetBeans Lookup backend
+                .backend(Lookup.getDefault()::lookupResult, Lookup.Result::allInstances)
+                .build()
+                .get();
 
-    @Override
-    public void accept(Iterable iterable) {
-        ((NetBeansLookupResult) iterable).reload();
-    }
-
-    private static final class NetBeansLookupResult implements Iterable {
-
-        private final Lookup.Result result;
-        private Collection instances;
-
-        private NetBeansLookupResult(Class type) {
-            this.result = Lookup.getDefault().lookupResult(type);
-            this.instances = result.allInstances();
-        }
-
-        @Override
-        public Iterator iterator() {
-            return instances.iterator();
-        }
-
-        public void reload() {
-            this.instances = result.allInstances();
-        }
+        optional.map(reg -> reg.readString(
+                        HKEY_LOCAL_MACHINE,
+                        "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion",
+                        "ProductName"))
+                .ifPresent(System.out::println);
     }
 }

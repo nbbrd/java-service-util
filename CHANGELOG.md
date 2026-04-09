@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Add backend method for backends that do not support direct reloading [#564](https://github.com/nbbrd/java-service-util/issues/564)
+
 ## [2.0.0] - 2026-04-02
 
 This major release simplifies usage by removing deprecated properties and features.

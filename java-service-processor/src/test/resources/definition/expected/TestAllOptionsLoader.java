@@ -93,6 +93,14 @@ public final class TestAllOptionsLoader {
       return this;
     }
 
+    public <BACKEND> Builder backend(Function<Class<?>, BACKEND> factory,
+        Function<BACKEND, Iterable<?>> streamer) {
+      this.factory = (Function<Class<?>, Object>) factory;
+      this.streamer = (Function<Object, Iterable<?>>) streamer;
+      this.reloader = ignore -> {};
+      return this;
+    }
+
     public TestAllOptionsLoader build() {
       Object providerBackend = factory.apply(TestAllOptions.class);
       return new TestAllOptionsLoader(

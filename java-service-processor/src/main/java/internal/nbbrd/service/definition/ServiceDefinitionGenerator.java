@@ -258,7 +258,7 @@ class ServiceDefinitionGenerator {
                 .initializer("backend -> (($T) backend).reload()", ServiceLoader.class)
                 .build();
 
-        MethodSpec backendMethod = MethodSpec
+        MethodSpec backendMethod1 = MethodSpec
                 .methodBuilder("backend")
                 .addModifiers(PUBLIC)
                 .addTypeVariable(BACKEND)
@@ -269,6 +269,19 @@ class ServiceDefinitionGenerator {
                 .addStatement("this.$N = ($T) factory", factoryField, functionOf(WILDCARD_CLASS, OBJECT))
                 .addStatement("this.$N = ($T) streamer", streamerField, functionOf(OBJECT, iterableOf(WILDCARD)))
                 .addStatement("this.$N = ($T) reloader", reloaderField, consumerOf(OBJECT))
+                .addStatement("return this")
+                .build();
+
+        MethodSpec backendMethod2 = MethodSpec
+                .methodBuilder("backend")
+                .addModifiers(PUBLIC)
+                .addTypeVariable(BACKEND)
+                .returns(builderName)
+                .addParameter(functionOf(WILDCARD_CLASS, BACKEND), "factory")
+                .addParameter(functionOf(BACKEND, iterableOf(WILDCARD)), "streamer")
+                .addStatement("this.$N = ($T) factory", factoryField, functionOf(WILDCARD_CLASS, OBJECT))
+                .addStatement("this.$N = ($T) streamer", streamerField, functionOf(OBJECT, iterableOf(WILDCARD)))
+                .addStatement("this.$N = ignore -> {}", reloaderField)
                 .addStatement("return this")
                 .build();
 
@@ -307,7 +320,8 @@ class ServiceDefinitionGenerator {
                 .addField(factoryField)
                 .addField(streamerField)
                 .addField(reloaderField)
-                .addMethod(backendMethod)
+                .addMethod(backendMethod1)
+                .addMethod(backendMethod2)
                 .addMethod(buildMethod.build())
                 .build();
     }

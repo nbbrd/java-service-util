@@ -66,6 +66,7 @@ Features:
 - allows [identification](#serviceid)
 - allows [filtering](#servicefilter) and [sorting](#servicesorter)
 - allows [batch loading](#batch-type-property) 
+- allows [custom backend](#backend)
 
 Limitations:
 - does not support [type inspection before instantiation](https://github.com/nbbrd/java-service-util/issues/13)
@@ -241,6 +242,31 @@ _Source: [nbbrd/service/examples/SwingColorScheme.java](java-service-examples/sr
 Constraints:
 1. Batch type must be an interface or an abstract class.
 2. Batch method must be unique.
+
+#### Backend
+
+The builder allows to use a **custom service loader** such as [NetBeans Lookup](https://bits.netbeans.org/dev/javadoc/org-openide-util-lookup/index.html) instead of JDK `ServiceLoader`.
+
+```java
+public interface NetBeansLookup {
+
+  static void main(String[] args) {
+    Optional<WinRegistry> optional = WinRegistryLoader
+          .builder()
+          // 💡 NetBeans Lookup backend
+          .backend(Lookup.getDefault()::lookupResult, Lookup.Result::allInstances)
+          .build()
+          .get();
+
+    optional.map(reg -> reg.readString(
+                  HKEY_LOCAL_MACHINE,
+                  "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion",
+                  "ProductName"))
+          .ifPresent(System.out::println);
+  }
+}
+```
+_Source: [nbbrd/service/examples/NetBeansLookup.java](java-service-examples/src/main/java/nbbrd/service/examples/NetBeansLookup.java)_
 
 ### @ServiceId
 

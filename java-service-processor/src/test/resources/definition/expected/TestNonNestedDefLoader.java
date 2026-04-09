@@ -80,6 +80,14 @@ public final class TestNonNestedDefLoader {
       return this;
     }
 
+    public <BACKEND> Builder backend(Function<Class<?>, BACKEND> factory,
+        Function<BACKEND, Iterable<?>> streamer) {
+      this.factory = (Function<Class<?>, Object>) factory;
+      this.streamer = (Function<Object, Iterable<?>>) streamer;
+      this.reloader = ignore -> {};
+      return this;
+    }
+
     public TestNonNestedDefLoader build() {
       Object providerBackend = factory.apply(TestNonNestedDef.class);
       return new TestNonNestedDefLoader(
