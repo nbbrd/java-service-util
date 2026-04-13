@@ -19,7 +19,7 @@ import java.lang.annotation.*;
  */
 @Documented
 @Target({ElementType.METHOD})
-@Retention(RetentionPolicy.SOURCE)
+@Retention(RetentionPolicy.CLASS)
 public @interface ServiceId {
 
     /**
