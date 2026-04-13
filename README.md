@@ -287,10 +287,7 @@ public interface HashAlgorithm {
 
   static void main(String[] args) {
     // 💡 Retrieve service by name
-    HashAlgorithmLoader.load()
-      .stream()
-      .filter(algo -> algo.getName().equals("SHA-256"))
-      .findFirst()
+    HashAlgorithmLoader.loadById("SHA-256")
       .map(algo -> algo.hashToHex("hello".getBytes(UTF_8)))
       .ifPresent(System.out::println);
   }

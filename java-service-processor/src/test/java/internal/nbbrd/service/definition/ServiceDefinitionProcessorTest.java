@@ -514,6 +514,24 @@ public class ServiceDefinitionProcessorTest {
                     .returns(file, Diagnostic::getSource)
                     .returns(10L, Diagnostic::getLineNumber);
         }
+
+        @Test
+        public void testGetById() {
+            JavaFileObject file = forResource("definition/TestIdMultiple.java");
+
+            assertThat(compile(file))
+                    .has(succeededWithoutWarnings())
+                    .extracting(Compilation::generatedSourceFiles, JAVA_FILE_OBJECTS)
+                    .singleElement()
+                    .extracting(Compilations::contentsAsUtf8String, STRING)
+                    .contains(
+                            "public Optional<TestIdMultiple> getById(String id)",
+                            ".filter(o -> o.getName().equals(id))",
+                            ".findFirst()",
+                            "public static Optional<TestIdMultiple> loadById(String id)",
+                            "return builder().build().getById(id)"
+                    );
+        }
     }
 
     @Nested

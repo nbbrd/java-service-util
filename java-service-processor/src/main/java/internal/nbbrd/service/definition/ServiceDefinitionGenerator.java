@@ -232,6 +232,10 @@ class ServiceDefinitionGenerator {
                 .build();
 
         result.addMethod(newLoadMethod(quantifierType, getMethod));
+        if (!ids.isEmpty() && definition.getQuantifier() == Quantifier.MULTIPLE) {
+            result.addMethod(newGetByIdMethod(filterFieldOrNull));
+            result.addMethod(newLoadByIdMethod());
+        }
         result.addMethod(builderMethod);
         result.addType(generateBuilder());
 
@@ -542,6 +546,46 @@ class ServiceDefinitionGenerator {
             default:
                 throw new Unreachable();
         }
+    }
+
+    private MethodSpec newGetByIdMethod(FieldSpec filterFieldOrNull) {
+        ClassName serviceType = definition.getServiceType();
+        String idMethodName = ids.get(0).getMethodName();
+
+        CodeBlock.Builder body = CodeBlock.builder();
+        body.add("return stream()");
+        if (filterFieldOrNull != null) body.add(NEW_LINE).add(".filter($L)", filterFieldOrNull.name);
+        body.add(NEW_LINE).add(".filter(o -> o.$L().equals(id))", idMethodName);
+        body.add(NEW_LINE).add(".findFirst()");
+
+        return MethodSpec
+                .methodBuilder("getById")
+                .addJavadoc("Gets an optional $L instance by ID.\n", toJavadocLink(serviceType))
+                .addModifiers(PUBLIC)
+                .returns(TypeNames.typeOf(Optional.class, serviceType))
+                .addParameter(String.class, "id")
+                .addStatement(body.build())
+                .build();
+    }
+
+    private MethodSpec newLoadByIdMethod() {
+        ClassName serviceType = definition.getServiceType();
+        CodeBlock mainStatement = CodeBlock.of("builder().build().getById(id)");
+
+        return MethodSpec
+                .methodBuilder("loadById")
+                .addJavadoc(CodeBlock
+                        .builder()
+                        .add("Gets an optional $L instance by ID.\n", toJavadocLink(serviceType))
+                        .add("<br>This is equivalent to the following code: <code>$L</code>\n", mainStatement)
+                        .add("<br>Therefore, the returned value might be different at each call.\n")
+                        .add("@return a non-null value\n")
+                        .build())
+                .addModifiers(PUBLIC, STATIC)
+                .returns(TypeNames.typeOf(Optional.class, serviceType))
+                .addParameter(String.class, "id")
+                .addStatement("return $L", mainStatement)
+                .build();
     }
 
     private MethodSpec newLoadMethod(TypeName quantifierType, MethodSpec getter) {

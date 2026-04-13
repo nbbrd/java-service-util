@@ -140,6 +140,24 @@ public class ServiceDefinitionGeneratorTest {
         }
 
         @Test
+        public void doesNotIncludeGetByIdMethodWhenNoIds() {
+            TypeSpec typeSpec = generatorOf(baseDefinition(SERVICE_TYPE, Quantifier.MULTIPLE)).generateLoader(false);
+            assertThat(typeSpec.methodSpecs)
+                    .extracting(m -> m.name)
+                    .doesNotContain("getById", "loadById");
+        }
+
+        @Test
+        public void doesNotIncludeGetByIdMethodWhenQuantifierIsNotMultiple() {
+            for (Quantifier quantifier : new Quantifier[]{Quantifier.OPTIONAL, Quantifier.SINGLE}) {
+                TypeSpec typeSpec = generatorOf(baseDefinition(SERVICE_TYPE, quantifier)).generateLoader(false);
+                assertThat(typeSpec.methodSpecs)
+                        .extracting(m -> m.name)
+                        .doesNotContain("getById", "loadById");
+            }
+        }
+
+        @Test
         public void alwaysIncludesPublicStaticLoadMethod() {
             TypeSpec typeSpec = generatorOf(baseDefinition(SERVICE_TYPE, Quantifier.OPTIONAL)).generateLoader(false);
             assertThat(typeSpec.methodSpecs)

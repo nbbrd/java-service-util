@@ -4,9 +4,11 @@ import java.lang.Class;
 import java.lang.Iterable;
 import java.lang.Object;
 import java.lang.Runnable;
+import java.lang.String;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 import java.util.ServiceLoader;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -72,6 +74,26 @@ public final class TestAllOptionsLoader {
    */
   public static List<TestAllOptions> load() {
     return builder().build().get();
+  }
+
+  /**
+   * Gets an optional {@link definition.TestAllOptions} instance by ID.
+   */
+  public Optional<TestAllOptions> getById(String id) {
+    return stream()
+        .filter(filter)
+        .filter(o -> o.getName().equals(id))
+        .findFirst();
+  }
+
+  /**
+   * Gets an optional {@link definition.TestAllOptions} instance by ID.
+   * <br>This is equivalent to the following code: <code>builder().build().getById(id)</code>
+   * <br>Therefore, the returned value might be different at each call.
+   * @return a non-null value
+   */
+  public static Optional<TestAllOptions> loadById(String id) {
+    return builder().build().getById(id);
   }
 
   public static Builder builder() {
