@@ -24,7 +24,7 @@ public class ServiceDefinitionGeneratorTest {
                 .serviceType(serviceType)
                 .fallback(Optional.empty())
                 .loaderName("")
-                .batchType(Optional.empty())
+                .batch(Optional.empty())
                 .build();
     }
 
@@ -48,7 +48,7 @@ public class ServiceDefinitionGeneratorTest {
                     .serviceType(SERVICE_TYPE)
                     .fallback(Optional.empty())
                     .loaderName("internal.CustomLoader")
-                    .batchType(Optional.empty())
+                    .batch(Optional.empty())
                     .build();
             assertThat(generatorOf(definition).hasCustomLoaderName()).isTrue();
         }
@@ -83,7 +83,7 @@ public class ServiceDefinitionGeneratorTest {
                     .serviceType(SERVICE_TYPE)
                     .fallback(Optional.empty())
                     .loaderName("internal.FooLoader")
-                    .batchType(Optional.empty())
+                    .batch(Optional.empty())
                     .build();
             TypeSpec typeSpec = generatorOf(definition).generateLoader(false);
             assertThat(typeSpec.name).isEqualTo("FooLoader");

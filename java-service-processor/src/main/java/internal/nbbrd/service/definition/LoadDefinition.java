@@ -21,7 +21,6 @@ import com.squareup.javapoet.ClassName;
 import lombok.NonNull;
 import nbbrd.service.Quantifier;
 
-import javax.lang.model.type.TypeMirror;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.util.Optional;
@@ -47,7 +46,7 @@ class LoadDefinition {
     String loaderName;
 
     @lombok.NonNull
-    Optional<TypeMirror> batchType;
+    Optional<BatchDefinition> batch;
 
     public @NonNull ClassName resolveLoaderName() {
         return resolveName(loaderName, serviceType, "Loader");

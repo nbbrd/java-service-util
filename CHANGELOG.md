@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Add backend method for backends that do not support direct reloading [#564](https://github.com/nbbrd/java-service-util/issues/564)
 - Add service retrieval by ID  [#317](https://github.com/nbbrd/java-service-util/issues/317)
+- Add custom signature of batch method [#322](https://github.com/nbbrd/java-service-util/issues/322)
 
 ### Changed
 

@@ -23,13 +23,13 @@ import internal.nbbrd.service.TypeNames;
 import internal.nbbrd.service.Unreachable;
 import nbbrd.service.Quantifier;
 
-import javax.lang.model.type.TypeMirror;
 import java.util.*;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 import static com.squareup.javapoet.ClassName.OBJECT;
 import static com.squareup.javapoet.TypeName.VOID;
@@ -89,7 +89,7 @@ class ServiceDefinitionGenerator {
         ClassName loaderName = ClassName.bestGuess(definition.resolveLoaderName().simpleName());
         ClassName builderName = ClassName.bestGuess("Builder");
         ClassName providerType = definition.getServiceType();
-        ClassName batchTypeOrNull = definition.getBatchType().map(o -> ClassName.bestGuess(o.toString())).orElse(null);
+        ClassName batchTypeOrNull = definition.getBatch().map(o -> ClassName.bestGuess(o.getType().toString())).orElse(null);
         TypeName quantifierType = getQuantifierType();
 
         TypeSpec.Builder result = TypeSpec
@@ -113,6 +113,8 @@ class ServiceDefinitionGenerator {
         MethodSpec constructor;
 
         if (batchTypeOrNull != null) {
+            BatchDefinition batchDefinition = definition.getBatch().orElseThrow(Unreachable::new);
+
             FieldSpec batchSource = FieldSpec
                     .builder(iterableOf(WILDCARD), "batchSource", PRIVATE, FINAL)
                     .build();
@@ -141,9 +143,9 @@ class ServiceDefinitionGenerator {
                             CodeBlock
                                     .builder()
                                     .add("return ")
-                                    .add(concatStreams(
+                                     .add(concatStreams(
                                             iterableToStream(providerSource, providerType),
-                                            flatMapStream(iterableToStream(batchSource, batchTypeOrNull), CodeBlock.of("o -> o.getProviders()"))
+                                            flatMapStream(iterableToStream(batchSource, batchTypeOrNull), getBatchMapper(batchDefinition))
                                     )).build())
                     .build();
 
@@ -245,7 +247,7 @@ class ServiceDefinitionGenerator {
     public TypeSpec generateBuilder() {
         ClassName loaderName = ClassName.bestGuess(definition.resolveLoaderName().simpleName());
         ClassName builderName = ClassName.bestGuess("Builder");
-        ClassName batchTypeOrNull = definition.getBatchType().map(o -> ClassName.bestGuess(o.toString())).orElse(null);
+        ClassName batchTypeOrNull = definition.getBatch().map(o -> ClassName.bestGuess(o.getType().toString())).orElse(null);
 
         FieldSpec factoryField = FieldSpec
                 .builder(functionOf(WILDCARD_CLASS, OBJECT), "factory", PRIVATE)
@@ -340,7 +342,7 @@ class ServiceDefinitionGenerator {
                 .add("<li>Fallback: $L</li>\n", toJavadocLink(definition.getFallback().orElse(null)))
                 .add("<li>Preprocessing: $L</li>\n", getPreprocessingJavadoc())
                 .add("<li>Name: $L</li>\n", definition.getLoaderName().isEmpty() ? "null" : definition.getLoaderName())
-                .add("<li>Batch type: $L</li>\n", definition.getBatchType().map(TypeMirror::toString).orElse("null"))
+                .add("<li>Batch type: $L</li>\n", definition.getBatch().map(b -> b.getType().toString()).orElse("null"))
                 .add("</ul>\n")
                 .build();
     }
@@ -491,26 +493,6 @@ class ServiceDefinitionGenerator {
                 : emptyList();
     }
 
-    private FieldSpec getSourceField() {
-        return FieldSpec
-                .builder(TypeNames.typeOf(Iterable.class, definition.getServiceType()), "source")
-                .addModifiers(PRIVATE, FINAL)
-                .initializer("$L", getBackendInitCode(definition.getServiceType()))
-                .build();
-    }
-
-    private FieldSpec getBatchFieldOrNull() {
-        if (definition.getBatchType().isPresent()) {
-            ClassName batchTypeName = ClassName.bestGuess(definition.getBatchType().get().toString());
-            return FieldSpec
-                    .builder(TypeNames.typeOf(Iterable.class, batchTypeName), "batch")
-                    .addModifiers(PRIVATE, FINAL)
-                    .initializer("$L", getBackendInitCode(batchTypeName))
-                    .build();
-        }
-        return null;
-    }
-
     private FieldSpec getFilterFieldOrNull(FieldSpec idPatternFieldOrNull) {
         return !filters.isEmpty() || idPatternFieldOrNull != null
                 ? FieldSpec
@@ -529,10 +511,6 @@ class ServiceDefinitionGenerator {
                   .initializer("$L", getSortersCode())
                   .build()
                 : null;
-    }
-
-    private CodeBlock getBackendInitCode(ClassName serviceType) {
-        return CodeBlock.of("$T.load($T.class)", ServiceLoader.class, serviceType);
     }
 
     private CodeBlock getGetDescription() {
@@ -629,6 +607,24 @@ class ServiceDefinitionGenerator {
 
     private static Collector<HasMethod, ?, String> toMethodNames() {
         return Collectors.mapping(HasMethod::getMethodName, Collectors.joining("+", "[", "]"));
+    }
+
+    private static CodeBlock getBatchMapper(BatchDefinition batchDefinition) {
+        String methodName = batchDefinition.getMethodName().orElseThrow(Unreachable::new);
+        switch (batchDefinition.getMethodReturnKind().orElseThrow(Unreachable::new)) {
+            case STREAM:
+                return CodeBlock.of("o -> o.$L()", methodName);
+            case COLLECTION:
+                return CodeBlock.of("o -> o.$L().stream()", methodName);
+            case ITERABLE:
+                return CodeBlock.of("o -> $T.stream(o.$L().spliterator(), false)", StreamSupport.class, methodName);
+            case ITERATOR:
+                return CodeBlock.of("o -> $T.stream($T.spliteratorUnknownSize(o.$L(), 0), false)", StreamSupport.class, Spliterators.class, methodName);
+            case ARRAY:
+                return CodeBlock.of("o -> $T.stream(o.$L())", Arrays.class, methodName);
+            default:
+                throw new Unreachable();
+        }
     }
 
     private static final CodeBlock NEW_LINE = CodeBlock.of("\n");

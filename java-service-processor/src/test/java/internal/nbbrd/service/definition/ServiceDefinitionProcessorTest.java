@@ -593,6 +593,99 @@ public class ServiceDefinitionProcessorTest {
                     .returns(file, Diagnostic::getSource)
                     .returns(8L, Diagnostic::getLineNumber);
         }
+
+        @Test
+        public void testMethodNonUnique() {
+            JavaFileObject file = forResource("definition/TestBatchTypeMethodNonUnique.java");
+
+            assertThat(compile(file))
+                    .has(failed())
+                    .extracting(Compilation::errors, DIAGNOSTICS)
+                    .singleElement()
+                    .returns("[RULE_B2] Batch method must be unique", Compilations::getDefaultMessage)
+                    .returns(file, Diagnostic::getSource)
+                    .returns(8L, Diagnostic::getLineNumber);
+        }
+
+        @Test
+        public void testCollectionReturnType() {
+            JavaFileObject file = forResource("definition/TestBatchCollectionReturnType.java");
+            Compilation compilation = compile(file);
+
+            assertThat(compilation)
+                    .extracting(Compilation::generatedSourceFiles, JAVA_FILE_OBJECTS)
+                    .singleElement()
+                    .extracting(Compilations::contentsAsUtf8String, STRING)
+                    .contains(
+                            "private final Iterable<?> batchSource;",
+                            "Stream.concat(",
+                            ".flatMap(o -> o.getProviders().stream())"
+                    );
+        }
+
+        @Test
+        public void testIterableReturnType() {
+            JavaFileObject file = forResource("definition/TestBatchIterableReturnType.java");
+            Compilation compilation = compile(file);
+
+            assertThat(compilation)
+                    .extracting(Compilation::generatedSourceFiles, JAVA_FILE_OBJECTS)
+                    .singleElement()
+                    .extracting(Compilations::contentsAsUtf8String, STRING)
+                    .contains(
+                            "private final Iterable<?> batchSource;",
+                            "Stream.concat(",
+                            ".flatMap(o -> StreamSupport.stream(o.getProviders().spliterator(), false))"
+                    );
+        }
+
+        @Test
+        public void testIteratorReturnType() {
+            JavaFileObject file = forResource("definition/TestBatchIteratorReturnType.java");
+            Compilation compilation = compile(file);
+
+            assertThat(compilation)
+                    .extracting(Compilation::generatedSourceFiles, JAVA_FILE_OBJECTS)
+                    .singleElement()
+                    .extracting(Compilations::contentsAsUtf8String, STRING)
+                    .contains(
+                            "private final Iterable<?> batchSource;",
+                            "Stream.concat(",
+                            ".flatMap(o -> StreamSupport.stream(Spliterators.spliteratorUnknownSize(o.getProviders(), 0), false))"
+                    );
+        }
+
+        @Test
+        public void testArrayReturnType() {
+            JavaFileObject file = forResource("definition/TestBatchArrayReturnType.java");
+            Compilation compilation = compile(file);
+
+            assertThat(compilation)
+                    .extracting(Compilation::generatedSourceFiles, JAVA_FILE_OBJECTS)
+                    .singleElement()
+                    .extracting(Compilations::contentsAsUtf8String, STRING)
+                    .contains(
+                            "private final Iterable<?> batchSource;",
+                            "Stream.concat(",
+                            ".flatMap(o -> Arrays.stream(o.getProviders()))"
+                    );
+        }
+
+        @Test
+        public void testCustomMethodName() {
+            JavaFileObject file = forResource("definition/TestBatchCustomMethodName.java");
+            Compilation compilation = compile(file);
+
+            assertThat(compilation)
+                    .extracting(Compilation::generatedSourceFiles, JAVA_FILE_OBJECTS)
+                    .singleElement()
+                    .extracting(Compilations::contentsAsUtf8String, STRING)
+                    .contains(
+                            "private final Iterable<?> batchSource;",
+                            "Stream.concat(",
+                            ".flatMap(o -> o.getAll())"
+                    );
+        }
     }
 
     @Nested
