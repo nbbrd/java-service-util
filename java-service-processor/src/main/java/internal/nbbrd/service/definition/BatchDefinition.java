@@ -32,7 +32,7 @@ class BatchDefinition {
     @lombok.NonNull
     Optional<MethodReturnKind> methodReturnKind;
 
-    enum MethodReturnKind {
+    public enum MethodReturnKind {
         /** Method returns {@code Stream<Service>}. */
         STREAM,
         /** Method returns {@code Collection<Service>}. */

@@ -352,6 +352,35 @@ public class ServiceProviderProcessorTest {
                 .isEqualToIgnoringNewLines("ClassPathOrder$AClassPathOrder$BClassPathOrder$C");
     }
 
+    @Test
+    public void testEnumBatchProvider() {
+        JavaFileObject file = forResource("provider/EnumBatchProvider.java");
+        Compilation compilation = compile(file);
+
+        assertThat(compilation)
+                .has(succeeded());
+
+        // Check that the batch provider class was generated
+        assertThat(compilation)
+                .extracting(Compilation::generatedSourceFiles, JAVA_FILE_OBJECTS)
+                .filteredOn(fileNamed("/SOURCE_OUTPUT/provider/PrimaryColorBatchProvider.java"))
+                .hasSize(1);
+
+        // Check that the enum is NOT registered in the Color service (only the batch provider should be)
+        assertThat(compilation)
+                .extracting(Compilation::generatedFiles, JAVA_FILE_OBJECTS)
+                .filteredOn(fileNamed("/CLASS_OUTPUT/META-INF/services/provider.EnumBatchProvider$Color"))
+                .isEmpty();
+
+        // Check that the generated batch provider is registered in the ColorBatch service
+        assertThat(compilation)
+                .extracting(Compilation::generatedFiles, JAVA_FILE_OBJECTS)
+                .filteredOn(fileNamed("/CLASS_OUTPUT/META-INF/services/provider.EnumBatchProvider$ColorBatch"))
+                .singleElement()
+                .extracting(Compilations::contentsAsUtf8String, STRING)
+                .contains("provider.PrimaryColorBatchProvider");
+    }
+
     private URL fixPackageNotVisible() {
         try {
             return Paths.get(System.getProperty("user.dir"))

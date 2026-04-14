@@ -81,6 +81,8 @@ final class ServiceProviderChecker extends ProcessorTool {
                 return true;
             case STATIC_METHOD:
                 return instantiator.getElement().getSimpleName().contentEquals("provider");
+            case ENUM_FIELD:
+                return true;
             default:
                 return false;
         }
