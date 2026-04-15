@@ -163,11 +163,12 @@ public interface FooSPI { }
 An empty value generates an automatic name.  
 A non-empty value is interpreted as a [Mustache template](https://mustache.github.io/) with the following tags:
 
-| Tag             | Description                           |
-|-----------------|---------------------------------------|
-| `packageName`   | The package name of the service class |
-| `simpleName`    | The service class name                |
-| `canonicalName` | The full service class name           |
+| Tag                  | Description                           |
+|----------------------|---------------------------------------|
+| `packageName`        | The package name of the service class |
+| `simpleName`         | The service class name                |
+| `canonicalName`      | The full service class name           |
+| `topLevelClassName`  | The simple name of the top-level class |
 
 ```java
 // 💡 Name with interpretation

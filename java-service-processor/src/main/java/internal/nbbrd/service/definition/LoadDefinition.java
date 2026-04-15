@@ -63,8 +63,21 @@ class LoadDefinition {
         StringWriter writer = new StringWriter();
         new DefaultMustacheFactory()
                 .compile(new StringReader(classNameString), "")
-                .execute(writer, serviceType);
-        return ClassName.bestGuess(writer.toString());
+                .execute(writer, MustacheContext.of(serviceType));
+        ClassName parsed = ClassName.bestGuess(writer.toString());
+
+        // For nested services using top-level class name templates, ensure the loader name is also nested
+        ClassName top = serviceType.topLevelClassName();
+        if (!top.equals(serviceType) && usesTopLevelTemplate(classNameString)) {
+            // Service is nested and template uses top-level class name - make the loader name nested too
+            return parsed.topLevelClassName().nestedClass(serviceType.simpleName());
+        }
+        return parsed;
+    }
+
+    private static boolean usesTopLevelTemplate(String classNameString) {
+        return classNameString.contains("{{topLevelClassName}}")
+                || classNameString.contains("{{topLevelSimpleName}}");
     }
 
     private static ClassName generateName(ClassName serviceType, String defaultSuffix) {

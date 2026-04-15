@@ -16,7 +16,7 @@
  */
 package nbbrd.service.examples;
 
-import internal.nbbrd.service.examples.FileTypeSpiLoader;
+import internal.nbbrd.service.examples.FileType.FileTypeSpiLoader;
 import nbbrd.service.Quantifier;
 import nbbrd.service.ServiceDefinition;
 import nbbrd.service.ServiceProvider;

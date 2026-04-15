@@ -179,6 +179,18 @@ public class ServiceDefinitionProcessorTest {
                     .extracting(Compilation::generatedSourceFiles, JAVA_FILE_OBJECTS)
                     .hasSize(1)
                     .haveAtLeastOne(sourceFileNamed("internal", "LOADER.java"));
+
+            assertThat(compile(forResource("definition/TestNestedLoaderDefaultNames.java")))
+                    .has(succeededWithoutWarnings())
+                    .extracting(Compilation::generatedSourceFiles, JAVA_FILE_OBJECTS)
+                    .hasSize(1)
+                    .haveAtLeastOne(sourceFileNamed("definition", "TestNestedLoaderDefaultNamesLoader.java"));
+
+            assertThat(compile(forResource("definition/TestNestedLoaderCustomNames.java")))
+                    .has(succeededWithoutWarnings())
+                    .extracting(Compilation::generatedSourceFiles, JAVA_FILE_OBJECTS)
+                    .hasSize(1)
+                    .haveAtLeastOne(sourceFileNamed("definition", "TestNestedLoaderCustomNamesLoader.java"));
         }
     }
 

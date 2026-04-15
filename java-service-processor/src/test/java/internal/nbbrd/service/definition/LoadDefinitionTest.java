@@ -87,6 +87,9 @@ public class LoadDefinitionTest {
 
         assertThat(resolveName("internal.{{canonicalName}}Loader", nestedService, "Stuff"))
                 .isEqualTo(ClassName.get("internal.node1.node2.Leaf", "NestedLeafLoader"));
+
+        assertThat(resolveName("internal.{{topLevelClassName}}Loader", nestedService, "Stuff"))
+                .isEqualTo(ClassName.get("internal", "LeafLoader", "NestedLeaf"));
     }
 
     @Test
@@ -107,5 +110,8 @@ public class LoadDefinitionTest {
 
         assertThat(resolveName("internal.{{canonicalName}}Loader", nestedService, "Stuff"))
                 .isEqualTo(ClassName.get("internal.Leaf", "NestedLeafLoader"));
+
+        assertThat(resolveName("internal.{{topLevelClassName}}Loader", nestedService, "Stuff"))
+                .isEqualTo(ClassName.get("internal", "LeafLoader", "NestedLeaf"));
     }
 }

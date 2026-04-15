@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add service retrieval by ID  [#317](https://github.com/nbbrd/java-service-util/issues/317)
 - Add custom signature of batch method [#322](https://github.com/nbbrd/java-service-util/issues/322)
 - Add generation of batch provider [#161](https://github.com/nbbrd/java-service-util/issues/161)
+- Add topLevelClassName mustache template variable [#566](https://github.com/nbbrd/java-service-util/issues/566)
 
 ### Changed
 
