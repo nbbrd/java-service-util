@@ -46,6 +46,9 @@
         <!-- GitHub hosting -->
         <x.github.user>nbbrd</x.github.user>
         <x.github.repo>java-service-util</x.github.repo>
+
+        <!-- other properties -->
+        <java-design-util.version>1.10.1</java-design-util.version>
     </properties>
 
     <dependencyManagement>

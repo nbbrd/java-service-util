@@ -397,7 +397,11 @@ class ServiceDefinitionGenerator {
     }
 
     private CodeBlock getIdPredicateCode(FieldSpec field) {
-        return CodeBlock.of("o -> $N.matcher(o.$L()).matches()", field, ids.get(0).getMethod().getSimpleName());
+        LoadId id = ids.get(0);
+        String idCall = id.getFormatMethodName().isEmpty()
+                ? "o.$L()"
+                : "o.$L()." + id.getFormatMethodName() + "()";
+        return CodeBlock.of("o -> $N.matcher(" + idCall + ").matches()", field, id.getMethod().getSimpleName());
     }
 
     private CodeBlock getFiltersCode(FieldSpec idPatternFieldOrNull) {
@@ -576,12 +580,16 @@ class ServiceDefinitionGenerator {
 
     private MethodSpec newGetByIdMethod(FieldSpec filterFieldOrNull) {
         ClassName serviceType = definition.getServiceType();
-        String idMethodName = ids.get(0).getMethodName();
+        LoadId id = ids.get(0);
+        String idMethodName = id.getMethodName();
+        String idExpression = id.getFormatMethodName().isEmpty()
+                ? "o." + idMethodName + "()"
+                : "o." + idMethodName + "()." + id.getFormatMethodName() + "()";
 
         CodeBlock.Builder body = CodeBlock.builder();
         body.add("return stream()");
         if (filterFieldOrNull != null) body.add(NEW_LINE).add(".filter($L)", filterFieldOrNull.name);
-        body.add(NEW_LINE).add(".filter(o -> o.$L().equals(id))", idMethodName);
+        body.add(NEW_LINE).add(".filter(o -> $L.equals(id))", idExpression);
         body.add(NEW_LINE).add(".findFirst()");
 
         return MethodSpec

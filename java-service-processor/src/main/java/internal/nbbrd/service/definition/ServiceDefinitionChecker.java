@@ -142,9 +142,16 @@ final class ServiceDefinitionChecker {
             env.error(method, "[RULE_I3] Id method must have no-args");
             return false;
         }
-        if (!types.isSameType(method.getReturnType(), env.asTypeElement(String.class).asType())) {
-            env.error(method, "[RULE_I4] Id method must return String");
-            return false;
+        if (id.getFormatMethodName().isEmpty()) {
+            if (!types.isSameType(method.getReturnType(), env.asTypeElement(String.class).asType())) {
+                env.error(method, "[RULE_I4] Id method must return String, a built-in representable type " + IdFormatMethods.BUILT_IN.keySet() + ", or specify formatMethodName for other types");
+                return false;
+            }
+        } else {
+            if (!hasFormatMethod(method.getReturnType(), id.getFormatMethodName(), types)) {
+                env.error(method, "[RULE_I8] Format method '" + id.getFormatMethodName() + "' must exist on return type, be no-arg and return String");
+                return false;
+            }
         }
         if (hasCheckedExceptions(method)) {
             env.error(method, "[RULE_I6] Id method must not throw checked exceptions");
@@ -155,6 +162,19 @@ final class ServiceDefinitionChecker {
             return false;
         }
         return true;
+    }
+
+    private boolean hasFormatMethod(TypeMirror returnType, String formatMethodName, Types types) {
+        if (returnType.getKind().isPrimitive()) return false;
+        TypeElement returnTypeElement = (TypeElement) types.asElement(returnType);
+        if (returnTypeElement == null) return false;
+        TypeMirror stringType = env.asTypeElement(String.class).asType();
+        return ElementFilter.methodsIn(env.getElementUtils().getAllMembers(returnTypeElement))
+                .stream()
+                .anyMatch(m -> m.getSimpleName().contentEquals(formatMethodName)
+                        && m.getParameters().isEmpty()
+                        && !m.getModifiers().contains(STATIC)
+                        && types.isSameType(m.getReturnType(), stringType));
     }
 
     public boolean checkIds(Map<ClassName, List<LoadId>> idsByService) {

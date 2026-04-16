@@ -159,9 +159,19 @@ final class ServiceDefinitionCollector {
 
     private LoadId idOf(ExecutableElement x) {
         ServiceId annotation = x.getAnnotation(ServiceId.class);
+        String formatMethodName = annotation.formatMethodName();
+        if (formatMethodName.isEmpty()) {
+            TypeMirror returnType = x.getReturnType();
+            formatMethodName = IdFormatMethods
+                    .resolveFromRepresentableAsString(returnType, env.getTypeUtils())
+                    .orElseGet(() -> IdFormatMethods
+                            .resolve(returnType, env.getTypeUtils(), env.getElementUtils())
+                            .orElse(""));
+        }
         return new LoadId(x,
                 Optional.ofNullable(getServiceTypeOrNull(x)),
-                annotation.pattern()
+                annotation.pattern(),
+                formatMethodName
         );
     }
 

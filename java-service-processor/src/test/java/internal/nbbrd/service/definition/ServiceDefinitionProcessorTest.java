@@ -445,9 +445,37 @@ public class ServiceDefinitionProcessorTest {
                     .has(failed())
                     .extracting(Compilation::errors, DIAGNOSTICS)
                     .singleElement()
-                    .returns("[RULE_I4] Id method must return String", Compilations::getDefaultMessage)
+                    .returns("[RULE_I4] Id method must return String, a built-in representable type [java.lang.Enum, java.util.UUID, java.net.URI, java.nio.charset.Charset, java.util.Locale], or specify formatMethodName for other types", Compilations::getDefaultMessage)
                     .returns(file, Diagnostic::getSource)
                     .returns(10L, Diagnostic::getLineNumber);
+        }
+
+        @Test
+        public void testNonStringWithFormat() {
+            JavaFileObject file = forResource("definition/TestIdNonStringWithFormat.java");
+
+            assertThat(compile(file))
+                    .has(succeeded());
+        }
+
+        @Test
+        public void testBuiltInEnum() {
+            JavaFileObject file = forResource("definition/TestIdBuiltInEnum.java");
+
+            assertThat(compile(file))
+                    .has(succeeded());
+        }
+
+        @Test
+        public void testRepresentableAsString() {
+            JavaFileObject file = forResource("definition/TestIdRepresentableAsString.java");
+
+            assertThat(compile(file))
+                    .has(succeeded())
+                    .extracting(Compilation::generatedSourceFiles, JAVA_FILE_OBJECTS)
+                    .singleElement()
+                    .extracting(Compilations::contentsAsUtf8String, STRING)
+                    .contains("o.getVersion().serialize().equals(id)");
         }
 
         @Test
