@@ -42,6 +42,8 @@ public final class TestBatchReloadingLoader {
 
     /**
      * Reloads the content by clearing the cache and fetching available providers.
+     * <p>This method reloads both individual providers and batch providers.
+     * It should be called when the set of available providers may have changed.
      */
     public void reload() {
       providerReloader.run();
@@ -54,6 +56,8 @@ public final class TestBatchReloadingLoader {
 
     /**
      * Gets an optional {@link definition.TestBatchReloading.Mutable} instance.
+     * <p>Returns the first available provider after applying filters and sorters, or empty if none is found.
+     * @return a non-null optional {@link definition.TestBatchReloading.Mutable} instance
      */
     public Optional<TestBatchReloading.Mutable> get() {
       return stream()
@@ -62,14 +66,20 @@ public final class TestBatchReloadingLoader {
 
     /**
      * Gets an optional {@link definition.TestBatchReloading.Mutable} instance.
+     * <p>Returns the first available provider after applying filters and sorters, or empty if none is found.
+     * @return a non-null optional {@link definition.TestBatchReloading.Mutable} instance
      * <br>This is equivalent to the following code: <code>builder().build().get()</code>
      * <br>Therefore, the returned value might be different at each call.
-     * @return a non-null value
      */
     public static Optional<TestBatchReloading.Mutable> load() {
       return builder().build().get();
     }
 
+    /**
+     * Creates a new builder to configure and construct a loader instance.
+     * <p>Use this method to customize the backend (e.g. NetBeans Lookup) instead of the default ServiceLoader.
+     * @return a non-null new Builder instance
+     */
     public static Builder builder() {
       return new Builder();
     }
@@ -81,6 +91,13 @@ public final class TestBatchReloadingLoader {
 
       private Consumer<Object> reloader = backend -> ((ServiceLoader) backend).reload();
 
+      /**
+       * Configures a custom backend for loading and reloading providers.
+       * @param factory a function that creates a backend instance from a service class, not null
+       * @param streamer a function that streams providers from the backend, not null
+       * @param reloader a consumer that triggers a reload on the backend, not null
+       * @return this builder instance
+       */
       public <BACKEND> Builder backend(Function<Class<?>, BACKEND> factory,
           Function<BACKEND, Iterable<?>> streamer, Consumer<BACKEND> reloader) {
         this.factory = (Function<Class<?>, Object>) factory;
@@ -89,6 +106,12 @@ public final class TestBatchReloadingLoader {
         return this;
       }
 
+      /**
+       * Configures a custom backend for loading providers (without reload support).
+       * @param factory a function that creates a backend instance from a service class, not null
+       * @param streamer a function that streams providers from the backend, not null
+       * @return this builder instance
+       */
       public <BACKEND> Builder backend(Function<Class<?>, BACKEND> factory,
           Function<BACKEND, Iterable<?>> streamer) {
         this.factory = (Function<Class<?>, Object>) factory;
@@ -97,6 +120,10 @@ public final class TestBatchReloadingLoader {
         return this;
       }
 
+      /**
+       * Builds a new loader instance using the configured backend.
+       * @return a non-null loader instance
+       */
       public Mutable build() {
         Object providerBackend = factory.apply(TestBatchReloading.Mutable.class);
         Object batchBackend = factory.apply(TestBatchReloading.Batch.class);

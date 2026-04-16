@@ -128,6 +128,8 @@ class ServiceDefinitionGenerator {
                     .addJavadoc(CodeBlock
                             .builder()
                             .add("Reloads the content by clearing the cache and fetching available providers.\n")
+                            .add("<p>This method reloads both individual providers and batch providers.\n")
+                            .add("It should be called when the set of available providers may have changed.\n")
                             .build())
                     .addModifiers(PUBLIC)
                     .returns(VOID)
@@ -170,6 +172,7 @@ class ServiceDefinitionGenerator {
                     .addJavadoc(CodeBlock
                             .builder()
                             .add("Reloads the content by clearing the cache and fetching available providers.\n")
+                            .add("<p>It should be called when the set of available providers may have changed.\n")
                             .build())
                     .addModifiers(PUBLIC)
                     .returns(VOID)
@@ -228,6 +231,12 @@ class ServiceDefinitionGenerator {
 
         MethodSpec builderMethod = MethodSpec
                 .methodBuilder("builder")
+                .addJavadoc(CodeBlock
+                        .builder()
+                        .add("Creates a new builder to configure and construct a loader instance.\n")
+                        .add("<p>Use this method to customize the backend (e.g. NetBeans Lookup) instead of the default $T.\n", ServiceLoader.class)
+                        .add("@return a non-null new $T instance\n", ClassName.bestGuess("Builder"))
+                        .build())
                 .addModifiers(PUBLIC, STATIC)
                 .returns(builderName)
                 .addStatement("return new $T()", builderName)
@@ -266,6 +275,14 @@ class ServiceDefinitionGenerator {
 
         MethodSpec backendMethod1 = MethodSpec
                 .methodBuilder("backend")
+                .addJavadoc(CodeBlock
+                        .builder()
+                        .add("Configures a custom backend for loading and reloading providers.\n")
+                        .add("@param factory a function that creates a backend instance from a service class, not null\n")
+                        .add("@param streamer a function that streams providers from the backend, not null\n")
+                        .add("@param reloader a consumer that triggers a reload on the backend, not null\n")
+                        .add("@return this builder instance\n")
+                        .build())
                 .addModifiers(PUBLIC)
                 .addTypeVariable(BACKEND)
                 .returns(builderName)
@@ -280,6 +297,13 @@ class ServiceDefinitionGenerator {
 
         MethodSpec backendMethod2 = MethodSpec
                 .methodBuilder("backend")
+                .addJavadoc(CodeBlock
+                        .builder()
+                        .add("Configures a custom backend for loading providers (without reload support).\n")
+                        .add("@param factory a function that creates a backend instance from a service class, not null\n")
+                        .add("@param streamer a function that streams providers from the backend, not null\n")
+                        .add("@return this builder instance\n")
+                        .build())
                 .addModifiers(PUBLIC)
                 .addTypeVariable(BACKEND)
                 .returns(builderName)
@@ -293,6 +317,11 @@ class ServiceDefinitionGenerator {
 
         MethodSpec.Builder buildMethod = MethodSpec
                 .methodBuilder("build")
+                .addJavadoc(CodeBlock
+                        .builder()
+                        .add("Builds a new loader instance using the configured backend.\n")
+                        .add("@return a non-null loader instance\n")
+                        .build())
                 .addModifiers(PUBLIC)
                 .returns(loaderName);
 
@@ -516,11 +545,30 @@ class ServiceDefinitionGenerator {
     private CodeBlock getGetDescription() {
         switch (definition.getQuantifier()) {
             case OPTIONAL:
-                return CodeBlock.of("Gets an optional $L instance.\n", toJavadocLink(definition.getServiceType()));
+                return CodeBlock.of(
+                        "Gets an optional $L instance.\n" +
+                        "<p>Returns the first available provider after applying filters and sorters, or empty if none is found.\n" +
+                        "@return a non-null optional $L instance\n",
+                        toJavadocLink(definition.getServiceType()), toJavadocLink(definition.getServiceType()));
             case SINGLE:
-                return CodeBlock.of("Gets a $L instance.\n", toJavadocLink(definition.getServiceType()));
+                return definition.getFallback().isPresent()
+                        ? CodeBlock.of(
+                                "Gets a $L instance.\n" +
+                                "<p>Returns the first available provider after applying filters and sorters, or the fallback if none is found.\n" +
+                                "@return a non-null $L instance\n",
+                                toJavadocLink(definition.getServiceType()), toJavadocLink(definition.getServiceType()))
+                        : CodeBlock.of(
+                                "Gets a $L instance.\n" +
+                                "<p>Returns the first available provider after applying filters and sorters.\n" +
+                                "@return a non-null $L instance\n" +
+                                "@throws $T if no provider is available\n",
+                                toJavadocLink(definition.getServiceType()), toJavadocLink(definition.getServiceType()), IllegalStateException.class);
             case MULTIPLE:
-                return CodeBlock.of("Gets a list of $L instances.\n", toJavadocLink(definition.getServiceType()));
+                return CodeBlock.of(
+                        "Gets a list of $L instances.\n" +
+                        "<p>Returns all available providers after applying filters and sorters.\n" +
+                        "@return a non-null unmodifiable list of $L instances\n",
+                        toJavadocLink(definition.getServiceType()), toJavadocLink(definition.getServiceType()));
             default:
                 throw new Unreachable();
         }
@@ -538,7 +586,13 @@ class ServiceDefinitionGenerator {
 
         return MethodSpec
                 .methodBuilder("getById")
-                .addJavadoc("Gets an optional $L instance by ID.\n", toJavadocLink(serviceType))
+                .addJavadoc(CodeBlock
+                        .builder()
+                        .add("Gets an optional $L instance by ID.\n", toJavadocLink(serviceType))
+                        .add("<p>Returns the first available provider whose ID equals the given value, after applying filters.\n")
+                        .add("@param id the ID to look up, not null\n")
+                        .add("@return a non-null optional $L instance\n", toJavadocLink(serviceType))
+                        .build())
                 .addModifiers(PUBLIC)
                 .returns(TypeNames.typeOf(Optional.class, serviceType))
                 .addParameter(CharSequence.class, "id")
@@ -555,9 +609,11 @@ class ServiceDefinitionGenerator {
                 .addJavadoc(CodeBlock
                         .builder()
                         .add("Gets an optional $L instance by ID.\n", toJavadocLink(serviceType))
+                        .add("<p>Returns the first available provider whose ID equals the given value.\n")
                         .add("<br>This is equivalent to the following code: <code>$L</code>\n", mainStatement)
                         .add("<br>Therefore, the returned value might be different at each call.\n")
-                        .add("@return a non-null value\n")
+                        .add("@param id the ID to look up, not null\n")
+                        .add("@return a non-null optional $L instance\n", toJavadocLink(serviceType))
                         .build())
                 .addModifiers(PUBLIC, STATIC)
                 .returns(TypeNames.typeOf(Optional.class, serviceType))
@@ -576,7 +632,6 @@ class ServiceDefinitionGenerator {
                         .add(getGetDescription())
                         .add("<br>This is equivalent to the following code: <code>$L</code>\n", mainStatement)
                         .add("<br>Therefore, the returned value might be different at each call.\n")
-                        .add("@return a non-null value\n")
                         .build())
                 .addModifiers(PUBLIC, STATIC)
                 .returns(quantifierType)

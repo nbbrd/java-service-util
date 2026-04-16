@@ -47,6 +47,7 @@ public final class TestAllOptionsLoader {
 
   /**
    * Reloads the content by clearing the cache and fetching available providers.
+   * <p>It should be called when the set of available providers may have changed.
    */
   public void reload() {
     providerReloader.run();
@@ -58,6 +59,8 @@ public final class TestAllOptionsLoader {
 
   /**
    * Gets a list of {@link definition.TestAllOptions} instances.
+   * <p>Returns all available providers after applying filters and sorters.
+   * @return a non-null unmodifiable list of {@link definition.TestAllOptions} instances
    */
   public List<TestAllOptions> get() {
     return stream()
@@ -68,9 +71,10 @@ public final class TestAllOptionsLoader {
 
   /**
    * Gets a list of {@link definition.TestAllOptions} instances.
+   * <p>Returns all available providers after applying filters and sorters.
+   * @return a non-null unmodifiable list of {@link definition.TestAllOptions} instances
    * <br>This is equivalent to the following code: <code>builder().build().get()</code>
    * <br>Therefore, the returned value might be different at each call.
-   * @return a non-null value
    */
   public static List<TestAllOptions> load() {
     return builder().build().get();
@@ -78,6 +82,9 @@ public final class TestAllOptionsLoader {
 
   /**
    * Gets an optional {@link definition.TestAllOptions} instance by ID.
+   * <p>Returns the first available provider whose ID equals the given value, after applying filters.
+   * @param id the ID to look up, not null
+   * @return a non-null optional {@link definition.TestAllOptions} instance
    */
   public Optional<TestAllOptions> getById(CharSequence id) {
     return stream()
@@ -88,14 +95,21 @@ public final class TestAllOptionsLoader {
 
   /**
    * Gets an optional {@link definition.TestAllOptions} instance by ID.
+   * <p>Returns the first available provider whose ID equals the given value.
    * <br>This is equivalent to the following code: <code>builder().build().getById(id)</code>
    * <br>Therefore, the returned value might be different at each call.
-   * @return a non-null value
+   * @param id the ID to look up, not null
+   * @return a non-null optional {@link definition.TestAllOptions} instance
    */
   public static Optional<TestAllOptions> loadById(CharSequence id) {
     return builder().build().getById(id);
   }
 
+  /**
+   * Creates a new builder to configure and construct a loader instance.
+   * <p>Use this method to customize the backend (e.g. NetBeans Lookup) instead of the default ServiceLoader.
+   * @return a non-null new Builder instance
+   */
   public static Builder builder() {
     return new Builder();
   }
@@ -107,6 +121,13 @@ public final class TestAllOptionsLoader {
 
     private Consumer<Object> reloader = backend -> ((ServiceLoader) backend).reload();
 
+    /**
+     * Configures a custom backend for loading and reloading providers.
+     * @param factory a function that creates a backend instance from a service class, not null
+     * @param streamer a function that streams providers from the backend, not null
+     * @param reloader a consumer that triggers a reload on the backend, not null
+     * @return this builder instance
+     */
     public <BACKEND> Builder backend(Function<Class<?>, BACKEND> factory,
         Function<BACKEND, Iterable<?>> streamer, Consumer<BACKEND> reloader) {
       this.factory = (Function<Class<?>, Object>) factory;
@@ -115,6 +136,12 @@ public final class TestAllOptionsLoader {
       return this;
     }
 
+    /**
+     * Configures a custom backend for loading providers (without reload support).
+     * @param factory a function that creates a backend instance from a service class, not null
+     * @param streamer a function that streams providers from the backend, not null
+     * @return this builder instance
+     */
     public <BACKEND> Builder backend(Function<Class<?>, BACKEND> factory,
         Function<BACKEND, Iterable<?>> streamer) {
       this.factory = (Function<Class<?>, Object>) factory;
@@ -123,6 +150,10 @@ public final class TestAllOptionsLoader {
       return this;
     }
 
+    /**
+     * Builds a new loader instance using the configured backend.
+     * @return a non-null loader instance
+     */
     public TestAllOptionsLoader build() {
       Object providerBackend = factory.apply(TestAllOptions.class);
       return new TestAllOptionsLoader(
