@@ -31,8 +31,24 @@ final class ServiceProviderGenerator extends ProcessorTool {
         List<BatchProviderRef> batchRefs = collectBatchProviderRefs(annotationRefs);
         List<BatchProviderRegistration> batchRegistrations = generateBatchProviders(batchRefs);
 
-        // Filter out enum providers that have batch providers generated
-        List<ProviderRef> refsToRegister = filterOutEnumsWithBatchProviders(annotationRefs, batchRefs);
+        // Generate delegates for enum constants when batchType is not defined
+        List<ProviderRef> enumDelegateRefs = generateEnumDelegates(annotationRefs, batchRefs);
+
+        // Filter out enum providers that have batch providers or enum delegates generated
+        Set<TypeElement> enumsWithBatchProviders = batchRefs.stream()
+                .map(BatchProviderRef::getEnumProvider)
+                .collect(Collectors.toSet());
+        Set<TypeElement> enumsWithDelegates = enumDelegateRefs.stream()
+                .map(ProviderRef::getProvider)
+                .collect(Collectors.toSet());
+
+        List<ProviderRef> refsToRegister = annotationRefs.stream()
+                .filter(ref -> !enumsWithBatchProviders.contains(ref.getProvider()))
+                .filter(ref -> !enumsWithDelegates.contains(ref.getProvider()))
+                .collect(Collectors.toList());
+
+        // Add enum delegate refs to the list to register
+        refsToRegister.addAll(enumDelegateRefs);
 
         // Register in SPI files
         ClassPathRegistry classPath = new ClassPathRegistry(getEnv());
@@ -151,6 +167,42 @@ final class ServiceProviderGenerator extends ProcessorTool {
                 getBatchProviderRef(ref).ifPresent(result::add);
             }
         }
+        return result;
+    }
+
+    private List<ProviderRef> generateEnumDelegates(List<ProviderRef> annotationRefs, List<BatchProviderRef> batchRefs) {
+        // Get enum providers that have batch providers
+        Set<TypeElement> enumsWithBatchProviders = batchRefs.stream()
+                .map(BatchProviderRef::getEnumProvider)
+                .collect(Collectors.toSet());
+
+        List<ProviderRef> result = new ArrayList<>();
+        
+        for (ProviderRef ref : annotationRefs) {
+            // Only process enums that don't have batch providers
+            if (ref.getProvider().getKind() == ElementKind.ENUM 
+                    && !enumsWithBatchProviders.contains(ref.getProvider())) {
+                
+                // Get all enum constants
+                List<VariableElement> enumConstants = ElementFilter.fieldsIn(
+                        ref.getProvider().getEnclosedElements())
+                        .stream()
+                        .filter(field -> field.getKind() == ElementKind.ENUM_CONSTANT)
+                        .collect(Collectors.toList());
+                
+                // Generate a delegate for each enum constant
+                for (VariableElement enumConstant : enumConstants) {
+                    String generatedClassName = generateDelegateWrapper(ref, enumConstant);
+                    result.add(new ProviderRef(
+                            ref.getService(), 
+                            ref.getProvider(), 
+                            Optional.empty(), 
+                            Optional.of(generatedClassName)
+                    ));
+                }
+            }
+        }
+        
         return result;
     }
 

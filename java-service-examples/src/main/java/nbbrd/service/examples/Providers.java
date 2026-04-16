@@ -35,6 +35,12 @@ public interface Providers {
         };
     }
 
+    // 💡 Provider using enum values
+    @ServiceProvider
+    enum CommonFoo implements FooSPI {
+        A, B, C
+    }
+
     static void main(String[] args) {
         // 💡 Get all providers for the services
         ServiceLoader.load(FooSPI.class).forEach(System.out::println);

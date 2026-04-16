@@ -441,6 +441,31 @@ public class ServiceProviderProcessorTest {
                 .contains("provider.StaticMethodDelegate_getInstanceDelegate");
     }
 
+    @Test
+    public void testEnumWithoutBatch() {
+        JavaFileObject file = forResource("provider/EnumWithoutBatch.java");
+        Compilation compilation = compile(file);
+
+        assertThat(compilation)
+                .has(succeeded());
+
+        // Check that delegate wrappers were generated for each enum constant
+        assertThat(compilation)
+                .extracting(Compilation::generatedSourceFiles, JAVA_FILE_OBJECTS)
+                .filteredOn(f -> f.getName().contains("PrimaryColor_") && f.getName().contains("Delegate.java"))
+                .hasSize(3); // RED, BLUE, YELLOW
+
+        // Check that the delegates are registered in the Color service
+        assertThat(compilation)
+                .extracting(Compilation::generatedFiles, JAVA_FILE_OBJECTS)
+                .filteredOn(fileNamed("/CLASS_OUTPUT/META-INF/services/provider.EnumWithoutBatch$Color"))
+                .singleElement()
+                .extracting(Compilations::contentsAsUtf8String, STRING)
+                .contains("provider.PrimaryColor_REDDelegate",
+                          "provider.PrimaryColor_BLUEDelegate",
+                          "provider.PrimaryColor_YELLOWDelegate");
+    }
+
     private Compilation compile(JavaFileObject... files) {
         return Compiler.javac()
                 .withProcessors(new ServiceProviderProcessor())

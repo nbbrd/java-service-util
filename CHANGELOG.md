@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add topLevelClassName mustache template variable [#566](https://github.com/nbbrd/java-service-util/issues/566)
 - Add support of types representable as String to ServiceId annotation [#325](https://github.com/nbbrd/java-service-util/issues/325)
 - Add generation of service delegates from fields and methods [#567](https://github.com/nbbrd/java-service-util/issues/567)
+- Add generation of service delegates from enum values [#568](https://github.com/nbbrd/java-service-util/issues/568)
 
 ### Changed
 
