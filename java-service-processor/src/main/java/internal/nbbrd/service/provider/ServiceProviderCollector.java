@@ -4,14 +4,11 @@ import internal.nbbrd.service.ProcessorTool;
 
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.RoundEnvironment;
-import javax.lang.model.element.Name;
 import javax.lang.model.element.TypeElement;
-import javax.lang.model.util.Elements;
-import java.util.HashSet;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
 
 final class ServiceProviderCollector extends ProcessorTool {
 
@@ -19,14 +16,10 @@ final class ServiceProviderCollector extends ProcessorTool {
         super(envSupplier);
     }
 
-    // we store Name instead of TypeElement due to a bug(?) in JDK8
-    // that creates not-equivalent elements between rounds
-    private final Set<Name> pendingRefs = new HashSet<>();
+    private final List<ProviderRef> pendingRefs = new ArrayList<>();
 
     public void collect(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
-        new AnnotationRegistry(annotations, roundEnv)
-                .readAll()
-                .forEach(ref -> pendingRefs.add(ref.getProvider().getQualifiedName()));
+        pendingRefs.addAll(new AnnotationRegistry(annotations, roundEnv).readAll());
     }
 
     public void clear() {
@@ -34,11 +27,6 @@ final class ServiceProviderCollector extends ProcessorTool {
     }
 
     public List<ProviderRef> build() {
-        Elements elements = getEnv().getElementUtils();
-        return pendingRefs
-                .stream()
-                .map(x -> elements.getTypeElement(x.toString()))
-                .flatMap(AnnotationRegistry::newRefs)
-                .collect(Collectors.toList());
+        return new ArrayList<>(pendingRefs);
     }
 }

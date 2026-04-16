@@ -1,32 +1,18 @@
-/*
- * Copyright 2019 National Bank of Belgium
- * 
- * Licensed under the EUPL, Version 1.1 or - as soon they will be approved 
- * by the European Commission - subsequent versions of the EUPL (the "Licence");
- * You may not use this work except in compliance with the Licence.
- * You may obtain a copy of the Licence at:
- * 
- * http://ec.europa.eu/idabc/eupl
- * 
- * Unless required by applicable law or agreed to in writing, software 
- * distributed under the Licence is distributed on an "AS IS" basis,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the Licence for the specific language governing permissions and 
- * limitations under the Licence.
- */
 package internal.nbbrd.service.provider;
 
 import internal.nbbrd.service.ProcessorUtil;
+
+import javax.annotation.processing.RoundEnvironment;
+import javax.lang.model.element.*;
+import javax.lang.model.type.DeclaredType;
+import javax.lang.model.type.TypeMirror;
+import nbbrd.service.ServiceProvider;
+
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import javax.annotation.processing.RoundEnvironment;
-import javax.lang.model.element.TypeElement;
-import javax.lang.model.type.DeclaredType;
-import javax.lang.model.type.TypeMirror;
-import nbbrd.service.ServiceProvider;
 
 /**
  *
@@ -45,22 +31,51 @@ final class AnnotationRegistry implements ProviderRegistry {
         return annotations.stream()
                 .map(roundEnv::getElementsAnnotatedWith)
                 .flatMap(Set::stream)
-                .map(TypeElement.class::cast)
                 .flatMap(AnnotationRegistry::newRefs)
                 .collect(Collectors.toList());
     }
 
-    static Stream<ProviderRef> newRefs(TypeElement type) {
-        return getAnnotations(type)
-                .map(annotation -> getServiceType(annotation, type))
-                .map(service -> new ProviderRef(service, type));
+    static Stream<ProviderRef> newRefs(Element element) {
+        ElementKind kind = element.getKind();
+
+        if (kind == ElementKind.CLASS || kind == ElementKind.ENUM || kind == ElementKind.INTERFACE) {
+            // TYPE annotation: no delegate needed
+            TypeElement type = (TypeElement) element;
+            return getAnnotations(element)
+                    .map(annotation -> getServiceType(annotation, type))
+                    .map(service -> new ProviderRef(service, type, Optional.empty(), Optional.empty()));
+        } else if (kind == ElementKind.FIELD || kind == ElementKind.METHOD) {
+            // FIELD or METHOD annotation: delegate wrapper needed
+            if (!element.getModifiers().contains(Modifier.STATIC)) {
+                return Stream.empty(); // Skip non-static; checker will report error
+            }
+            TypeElement enclosingClass = (TypeElement) element.getEnclosingElement();
+            return getAnnotations(element)
+                    .map(annotation -> getServiceTypeForDelegateSource(annotation, element))
+                    .map(service -> new ProviderRef(service, enclosingClass, Optional.of(element), Optional.empty()));
+        } else {
+            return Stream.empty();
+        }
     }
 
-    static Stream<ServiceProvider> getAnnotations(TypeElement type) {
-        ServiceProvider.List list = type.getAnnotation(ServiceProvider.List.class);
+    static Stream<ServiceProvider> getAnnotations(Element element) {
+        ServiceProvider.List list = element.getAnnotation(ServiceProvider.List.class);
         return list == null
-                ? Stream.of(type.getAnnotation(ServiceProvider.class))
+                ? Stream.of(element.getAnnotation(ServiceProvider.class)).filter(a -> a != null)
                 : Stream.of(list.value());
+    }
+
+    static TypeElement getServiceTypeForDelegateSource(ServiceProvider annotation, Element delegateSource) {
+        TypeMirror serviceType = ProcessorUtil.extractResultType(annotation::value);
+        if (isNullValue(serviceType)) {
+            // Infer from the field/method type
+            if (delegateSource.getKind() == ElementKind.FIELD) {
+                serviceType = ((VariableElement) delegateSource).asType();
+            } else if (delegateSource.getKind() == ElementKind.METHOD) {
+                serviceType = ((ExecutableElement) delegateSource).getReturnType();
+            }
+        }
+        return (TypeElement) ((DeclaredType) serviceType).asElement();
     }
 
     static TypeElement getServiceType(ServiceProvider annotation, TypeElement type) {

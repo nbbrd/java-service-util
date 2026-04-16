@@ -4,26 +4,38 @@ import nbbrd.service.ServiceProvider;
 
 import java.util.ServiceLoader;
 
-public class Providers {
+public interface Providers {
 
-    public interface FooSPI {
+    interface FooSPI {
     }
 
-    public interface BarSPI {
+    interface BarSPI {
     }
 
     // 💡 One provider, one service
     @ServiceProvider
-    public static class FooProvider implements FooSPI {
+    class FooProvider implements FooSPI {
     }
 
     // 💡 One provider, multiple services
     @ServiceProvider(FooSPI.class)
     @ServiceProvider(BarSPI.class)
-    public static class FooBarProvider implements FooSPI, BarSPI {
+    class FooBarProvider implements FooSPI, BarSPI {
     }
 
-    public static void main(String[] args) {
+    // 💡 Provider using a static field
+    @ServiceProvider
+    FooSPI CONSTANT = new FooSPI() {
+    };
+
+    // 💡 Provider using a static method
+    @ServiceProvider
+    static FooSPI getInstance() {
+        return new FooSPI() {
+        };
+    }
+
+    static void main(String[] args) {
         // 💡 Get all providers for the services
         ServiceLoader.load(FooSPI.class).forEach(System.out::println);
         ServiceLoader.load(BarSPI.class).forEach(System.out::println);

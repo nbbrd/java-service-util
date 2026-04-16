@@ -8,6 +8,7 @@ import org.junit.Test;
 import javax.lang.model.element.TypeElement;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import static internal.nbbrd.service.provider.ServiceProviderChecker.getMissingEntries;
 import static internal.nbbrd.service.provider.ServiceProviderChecker.getMissingRefs;
@@ -78,7 +79,7 @@ public class ServiceProviderCheckerTest {
     }
 
     private <T> ProviderRef ref(Class<T> service, Class<? extends T> provider) {
-        return new ProviderRef(getTypeElement(service), getTypeElement(provider));
+        return new ProviderRef(getTypeElement(service), getTypeElement(provider), Optional.empty(), Optional.empty());
     }
 
     private <T> ProviderEntry entry(Class<T> service, Class<? extends T> provider) {

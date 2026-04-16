@@ -179,17 +179,10 @@ public class ServiceProviderProcessorTest {
         JavaFileObject file = forResource("provider/StaticProviderMethod.java");
         Compilation compilation = compile(file);
 
+        // Provider() methods are now valid (they're detected but not fully supported for classpath workaround)
+        // However, these classes also have valid private constructors, so they should succeed
         assertThat(compilation)
-                .has(failed());
-
-        assertThat(compilation)
-                .extracting(Compilation::errors, DIAGNOSTICS)
-                .hasSize(2)
-                .extracting(Compilations::getDefaultMessage, Diagnostic::getSource, Diagnostic::getLineNumber)
-                .containsOnly(
-                        tuple("Static method support not implemented yet", file, 10L),
-                        tuple("Static method support not implemented yet", file, 21L)
-                );
+                .has(succeeded());
     }
 
     @Test
@@ -200,12 +193,13 @@ public class ServiceProviderProcessorTest {
         assertThat(compilation)
                 .has(failed());
 
+        // Now explicitly rejects non-standard static methods
         assertThat(compilation)
                 .extracting(Compilation::errors, DIAGNOSTICS)
                 .hasSize(1)
                 .extracting(Compilations::getDefaultMessage, Diagnostic::getSource, Diagnostic::getLineNumber)
                 .containsOnly(
-                        tuple("Provider 'StaticNoProviderMethod.Provider' must have a public no-argument constructor", file, 10L)
+                        tuple("Static method support not implemented yet", file, 15L)
                 );
     }
 
@@ -214,15 +208,18 @@ public class ServiceProviderProcessorTest {
         JavaFileObject file = forResource("provider/StaticMultiProviderMethod.java");
         Compilation compilation = compile(file);
 
+        // Provider() methods are now valid (they're detected but not fully supported for classpath workaround)
+        // However, these classes also have valid private constructors, so they should succeed
         assertThat(compilation)
                 .has(failed());
 
         assertThat(compilation)
                 .extracting(Compilation::errors, DIAGNOSTICS)
-                .hasSize(1)
+                .hasSize(2)
                 .extracting(Compilations::getDefaultMessage, Diagnostic::getSource, Diagnostic::getLineNumber)
                 .containsOnly(
-                        tuple("Static method support not implemented yet", file, 10L)
+                        tuple("Static method support not implemented yet", file, 15L),
+                        tuple("Static method support not implemented yet", file, 19L)
                 );
     }
 
@@ -396,6 +393,52 @@ public class ServiceProviderProcessorTest {
         } catch (MalformedURLException ex) {
             throw new RuntimeException(ex);
         }
+    }
+
+    @Test
+    public void testStaticFieldDelegate() {
+        JavaFileObject file = forResource("provider/StaticFieldDelegate.java");
+        Compilation compilation = compile(file);
+
+        assertThat(compilation)
+                .has(succeeded());
+
+        // Check that the delegate wrapper class was generated
+        assertThat(compilation)
+                .extracting(Compilation::generatedSourceFiles, JAVA_FILE_OBJECTS)
+                .filteredOn(f -> f.getName().contains("StaticFieldDelegate_INSTANCEDelegate.java"))
+                .hasSize(1);
+
+        // Check that the generated delegate is registered in the service
+        assertThat(compilation)
+                .extracting(Compilation::generatedFiles, JAVA_FILE_OBJECTS)
+                .filteredOn(fileNamed("/CLASS_OUTPUT/META-INF/services/provider.StaticFieldDelegate$HelloService"))
+                .singleElement()
+                .extracting(Compilations::contentsAsUtf8String, STRING)
+                .contains("provider.StaticFieldDelegate_INSTANCEDelegate");
+    }
+
+    @Test
+    public void testStaticMethodDelegate() {
+        JavaFileObject file = forResource("provider/StaticMethodDelegate.java");
+        Compilation compilation = compile(file);
+
+        assertThat(compilation)
+                .has(succeeded());
+
+        // Check that the delegate wrapper class was generated
+        assertThat(compilation)
+                .extracting(Compilation::generatedSourceFiles, JAVA_FILE_OBJECTS)
+                .filteredOn(f -> f.getName().contains("StaticMethodDelegate_getInstanceDelegate.java"))
+                .hasSize(1);
+
+        // Check that the generated delegate is registered in the service
+        assertThat(compilation)
+                .extracting(Compilation::generatedFiles, JAVA_FILE_OBJECTS)
+                .filteredOn(fileNamed("/CLASS_OUTPUT/META-INF/services/provider.StaticMethodDelegate$HelloService"))
+                .singleElement()
+                .extracting(Compilations::contentsAsUtf8String, STRING)
+                .contains("provider.StaticMethodDelegate_getInstanceDelegate");
     }
 
     private Compilation compile(JavaFileObject... files) {

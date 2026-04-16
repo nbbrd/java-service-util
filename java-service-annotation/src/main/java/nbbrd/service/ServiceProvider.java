@@ -29,6 +29,7 @@ import java.lang.annotation.*;
  * interface/class
  * <li>checks coherence between classpath and modulepath if
  * {@code module-info.java} is available
+ * <li>supports annotation on static fields and methods with automatic delegate wrapper generation
  * <li>automatically generates batch provider implementations for enums that
  * implement a service with a {@link ServiceDefinition#batchType()}; the
  * generated batch provider returns all enum constants via {@code values()}
@@ -44,8 +45,8 @@ import java.lang.annotation.*;
  * @author Philippe Charles
  */
 @Documented
-@Target({ElementType.TYPE})
-@Retention(RetentionPolicy.SOURCE)
+@Target({ElementType.TYPE, ElementType.FIELD, ElementType.METHOD})
+@Retention(RetentionPolicy.CLASS)
 @Repeatable(ServiceProvider.List.class)
 public @interface ServiceProvider {
 
@@ -59,8 +60,8 @@ public @interface ServiceProvider {
     Class<?> value() default Void.class;
 
     @Documented
-    @Target({ElementType.TYPE})
-    @Retention(RetentionPolicy.SOURCE)
+    @Target({ElementType.TYPE, ElementType.FIELD, ElementType.METHOD})
+    @Retention(RetentionPolicy.CLASS)
     @interface List {
 
         ServiceProvider[] value();

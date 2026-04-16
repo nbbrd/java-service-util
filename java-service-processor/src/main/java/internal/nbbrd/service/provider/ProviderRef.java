@@ -22,6 +22,7 @@ import javax.lang.model.element.Element;
 import javax.lang.model.element.TypeElement;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -37,9 +38,23 @@ class ProviderRef implements HasPositionHint {
     @lombok.NonNull
     TypeElement provider;
 
+    /**
+     * When present, indicates the static field or method that provides the service instance.
+     * A delegate wrapper will be generated for this source.
+     */
+    @lombok.NonNull
+    Optional<Element> delegateSource;
+
+    /**
+     * When present, overrides the provider class name in the generated ProviderEntry.
+     * Used for generated delegate wrappers.
+     */
+    @lombok.NonNull
+    Optional<String> generatedProviderClassName;
+
     @Override
     public Element getPositionHint() {
-        return provider;
+        return delegateSource.orElse(provider);
     }
 
     @Override
@@ -48,7 +63,8 @@ class ProviderRef implements HasPositionHint {
     }
 
     ProviderEntry toEntry() {
-        return new ProviderEntry(service.getQualifiedName().toString(), provider.getQualifiedName().toString());
+        String providerName = generatedProviderClassName.orElse(provider.getQualifiedName().toString());
+        return new ProviderEntry(service.getQualifiedName().toString(), providerName);
     }
 
     static Set<ProviderRef> getDuplicates(Collection<ProviderRef> refs) {
