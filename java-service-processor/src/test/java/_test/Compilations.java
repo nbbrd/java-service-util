@@ -11,10 +11,13 @@ import org.assertj.core.condition.AllOf;
 import javax.tools.Diagnostic;
 import javax.tools.JavaFileManager;
 import javax.tools.JavaFileObject;
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.StringReader;
 import java.util.List;
 import java.util.Locale;
 
+import static java.util.stream.Collectors.toList;
 import static javax.tools.StandardLocation.SOURCE_OUTPUT;
 import static org.assertj.core.api.HamcrestCondition.matching;
 import static org.assertj.core.condition.MappedCondition.mappedCondition;
@@ -85,5 +88,9 @@ public final class Compilations {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    public static List<String> contentsAsUtf8StringList(JavaFileObject file) {
+        return new BufferedReader(new StringReader(contentsAsUtf8String(file))).lines().collect(toList());
     }
 }

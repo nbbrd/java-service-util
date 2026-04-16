@@ -22,6 +22,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Modify annotations retention to CLASS to enable new features [#561](https://github.com/nbbrd/java-service-util/issues/561)
 
+### Fixed
+
+- Fix duplicates in META-INF services files [#569](https://github.com/nbbrd/java-service-util/issues/569)
+
 ## [2.0.0] - 2026-04-02
 
 This major release simplifies usage by removing deprecated properties and features.

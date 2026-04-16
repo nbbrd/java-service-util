@@ -40,7 +40,7 @@ import static com.google.testing.compile.JavaFileObjects.forSourceLines;
 import static io.toolisticon.cute.JavaFileObjectUtils.readFromString;
 import static javax.tools.StandardLocation.CLASS_OUTPUT;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.InstanceOfAssertFactories.STRING;
+import static org.assertj.core.api.InstanceOfAssertFactories.*;
 import static org.assertj.core.groups.Tuple.tuple;
 
 /**
@@ -73,8 +73,8 @@ public class ServiceProviderProcessorTest {
                 .extracting(Compilation::generatedFiles, JAVA_FILE_OBJECTS)
                 .filteredOn(fileNamed("/CLASS_OUTPUT/META-INF/services/provider.WithAnnotation$HelloService"))
                 .singleElement()
-                .extracting(Compilations::contentsAsUtf8String, STRING)
-                .contains(
+                .extracting(Compilations::contentsAsUtf8StringList, LIST)
+                .containsExactlyInAnyOrder(
                         "provider.WithAnnotation$Provider1",
                         "provider.WithAnnotation$Provider2"
                 );
@@ -91,8 +91,8 @@ public class ServiceProviderProcessorTest {
                 .extracting(Compilation::generatedFiles, JAVA_FILE_OBJECTS)
                 .filteredOn(fileNamed("/CLASS_OUTPUT/META-INF/services/WithRepeatedAnnotation$HelloService"))
                 .singleElement()
-                .extracting(Compilations::contentsAsUtf8String, STRING)
-                .contains(
+                .extracting(Compilations::contentsAsUtf8StringList, LIST)
+                .containsExactlyInAnyOrder(
                         "WithRepeatedAnnotation$SimpleProvider",
                         "WithRepeatedAnnotation$MultiProvider"
                 );
@@ -101,9 +101,8 @@ public class ServiceProviderProcessorTest {
                 .extracting(Compilation::generatedFiles, JAVA_FILE_OBJECTS)
                 .filteredOn(fileNamed("/CLASS_OUTPUT/META-INF/services/WithRepeatedAnnotation$SomeService"))
                 .singleElement()
-                .extracting(Compilations::contentsAsUtf8String, STRING)
-                .contains("WithRepeatedAnnotation$MultiProvider")
-                .doesNotContain("WithRepeatedAnnotation$SimpleProvider");
+                .extracting(Compilations::contentsAsUtf8StringList, LIST)
+                .containsExactlyInAnyOrder("WithRepeatedAnnotation$MultiProvider");
     }
 
     @Test
@@ -252,8 +251,8 @@ public class ServiceProviderProcessorTest {
                 .extracting(Compilation::generatedFiles, JAVA_FILE_OBJECTS)
                 .filteredOn(fileNamed("/CLASS_OUTPUT/META-INF/services/WithGenerics$HelloService"))
                 .singleElement()
-                .extracting(Compilations::contentsAsUtf8String, STRING)
-                .contains(
+                .extracting(Compilations::contentsAsUtf8StringList, LIST)
+                .containsExactlyInAnyOrder(
                         "WithGenerics$Provider1",
                         "WithGenerics$Provider2"
                 );
@@ -271,8 +270,8 @@ public class ServiceProviderProcessorTest {
                 .extracting(Compilation::generatedFiles, JAVA_FILE_OBJECTS)
                 .filteredOn(fileNamed("/CLASS_OUTPUT/META-INF/services/InferredService$HelloService"))
                 .singleElement()
-                .extracting(Compilations::contentsAsUtf8String, STRING)
-                .contains("InferredService$Provider1");
+                .extracting(Compilations::contentsAsUtf8StringList, LIST)
+                .containsExactly("InferredService$Provider1");
     }
 
     @Test
@@ -345,8 +344,8 @@ public class ServiceProviderProcessorTest {
                 .extracting(Compilation::generatedFiles, JAVA_FILE_OBJECTS)
                 .filteredOn(fileNamed("/CLASS_OUTPUT/META-INF/services/ClassPathOrder$HelloService"))
                 .singleElement()
-                .extracting(Compilations::contentsAsUtf8String, STRING)
-                .isEqualToIgnoringNewLines("ClassPathOrder$AClassPathOrder$BClassPathOrder$C");
+                .extracting(Compilations::contentsAsUtf8StringList, LIST)
+                .containsExactly("ClassPathOrder$A", "ClassPathOrder$B", "ClassPathOrder$C");
     }
 
     @Test
@@ -374,8 +373,8 @@ public class ServiceProviderProcessorTest {
                 .extracting(Compilation::generatedFiles, JAVA_FILE_OBJECTS)
                 .filteredOn(fileNamed("/CLASS_OUTPUT/META-INF/services/provider.EnumBatchProvider$ColorBatch"))
                 .singleElement()
-                .extracting(Compilations::contentsAsUtf8String, STRING)
-                .contains("provider.PrimaryColorBatchProvider");
+                .extracting(Compilations::contentsAsUtf8StringList, LIST)
+                .containsExactly("provider.PrimaryColorBatchProvider");
     }
 
     private URL fixPackageNotVisible() {
@@ -414,8 +413,8 @@ public class ServiceProviderProcessorTest {
                 .extracting(Compilation::generatedFiles, JAVA_FILE_OBJECTS)
                 .filteredOn(fileNamed("/CLASS_OUTPUT/META-INF/services/provider.StaticFieldDelegate$HelloService"))
                 .singleElement()
-                .extracting(Compilations::contentsAsUtf8String, STRING)
-                .contains("provider.StaticFieldDelegate_INSTANCEDelegate");
+                .extracting(Compilations::contentsAsUtf8StringList, LIST)
+                .containsExactly("provider.StaticFieldDelegate_INSTANCEDelegate");
     }
 
     @Test
@@ -437,8 +436,8 @@ public class ServiceProviderProcessorTest {
                 .extracting(Compilation::generatedFiles, JAVA_FILE_OBJECTS)
                 .filteredOn(fileNamed("/CLASS_OUTPUT/META-INF/services/provider.StaticMethodDelegate$HelloService"))
                 .singleElement()
-                .extracting(Compilations::contentsAsUtf8String, STRING)
-                .contains("provider.StaticMethodDelegate_getInstanceDelegate");
+                .extracting(Compilations::contentsAsUtf8StringList, LIST)
+                .containsExactly("provider.StaticMethodDelegate_getInstanceDelegate");
     }
 
     @Test
@@ -460,8 +459,8 @@ public class ServiceProviderProcessorTest {
                 .extracting(Compilation::generatedFiles, JAVA_FILE_OBJECTS)
                 .filteredOn(fileNamed("/CLASS_OUTPUT/META-INF/services/provider.EnumWithoutBatch$Color"))
                 .singleElement()
-                .extracting(Compilations::contentsAsUtf8String, STRING)
-                .contains("provider.PrimaryColor_REDDelegate",
+                .extracting(Compilations::contentsAsUtf8StringList, LIST)
+                .containsExactlyInAnyOrder("provider.PrimaryColor_REDDelegate",
                           "provider.PrimaryColor_BLUEDelegate",
                           "provider.PrimaryColor_YELLOWDelegate");
     }

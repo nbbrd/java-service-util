@@ -68,7 +68,13 @@ final class ServiceProviderGenerator extends ProcessorTool {
 
         List<ProviderConfigurationFileLine> oldLines = classPath.readLinesByService(service);
         List<ProviderConfigurationFileLine> newLines = classPath.formatAll(service, providerRefs);
-        classPath.writeLinesByService(concat(oldLines, newLines), service);
+
+        // Filter out duplicates - only add new lines that aren't already in oldLines
+        List<ProviderConfigurationFileLine> linesToAdd = newLines.stream()
+                .filter(newLine -> !oldLines.contains(newLine))
+                .collect(Collectors.toList());
+
+        classPath.writeLinesByService(concat(oldLines, linesToAdd), service);
     }
 
     private List<ProviderRef> generateDelegates(List<ProviderRef> refs) {
@@ -281,7 +287,13 @@ final class ServiceProviderGenerator extends ProcessorTool {
             List<ProviderConfigurationFileLine> oldLines = classPath.readLinesByService(registration.getBatchService());
             List<ProviderConfigurationFileLine> newLines = new ArrayList<>();
             newLines.add(ProviderConfigurationFileLine.ofProviderBinaryName(registration.getProviderClassName()));
-            classPath.writeLinesByService(concat(oldLines, newLines), registration.getBatchService());
+
+            // Filter out duplicates
+            List<ProviderConfigurationFileLine> linesToAdd = newLines.stream()
+                    .filter(newLine -> !oldLines.contains(newLine))
+                    .collect(Collectors.toList());
+
+            classPath.writeLinesByService(concat(oldLines, linesToAdd), registration.getBatchService());
         }
     }
 
