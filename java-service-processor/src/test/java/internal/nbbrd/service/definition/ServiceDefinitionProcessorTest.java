@@ -537,10 +537,10 @@ public class ServiceDefinitionProcessorTest {
                     .singleElement()
                     .extracting(Compilations::contentsAsUtf8String, STRING)
                     .contains(
-                            "public Optional<TestIdMultiple> getById(String id)",
+                            "public Optional<TestIdMultiple> getById(CharSequence id)",
                             ".filter(o -> o.getName().equals(id))",
                             ".findFirst()",
-                            "public static Optional<TestIdMultiple> loadById(String id)",
+                            "public static Optional<TestIdMultiple> loadById(CharSequence id)",
                             "return builder().build().getById(id)"
                     );
         }

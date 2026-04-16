@@ -1,10 +1,10 @@
 package definition;
 
+import java.lang.CharSequence;
 import java.lang.Class;
 import java.lang.Iterable;
 import java.lang.Object;
 import java.lang.Runnable;
-import java.lang.String;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -79,7 +79,7 @@ public final class TestAllOptionsLoader {
   /**
    * Gets an optional {@link definition.TestAllOptions} instance by ID.
    */
-  public Optional<TestAllOptions> getById(String id) {
+  public Optional<TestAllOptions> getById(CharSequence id) {
     return stream()
         .filter(filter)
         .filter(o -> o.getName().equals(id))
@@ -92,7 +92,7 @@ public final class TestAllOptionsLoader {
    * <br>Therefore, the returned value might be different at each call.
    * @return a non-null value
    */
-  public static Optional<TestAllOptions> loadById(String id) {
+  public static Optional<TestAllOptions> loadById(CharSequence id) {
     return builder().build().getById(id);
   }
 

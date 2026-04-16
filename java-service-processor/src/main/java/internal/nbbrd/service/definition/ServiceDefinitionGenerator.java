@@ -541,7 +541,7 @@ class ServiceDefinitionGenerator {
                 .addJavadoc("Gets an optional $L instance by ID.\n", toJavadocLink(serviceType))
                 .addModifiers(PUBLIC)
                 .returns(TypeNames.typeOf(Optional.class, serviceType))
-                .addParameter(String.class, "id")
+                .addParameter(CharSequence.class, "id")
                 .addStatement(body.build())
                 .build();
     }
@@ -561,7 +561,7 @@ class ServiceDefinitionGenerator {
                         .build())
                 .addModifiers(PUBLIC, STATIC)
                 .returns(TypeNames.typeOf(Optional.class, serviceType))
-                .addParameter(String.class, "id")
+                .addParameter(CharSequence.class, "id")
                 .addStatement("return $L", mainStatement)
                 .build();
     }
