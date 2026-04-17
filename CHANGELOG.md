@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+This release reduces boilerplate by enabling service identification, automatic delegate generation from enums/fields/methods, and flexible batch method signatures.
+
 ### Added
 
 - Add backend method for backends that do not support direct reloading [#564](https://github.com/nbbrd/java-service-util/issues/564)
