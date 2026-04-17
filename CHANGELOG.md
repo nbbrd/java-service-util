@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.1.0] - 2026-04-17
+
 This release reduces boilerplate by enabling service identification, automatic delegate generation from enums/fields/methods, and flexible batch method signatures.
 
 ### Added
@@ -202,7 +204,8 @@ It also introduces a builder pattern for the loader, enabling greater flexibilit
 
 - Initial release
 
-[Unreleased]: https://github.com/nbbrd/java-service-util/compare/v2.0.0...HEAD
+[Unreleased]: https://github.com/nbbrd/java-service-util/compare/v2.1.0...HEAD
+[2.1.0]: https://github.com/nbbrd/java-service-util/compare/v2.0.0...v2.1.0
 [2.0.0]: https://github.com/nbbrd/java-service-util/compare/v1.9.0...v2.0.0
 [1.9.0]: https://github.com/nbbrd/java-service-util/compare/v1.8.0...v1.9.0
 [1.8.0]: https://github.com/nbbrd/java-service-util/compare/v1.7.0...v1.8.0
