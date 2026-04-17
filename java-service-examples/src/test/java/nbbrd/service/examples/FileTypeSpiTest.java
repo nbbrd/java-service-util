@@ -1,6 +1,6 @@
 package nbbrd.service.examples;
 
-import internal.nbbrd.service.examples.FileTypeSpiLoader;
+import internal.nbbrd.service.examples.FileType.FileTypeSpiLoader;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;

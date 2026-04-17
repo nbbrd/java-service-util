@@ -21,7 +21,6 @@ import com.squareup.javapoet.ClassName;
 import lombok.NonNull;
 import nbbrd.service.Quantifier;
 
-import javax.lang.model.type.TypeMirror;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.util.Optional;
@@ -47,7 +46,7 @@ class LoadDefinition {
     String loaderName;
 
     @lombok.NonNull
-    Optional<TypeMirror> batchType;
+    Optional<BatchDefinition> batch;
 
     public @NonNull ClassName resolveLoaderName() {
         return resolveName(loaderName, serviceType, "Loader");
@@ -64,8 +63,21 @@ class LoadDefinition {
         StringWriter writer = new StringWriter();
         new DefaultMustacheFactory()
                 .compile(new StringReader(classNameString), "")
-                .execute(writer, serviceType);
-        return ClassName.bestGuess(writer.toString());
+                .execute(writer, MustacheContext.of(serviceType));
+        ClassName parsed = ClassName.bestGuess(writer.toString());
+
+        // For nested services using top-level class name templates, ensure the loader name is also nested
+        ClassName top = serviceType.topLevelClassName();
+        if (!top.equals(serviceType) && usesTopLevelTemplate(classNameString)) {
+            // Service is nested and template uses top-level class name - make the loader name nested too
+            return parsed.topLevelClassName().nestedClass(serviceType.simpleName());
+        }
+        return parsed;
+    }
+
+    private static boolean usesTopLevelTemplate(String classNameString) {
+        return classNameString.contains("{{topLevelClassName}}")
+                || classNameString.contains("{{topLevelSimpleName}}");
     }
 
     private static ClassName generateName(ClassName serviceType, String defaultSuffix) {

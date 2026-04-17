@@ -179,6 +179,18 @@ public class ServiceDefinitionProcessorTest {
                     .extracting(Compilation::generatedSourceFiles, JAVA_FILE_OBJECTS)
                     .hasSize(1)
                     .haveAtLeastOne(sourceFileNamed("internal", "LOADER.java"));
+
+            assertThat(compile(forResource("definition/TestNestedLoaderDefaultNames.java")))
+                    .has(succeededWithoutWarnings())
+                    .extracting(Compilation::generatedSourceFiles, JAVA_FILE_OBJECTS)
+                    .hasSize(1)
+                    .haveAtLeastOne(sourceFileNamed("definition", "TestNestedLoaderDefaultNamesLoader.java"));
+
+            assertThat(compile(forResource("definition/TestNestedLoaderCustomNames.java")))
+                    .has(succeededWithoutWarnings())
+                    .extracting(Compilation::generatedSourceFiles, JAVA_FILE_OBJECTS)
+                    .hasSize(1)
+                    .haveAtLeastOne(sourceFileNamed("definition", "TestNestedLoaderCustomNamesLoader.java"));
         }
     }
 
@@ -433,9 +445,37 @@ public class ServiceDefinitionProcessorTest {
                     .has(failed())
                     .extracting(Compilation::errors, DIAGNOSTICS)
                     .singleElement()
-                    .returns("[RULE_I4] Id method must return String", Compilations::getDefaultMessage)
+                    .returns("[RULE_I4] Id method must return String, a built-in representable type [java.lang.Enum, java.util.UUID, java.net.URI, java.nio.charset.Charset, java.util.Locale], or specify formatMethodName for other types", Compilations::getDefaultMessage)
                     .returns(file, Diagnostic::getSource)
                     .returns(10L, Diagnostic::getLineNumber);
+        }
+
+        @Test
+        public void testNonStringWithFormat() {
+            JavaFileObject file = forResource("definition/TestIdNonStringWithFormat.java");
+
+            assertThat(compile(file))
+                    .has(succeeded());
+        }
+
+        @Test
+        public void testBuiltInEnum() {
+            JavaFileObject file = forResource("definition/TestIdBuiltInEnum.java");
+
+            assertThat(compile(file))
+                    .has(succeeded());
+        }
+
+        @Test
+        public void testRepresentableAsString() {
+            JavaFileObject file = forResource("definition/TestIdRepresentableAsString.java");
+
+            assertThat(compile(file))
+                    .has(succeeded())
+                    .extracting(Compilation::generatedSourceFiles, JAVA_FILE_OBJECTS)
+                    .singleElement()
+                    .extracting(Compilations::contentsAsUtf8String, STRING)
+                    .contains("o.getVersion().serialize().equals(id)");
         }
 
         @Test
@@ -514,6 +554,24 @@ public class ServiceDefinitionProcessorTest {
                     .returns(file, Diagnostic::getSource)
                     .returns(10L, Diagnostic::getLineNumber);
         }
+
+        @Test
+        public void testGetById() {
+            JavaFileObject file = forResource("definition/TestIdMultiple.java");
+
+            assertThat(compile(file))
+                    .has(succeededWithoutWarnings())
+                    .extracting(Compilation::generatedSourceFiles, JAVA_FILE_OBJECTS)
+                    .singleElement()
+                    .extracting(Compilations::contentsAsUtf8String, STRING)
+                    .contains(
+                            "public Optional<TestIdMultiple> getById(CharSequence id)",
+                            ".filter(o -> o.getName().equals(id))",
+                            ".findFirst()",
+                            "public static Optional<TestIdMultiple> loadById(CharSequence id)",
+                            "return builder().build().getById(id)"
+                    );
+        }
     }
 
     @Nested
@@ -574,6 +632,99 @@ public class ServiceDefinitionProcessorTest {
                     .returns("[RULE_B2] Batch method must be unique", Compilations::getDefaultMessage)
                     .returns(file, Diagnostic::getSource)
                     .returns(8L, Diagnostic::getLineNumber);
+        }
+
+        @Test
+        public void testMethodNonUnique() {
+            JavaFileObject file = forResource("definition/TestBatchTypeMethodNonUnique.java");
+
+            assertThat(compile(file))
+                    .has(failed())
+                    .extracting(Compilation::errors, DIAGNOSTICS)
+                    .singleElement()
+                    .returns("[RULE_B2] Batch method must be unique", Compilations::getDefaultMessage)
+                    .returns(file, Diagnostic::getSource)
+                    .returns(8L, Diagnostic::getLineNumber);
+        }
+
+        @Test
+        public void testCollectionReturnType() {
+            JavaFileObject file = forResource("definition/TestBatchCollectionReturnType.java");
+            Compilation compilation = compile(file);
+
+            assertThat(compilation)
+                    .extracting(Compilation::generatedSourceFiles, JAVA_FILE_OBJECTS)
+                    .singleElement()
+                    .extracting(Compilations::contentsAsUtf8String, STRING)
+                    .contains(
+                            "private final Iterable<?> batchSource;",
+                            "Stream.concat(",
+                            ".flatMap(o -> o.getProviders().stream())"
+                    );
+        }
+
+        @Test
+        public void testIterableReturnType() {
+            JavaFileObject file = forResource("definition/TestBatchIterableReturnType.java");
+            Compilation compilation = compile(file);
+
+            assertThat(compilation)
+                    .extracting(Compilation::generatedSourceFiles, JAVA_FILE_OBJECTS)
+                    .singleElement()
+                    .extracting(Compilations::contentsAsUtf8String, STRING)
+                    .contains(
+                            "private final Iterable<?> batchSource;",
+                            "Stream.concat(",
+                            ".flatMap(o -> StreamSupport.stream(o.getProviders().spliterator(), false))"
+                    );
+        }
+
+        @Test
+        public void testIteratorReturnType() {
+            JavaFileObject file = forResource("definition/TestBatchIteratorReturnType.java");
+            Compilation compilation = compile(file);
+
+            assertThat(compilation)
+                    .extracting(Compilation::generatedSourceFiles, JAVA_FILE_OBJECTS)
+                    .singleElement()
+                    .extracting(Compilations::contentsAsUtf8String, STRING)
+                    .contains(
+                            "private final Iterable<?> batchSource;",
+                            "Stream.concat(",
+                            ".flatMap(o -> StreamSupport.stream(Spliterators.spliteratorUnknownSize(o.getProviders(), 0), false))"
+                    );
+        }
+
+        @Test
+        public void testArrayReturnType() {
+            JavaFileObject file = forResource("definition/TestBatchArrayReturnType.java");
+            Compilation compilation = compile(file);
+
+            assertThat(compilation)
+                    .extracting(Compilation::generatedSourceFiles, JAVA_FILE_OBJECTS)
+                    .singleElement()
+                    .extracting(Compilations::contentsAsUtf8String, STRING)
+                    .contains(
+                            "private final Iterable<?> batchSource;",
+                            "Stream.concat(",
+                            ".flatMap(o -> Arrays.stream(o.getProviders()))"
+                    );
+        }
+
+        @Test
+        public void testCustomMethodName() {
+            JavaFileObject file = forResource("definition/TestBatchCustomMethodName.java");
+            Compilation compilation = compile(file);
+
+            assertThat(compilation)
+                    .extracting(Compilation::generatedSourceFiles, JAVA_FILE_OBJECTS)
+                    .singleElement()
+                    .extracting(Compilations::contentsAsUtf8String, STRING)
+                    .contains(
+                            "private final Iterable<?> batchSource;",
+                            "Stream.concat(",
+                            ".flatMap(o -> o.getAll())"
+                    );
         }
     }
 

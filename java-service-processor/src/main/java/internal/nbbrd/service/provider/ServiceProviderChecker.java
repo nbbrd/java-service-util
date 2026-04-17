@@ -4,9 +4,8 @@ import internal.nbbrd.service.Instantiator;
 import internal.nbbrd.service.ProcessorTool;
 
 import javax.annotation.processing.ProcessingEnvironment;
-import javax.lang.model.element.ElementKind;
-import javax.lang.model.element.Modifier;
-import javax.lang.model.element.TypeElement;
+import javax.lang.model.element.*;
+import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
 import javax.tools.Diagnostic;
@@ -53,8 +52,15 @@ final class ServiceProviderChecker extends ProcessorTool {
         }
 
         if (!types.isAssignable(ref.getProvider().asType(), types.erasure(ref.getService().asType()))) {
-            getEnv().error(ref, String.format(Locale.ROOT, "Provider '%1$s' doesn't extend nor implement service '%2$s'", ref.getProvider(), ref.getService()));
-            return false;
+            if (!ref.getDelegateSource().isPresent()) {
+                getEnv().error(ref, String.format(Locale.ROOT, "Provider '%1$s' doesn't extend nor implement service '%2$s'", ref.getProvider(), ref.getService()));
+                return false;
+            }
+        }
+
+        // Skip remaining checks if delegate source is present, since they apply to the generated delegate
+        if (ref.getDelegateSource().isPresent()) {
+            return checkDelegateSource(ref);
         }
 
         if (ref.getProvider().getEnclosingElement().getKind() == ElementKind.CLASS && !ref.getProvider().getModifiers().contains(Modifier.STATIC)) {
@@ -67,8 +73,54 @@ final class ServiceProviderChecker extends ProcessorTool {
             return false;
         }
 
+        // Check for multiple static methods or non-standard static methods - not yet fully supported
+        List<Instantiator> allStaticMethods = Instantiator.allOf(types, ref.getService(), ref.getProvider())
+                .stream()
+                .filter(inst -> inst.getKind() == Instantiator.Kind.STATIC_METHOD)
+                .collect(Collectors.toList());
+
+        // If there are multiple static methods (ambiguous), reject all of them
+        if (allStaticMethods.size() > 1) {
+            for (Instantiator method : allStaticMethods) {
+                getEnv().error(method.getElement(), "Static method support not implemented yet");
+            }
+            return false;
+        }
+
+        // If there's a single static method that's not the standard provider() pattern, reject it
+        if (allStaticMethods.size() == 1 && !allStaticMethods.get(0).getElement().getSimpleName().contentEquals("provider")) {
+            getEnv().error(allStaticMethods.get(0).getElement(), "Static method support not implemented yet");
+            return false;
+        }
+
         if (Instantiator.allOf(types, ref.getService(), ref.getProvider()).stream().noneMatch(this::isValidInstantiator)) {
             getEnv().error(ref, String.format(Locale.ROOT, "Provider '%1$s' must have a public no-argument constructor", ref.getProvider()));
+            return false;
+        }
+
+        return true;
+    }
+
+    private boolean checkDelegateSource(ProviderRef ref) {
+        Element source = ref.getDelegateSource().get();
+        Types types = getEnv().getTypeUtils();
+
+        if (!source.getModifiers().contains(Modifier.STATIC)) {
+            getEnv().error(ref, String.format(Locale.ROOT, "Delegate source '%1$s' must be static", source.getSimpleName()));
+            return false;
+        }
+
+        if (!source.getModifiers().contains(Modifier.PUBLIC) && !source.getModifiers().contains(Modifier.PROTECTED)) {
+            getEnv().warn(ref.getPositionHint(), String.format(Locale.ROOT, "Delegate source '%1$s' should be public or protected for accessibility", source.getSimpleName()));
+        }
+
+        // Check the field/method type is assignable to the service
+        TypeMirror sourceType = source.getKind() == ElementKind.FIELD
+                ? ((javax.lang.model.element.VariableElement) source).asType()
+                : ((ExecutableElement) source).getReturnType();
+
+        if (!types.isAssignable(sourceType, types.erasure(ref.getService().asType()))) {
+            getEnv().error(ref, String.format(Locale.ROOT, "Delegate source '%1$s' type doesn't extend nor implement service '%2$s'", source.getSimpleName(), ref.getService()));
             return false;
         }
 
@@ -81,6 +133,8 @@ final class ServiceProviderChecker extends ProcessorTool {
                 return true;
             case STATIC_METHOD:
                 return instantiator.getElement().getSimpleName().contentEquals("provider");
+            case ENUM_FIELD:
+                return true;
             default:
                 return false;
         }

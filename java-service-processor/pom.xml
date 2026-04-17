@@ -6,7 +6,7 @@
     <parent>
         <groupId>com.github.nbbrd.java-service-util</groupId>
         <artifactId>java-service-parent</artifactId>
-        <version>2.0.0</version>
+        <version>2.1.0</version>
     </parent>
 
     <artifactId>java-service-processor</artifactId>
@@ -61,6 +61,12 @@
         </dependency>
 
         <!-- test only -->
+        <dependency>
+            <groupId>com.github.nbbrd.java-design-util</groupId>
+            <artifactId>java-design-annotation</artifactId>
+            <version>${java-design-util.version}</version>
+            <scope>test</scope>
+        </dependency>
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>

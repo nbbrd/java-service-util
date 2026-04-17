@@ -116,20 +116,50 @@ public final class ServiceDefinitionProcessor extends AbstractProcessor {
     }
 
     private void generateNested(ClassName topLevel, List<ServiceDefinitionGenerator> generators) {
-        generateNestedLoaders(topLevel, generators.stream().collect(partitioningBy(ServiceDefinitionGenerator::hasCustomLoaderName)));
+        // Group by the resolved loader name (which may include nesting)
+        Map<ClassName, List<ServiceDefinitionGenerator>> generatorsByLoaderName = generators.stream()
+                .collect(groupingBy(g -> g.getDefinition().resolveLoaderName()));
+
+        // Group by top-level loader class name to handle nesting
+        Map<ClassName, List<Map.Entry<ClassName, List<ServiceDefinitionGenerator>>>> loadersByTopLevel = generatorsByLoaderName.entrySet().stream()
+                .collect(groupingBy(entry -> entry.getKey().topLevelClassName()));
+
+        loadersByTopLevel.forEach((loaderTopLevel, entries) -> {
+            // If there's only one entry and it's not nested, generate standalone
+            if (entries.size() == 1) {
+                Map.Entry<ClassName, List<ServiceDefinitionGenerator>> singleEntry = entries.get(0);
+                ClassName fullName = singleEntry.getKey();
+                List<ServiceDefinitionGenerator> gens = singleEntry.getValue();
+
+                // Generate standalone only if there's a single service with a non-nested custom name
+                if (fullName.equals(loaderTopLevel) && gens.size() == 1) {
+                    // Not nested and only one service - generate standalone loader
+                    generateNotNestedLoader(gens.get(0));
+                } else {
+                    // Either nested or multiple services with same name - generate grouped loader
+                    generateGroupedLoader(loaderTopLevel, gens);
+                }
+            } else {
+                // Multiple entries - all must be nested, generate grouped loader
+                List<ServiceDefinitionGenerator> allGens = entries.stream()
+                        .flatMap(entry -> entry.getValue().stream())
+                        .collect(toList());
+                generateGroupedLoader(loaderTopLevel, allGens);
+            }
+        });
     }
 
-    private void generateNestedLoaders(ClassName topLevel, Map<Boolean, List<ServiceDefinitionGenerator>> loadersByHasCustomName) {
-        loadersByHasCustomName.get(true).forEach(this::generateNotNestedLoader);
+    private void generateGroupedLoader(ClassName loaderName, List<ServiceDefinitionGenerator> generators) {
+        List<TypeSpec> nestedLoaders = generators.stream()
+                .map(generator -> generator.generateLoader(true))
+                .collect(toList());
 
-        List<TypeSpec> nestedLoaders = loadersByHasCustomName.get(false).stream().map(o -> o.generateLoader(true)).collect(toList());
-        if (!nestedLoaders.isEmpty()) {
-            TypeSpec loaderClass = TypeSpec.classBuilder(ClassName.bestGuess(topLevel.canonicalName() + "Loader"))
-                    .addModifiers(Modifier.PUBLIC, Modifier.FINAL)
-                    .addTypes(nestedLoaders)
-                    .build();
-            writeFile(topLevel.packageName(), loaderClass);
-        }
+        TypeSpec loaderClass = TypeSpec.classBuilder(loaderName.simpleName())
+                .addModifiers(Modifier.PUBLIC, Modifier.FINAL)
+                .addTypes(nestedLoaders)
+                .build();
+
+        writeFile(loaderName.packageName(), loaderClass);
     }
 
     private void writeFile(String loaderPackage, TypeSpec loaderClass) {

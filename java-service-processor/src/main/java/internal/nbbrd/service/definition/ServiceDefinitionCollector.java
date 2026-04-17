@@ -28,15 +28,18 @@ import nbbrd.service.ServiceSorter;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.element.ExecutableElement;
+import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.PrimitiveType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
+import javax.lang.model.util.ElementFilter;
 import javax.lang.model.util.Types;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Supplier;
+import java.util.stream.Stream;
 
 /**
  * @author Philippe Charles
@@ -102,7 +105,8 @@ final class ServiceDefinitionCollector {
         Optional<TypeInstantiator> fallback = nonNull(annotation::fallback, Void.class)
                 .map(fallbackType -> new TypeInstantiator(fallbackType, Instantiator.allOf(types, serviceType, env.asTypeElement(fallbackType))));
 
-        Optional<TypeMirror> batchType = nonNull(annotation::batchType, Void.class);
+        Optional<BatchDefinition> batch = nonNull(annotation::batchType, Void.class)
+                .map(batchType -> buildBatchDefinition(batchType, env.asTypeElement(batchType), serviceType, types));
 
         return LoadDefinition
                 .builder()
@@ -110,8 +114,32 @@ final class ServiceDefinitionCollector {
                 .serviceType(ClassName.get(serviceType))
                 .fallback(fallback)
                 .loaderName(annotation.loaderName())
-                .batchType(batchType)
+                .batch(batch)
                 .build();
+    }
+
+    private BatchDefinition buildBatchDefinition(TypeMirror batchType, TypeElement batchTypeElement, TypeElement serviceType, Types types) {
+        return ElementFilter.methodsIn(batchTypeElement.getEnclosedElements())
+                .stream()
+                .filter(method -> isBatchMethodCandidate(method, serviceType, types))
+                .findFirst()
+                .map(method -> new BatchDefinition(
+                        batchType,
+                        Optional.of(method.getSimpleName().toString()),
+                        Optional.of(getBatchMethodReturnKind(method, serviceType, types))
+                ))
+                .orElseGet(() -> new BatchDefinition(batchType, Optional.empty(), Optional.empty()));
+    }
+
+    private boolean isBatchMethodCandidate(ExecutableElement method, TypeElement serviceType, Types types) {
+        if (!method.getModifiers().contains(Modifier.PUBLIC)) return false;
+        if (method.getModifiers().contains(Modifier.STATIC)) return false;
+        if (!method.getParameters().isEmpty()) return false;
+        return getBatchMethodReturnKind(method, serviceType, types) != null;
+    }
+
+    private BatchDefinition.MethodReturnKind getBatchMethodReturnKind(ExecutableElement method, TypeElement serviceType, Types types) {
+        return BatchDefinition.MethodReturnKind.resolve(method.getReturnType(), serviceType, types, env.getElementUtils());
     }
 
     private LoadFilter filterOf(ExecutableElement x) {
@@ -131,9 +159,19 @@ final class ServiceDefinitionCollector {
 
     private LoadId idOf(ExecutableElement x) {
         ServiceId annotation = x.getAnnotation(ServiceId.class);
+        String formatMethodName = annotation.formatMethodName();
+        if (formatMethodName.isEmpty()) {
+            TypeMirror returnType = x.getReturnType();
+            formatMethodName = IdFormatMethods
+                    .resolveFromRepresentableAsString(returnType, env.getTypeUtils())
+                    .orElseGet(() -> IdFormatMethods
+                            .resolve(returnType, env.getTypeUtils(), env.getElementUtils())
+                            .orElse(""));
+        }
         return new LoadId(x,
                 Optional.ofNullable(getServiceTypeOrNull(x)),
-                annotation.pattern()
+                annotation.pattern(),
+                formatMethodName
         );
     }
 

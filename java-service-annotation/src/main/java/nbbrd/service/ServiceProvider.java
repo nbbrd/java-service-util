@@ -1,27 +1,22 @@
 /*
  * Copyright 2019 National Bank of Belgium
- * 
- * Licensed under the EUPL, Version 1.1 or - as soon they will be approved 
+ *
+ * Licensed under the EUPL, Version 1.1 or - as soon they will be approved
  * by the European Commission - subsequent versions of the EUPL (the "Licence");
  * You may not use this work except in compliance with the Licence.
  * You may obtain a copy of the Licence at:
- * 
+ *
  * http://ec.europa.eu/idabc/eupl
- * 
- * Unless required by applicable law or agreed to in writing, software 
+ *
+ * Unless required by applicable law or agreed to in writing, software
  * distributed under the Licence is distributed on an "AS IS" basis,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the Licence for the specific language governing permissions and 
+ * See the Licence for the specific language governing permissions and
  * limitations under the Licence.
  */
 package nbbrd.service;
 
-import java.lang.annotation.Documented;
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Repeatable;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import java.lang.annotation.*;
 
 /**
  * Declarative registration of a service provider.
@@ -34,6 +29,11 @@ import java.lang.annotation.Target;
  * interface/class
  * <li>checks coherence between classpath and modulepath if
  * {@code module-info.java} is available
+ * <li>supports annotation on static fields and methods with automatic delegate wrapper generation
+ * <li>automatically generates batch provider implementations for enums that
+ * implement a service with a {@link ServiceDefinition#batchType()}; the
+ * generated batch provider returns all enum constants via {@code values()}
+ * and the enum itself is not registered individually
  * </ul>
  * <p>
  * Current limitations:
@@ -45,8 +45,8 @@ import java.lang.annotation.Target;
  * @author Philippe Charles
  */
 @Documented
-@Target({ElementType.TYPE})
-@Retention(RetentionPolicy.SOURCE)
+@Target({ElementType.TYPE, ElementType.FIELD, ElementType.METHOD})
+@Retention(RetentionPolicy.CLASS)
 @Repeatable(ServiceProvider.List.class)
 public @interface ServiceProvider {
 
@@ -60,8 +60,8 @@ public @interface ServiceProvider {
     Class<?> value() default Void.class;
 
     @Documented
-    @Target({ElementType.TYPE})
-    @Retention(RetentionPolicy.SOURCE)
+    @Target({ElementType.TYPE, ElementType.FIELD, ElementType.METHOD})
+    @Retention(RetentionPolicy.CLASS)
     @interface List {
 
         ServiceProvider[] value();

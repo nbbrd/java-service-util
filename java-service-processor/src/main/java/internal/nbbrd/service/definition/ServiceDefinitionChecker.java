@@ -27,7 +27,6 @@ import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
-import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.PrimitiveType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
@@ -39,7 +38,6 @@ import java.util.*;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
-import java.util.stream.Stream;
 
 import static javax.lang.model.element.Modifier.*;
 
@@ -144,9 +142,16 @@ final class ServiceDefinitionChecker {
             env.error(method, "[RULE_I3] Id method must have no-args");
             return false;
         }
-        if (!types.isSameType(method.getReturnType(), env.asTypeElement(String.class).asType())) {
-            env.error(method, "[RULE_I4] Id method must return String");
-            return false;
+        if (id.getFormatMethodName().isEmpty()) {
+            if (!types.isSameType(method.getReturnType(), env.asTypeElement(String.class).asType())) {
+                env.error(method, "[RULE_I4] Id method must return String, a built-in representable type " + IdFormatMethods.BUILT_IN.keySet() + ", or specify formatMethodName for other types");
+                return false;
+            }
+        } else {
+            if (!hasFormatMethod(method.getReturnType(), id.getFormatMethodName(), types)) {
+                env.error(method, "[RULE_I8] Format method '" + id.getFormatMethodName() + "' must exist on return type, be no-arg and return String");
+                return false;
+            }
         }
         if (hasCheckedExceptions(method)) {
             env.error(method, "[RULE_I6] Id method must not throw checked exceptions");
@@ -157,6 +162,19 @@ final class ServiceDefinitionChecker {
             return false;
         }
         return true;
+    }
+
+    private boolean hasFormatMethod(TypeMirror returnType, String formatMethodName, Types types) {
+        if (returnType.getKind().isPrimitive()) return false;
+        TypeElement returnTypeElement = (TypeElement) types.asElement(returnType);
+        if (returnTypeElement == null) return false;
+        TypeMirror stringType = env.asTypeElement(String.class).asType();
+        return ElementFilter.methodsIn(env.getElementUtils().getAllMembers(returnTypeElement))
+                .stream()
+                .anyMatch(m -> m.getSimpleName().contentEquals(formatMethodName)
+                        && m.getParameters().isEmpty()
+                        && !m.getModifiers().contains(STATIC)
+                        && types.isSameType(m.getReturnType(), stringType));
     }
 
     public boolean checkIds(Map<ClassName, List<LoadId>> idsByService) {
@@ -219,8 +237,8 @@ final class ServiceDefinitionChecker {
     }
 
     private boolean checkBatch(LoadDefinition definition, TypeElement service) {
-        if (definition.getBatchType().isPresent()) {
-            TypeElement x = env.asTypeElement(definition.getBatchType().get());
+        if (definition.getBatch().isPresent()) {
+            TypeElement x = env.asTypeElement(definition.getBatch().get().getType());
             if (x.getKind() != ElementKind.INTERFACE && !x.getModifiers().contains(ABSTRACT)) {
                 env.error(service, "[RULE_B1] Batch type must be an interface or an abstract class");
                 return false;
@@ -234,13 +252,15 @@ final class ServiceDefinitionChecker {
     }
 
     private Predicate<ExecutableElement> batchMethodFilter(TypeElement service) {
-        DeclaredType streamType = env.getTypeUtils().getDeclaredType(env.asTypeElement(Stream.class), service.asType());
         return method -> method.getModifiers().contains(PUBLIC)
                 && !method.getModifiers().contains(STATIC)
                 && method.getParameters().isEmpty()
-                && method.getSimpleName().contentEquals("getProviders")
-                && env.getTypeUtils().isAssignable(method.getReturnType(), streamType)
+                && isBatchReturnType(method.getReturnType(), service)
                 && !hasCheckedExceptions(method);
+    }
+
+    private boolean isBatchReturnType(TypeMirror returnType, TypeElement service) {
+        return BatchDefinition.MethodReturnKind.resolve(returnType, service, env.getTypeUtils(), env.getElementUtils()) != null;
     }
 
     private boolean checkInstanceFactories(TypeElement annotatedElement, TypeMirror type, TypeInstantiator instance) {

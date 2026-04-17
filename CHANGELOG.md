@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.1.0] - 2026-04-17
+
+This release reduces boilerplate by enabling service identification, automatic delegate generation from enums/fields/methods, and flexible batch method signatures.
+
+### Added
+
+- Add backend method for backends that do not support direct reloading [#564](https://github.com/nbbrd/java-service-util/issues/564)
+- Add service retrieval by ID  [#317](https://github.com/nbbrd/java-service-util/issues/317)
+- Add custom signature of batch method [#322](https://github.com/nbbrd/java-service-util/issues/322)
+- Add generation of batch provider [#161](https://github.com/nbbrd/java-service-util/issues/161)
+- Add topLevelClassName mustache template variable [#566](https://github.com/nbbrd/java-service-util/issues/566)
+- Add support of types representable as String to ServiceId annotation [#325](https://github.com/nbbrd/java-service-util/issues/325)
+- Add generation of service delegates from fields and methods [#567](https://github.com/nbbrd/java-service-util/issues/567)
+- Add generation of service delegates from enum values [#568](https://github.com/nbbrd/java-service-util/issues/568)
+
+### Changed
+
+- Modify annotations retention to CLASS to enable new features [#561](https://github.com/nbbrd/java-service-util/issues/561)
+
+### Fixed
+
+- Fix duplicates in META-INF services files [#569](https://github.com/nbbrd/java-service-util/issues/569)
+
 ## [2.0.0] - 2026-04-02
 
 This major release simplifies usage by removing deprecated properties and features.
@@ -181,7 +204,8 @@ It also introduces a builder pattern for the loader, enabling greater flexibilit
 
 - Initial release
 
-[Unreleased]: https://github.com/nbbrd/java-service-util/compare/v2.0.0...HEAD
+[Unreleased]: https://github.com/nbbrd/java-service-util/compare/v2.1.0...HEAD
+[2.1.0]: https://github.com/nbbrd/java-service-util/compare/v2.0.0...v2.1.0
 [2.0.0]: https://github.com/nbbrd/java-service-util/compare/v1.9.0...v2.0.0
 [1.9.0]: https://github.com/nbbrd/java-service-util/compare/v1.8.0...v1.9.0
 [1.8.0]: https://github.com/nbbrd/java-service-util/compare/v1.7.0...v1.8.0

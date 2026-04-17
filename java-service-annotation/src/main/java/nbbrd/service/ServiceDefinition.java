@@ -26,7 +26,7 @@ import java.lang.annotation.*;
  */
 @Documented
 @Target({ElementType.TYPE})
-@Retention(RetentionPolicy.SOURCE)
+@Retention(RetentionPolicy.CLASS)
 public @interface ServiceDefinition {
 
     /**
@@ -44,6 +44,7 @@ public @interface ServiceDefinition {
      *     <li><code>{{packageName}}</code>: The package name of the service class, or "" if this is in the default package.</li>
      *     <li><code>{{simpleName}}</code>: The service class name.</li>
      *     <li><code>{{canonicalName}}</code>: The full service class name.</li>
+     *     <li><code>{{topLevelClassName}}</code>: The simple name of the top-level class.</li>
      * </ul>
      *
      * @return a fully qualified name

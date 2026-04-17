@@ -36,4 +36,7 @@ class LoadId implements HasMethod {
 
     @lombok.NonNull
     String pattern;
+
+    @lombok.NonNull
+    String formatMethodName;
 }

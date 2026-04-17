@@ -23,13 +23,13 @@ import internal.nbbrd.service.TypeNames;
 import internal.nbbrd.service.Unreachable;
 import nbbrd.service.Quantifier;
 
-import javax.lang.model.type.TypeMirror;
 import java.util.*;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 import static com.squareup.javapoet.ClassName.OBJECT;
 import static com.squareup.javapoet.TypeName.VOID;
@@ -89,7 +89,7 @@ class ServiceDefinitionGenerator {
         ClassName loaderName = ClassName.bestGuess(definition.resolveLoaderName().simpleName());
         ClassName builderName = ClassName.bestGuess("Builder");
         ClassName providerType = definition.getServiceType();
-        ClassName batchTypeOrNull = definition.getBatchType().map(o -> ClassName.bestGuess(o.toString())).orElse(null);
+        ClassName batchTypeOrNull = definition.getBatch().map(o -> ClassName.bestGuess(o.getType().toString())).orElse(null);
         TypeName quantifierType = getQuantifierType();
 
         TypeSpec.Builder result = TypeSpec
@@ -113,6 +113,8 @@ class ServiceDefinitionGenerator {
         MethodSpec constructor;
 
         if (batchTypeOrNull != null) {
+            BatchDefinition batchDefinition = definition.getBatch().orElseThrow(Unreachable::new);
+
             FieldSpec batchSource = FieldSpec
                     .builder(iterableOf(WILDCARD), "batchSource", PRIVATE, FINAL)
                     .build();
@@ -126,6 +128,8 @@ class ServiceDefinitionGenerator {
                     .addJavadoc(CodeBlock
                             .builder()
                             .add("Reloads the content by clearing the cache and fetching available providers.\n")
+                            .add("<p>This method reloads both individual providers and batch providers.\n")
+                            .add("It should be called when the set of available providers may have changed.\n")
                             .build())
                     .addModifiers(PUBLIC)
                     .returns(VOID)
@@ -141,9 +145,9 @@ class ServiceDefinitionGenerator {
                             CodeBlock
                                     .builder()
                                     .add("return ")
-                                    .add(concatStreams(
+                                     .add(concatStreams(
                                             iterableToStream(providerSource, providerType),
-                                            flatMapStream(iterableToStream(batchSource, batchTypeOrNull), CodeBlock.of("o -> o.getProviders()"))
+                                            flatMapStream(iterableToStream(batchSource, batchTypeOrNull), getBatchMapper(batchDefinition))
                                     )).build())
                     .build();
 
@@ -168,6 +172,7 @@ class ServiceDefinitionGenerator {
                     .addJavadoc(CodeBlock
                             .builder()
                             .add("Reloads the content by clearing the cache and fetching available providers.\n")
+                            .add("<p>It should be called when the set of available providers may have changed.\n")
                             .build())
                     .addModifiers(PUBLIC)
                     .returns(VOID)
@@ -226,12 +231,22 @@ class ServiceDefinitionGenerator {
 
         MethodSpec builderMethod = MethodSpec
                 .methodBuilder("builder")
+                .addJavadoc(CodeBlock
+                        .builder()
+                        .add("Creates a new builder to configure and construct a loader instance.\n")
+                        .add("<p>Use this method to customize the backend (e.g. NetBeans Lookup) instead of the default $T.\n", ServiceLoader.class)
+                        .add("@return a non-null new $T instance\n", ClassName.bestGuess("Builder"))
+                        .build())
                 .addModifiers(PUBLIC, STATIC)
                 .returns(builderName)
                 .addStatement("return new $T()", builderName)
                 .build();
 
         result.addMethod(newLoadMethod(quantifierType, getMethod));
+        if (!ids.isEmpty() && definition.getQuantifier() == Quantifier.MULTIPLE) {
+            result.addMethod(newGetByIdMethod(filterFieldOrNull));
+            result.addMethod(newLoadByIdMethod());
+        }
         result.addMethod(builderMethod);
         result.addType(generateBuilder());
 
@@ -241,7 +256,7 @@ class ServiceDefinitionGenerator {
     public TypeSpec generateBuilder() {
         ClassName loaderName = ClassName.bestGuess(definition.resolveLoaderName().simpleName());
         ClassName builderName = ClassName.bestGuess("Builder");
-        ClassName batchTypeOrNull = definition.getBatchType().map(o -> ClassName.bestGuess(o.toString())).orElse(null);
+        ClassName batchTypeOrNull = definition.getBatch().map(o -> ClassName.bestGuess(o.getType().toString())).orElse(null);
 
         FieldSpec factoryField = FieldSpec
                 .builder(functionOf(WILDCARD_CLASS, OBJECT), "factory", PRIVATE)
@@ -258,8 +273,16 @@ class ServiceDefinitionGenerator {
                 .initializer("backend -> (($T) backend).reload()", ServiceLoader.class)
                 .build();
 
-        MethodSpec backendMethod = MethodSpec
+        MethodSpec backendMethod1 = MethodSpec
                 .methodBuilder("backend")
+                .addJavadoc(CodeBlock
+                        .builder()
+                        .add("Configures a custom backend for loading and reloading providers.\n")
+                        .add("@param factory a function that creates a backend instance from a service class, not null\n")
+                        .add("@param streamer a function that streams providers from the backend, not null\n")
+                        .add("@param reloader a consumer that triggers a reload on the backend, not null\n")
+                        .add("@return this builder instance\n")
+                        .build())
                 .addModifiers(PUBLIC)
                 .addTypeVariable(BACKEND)
                 .returns(builderName)
@@ -272,8 +295,33 @@ class ServiceDefinitionGenerator {
                 .addStatement("return this")
                 .build();
 
+        MethodSpec backendMethod2 = MethodSpec
+                .methodBuilder("backend")
+                .addJavadoc(CodeBlock
+                        .builder()
+                        .add("Configures a custom backend for loading providers (without reload support).\n")
+                        .add("@param factory a function that creates a backend instance from a service class, not null\n")
+                        .add("@param streamer a function that streams providers from the backend, not null\n")
+                        .add("@return this builder instance\n")
+                        .build())
+                .addModifiers(PUBLIC)
+                .addTypeVariable(BACKEND)
+                .returns(builderName)
+                .addParameter(functionOf(WILDCARD_CLASS, BACKEND), "factory")
+                .addParameter(functionOf(BACKEND, iterableOf(WILDCARD)), "streamer")
+                .addStatement("this.$N = ($T) factory", factoryField, functionOf(WILDCARD_CLASS, OBJECT))
+                .addStatement("this.$N = ($T) streamer", streamerField, functionOf(OBJECT, iterableOf(WILDCARD)))
+                .addStatement("this.$N = ignore -> {}", reloaderField)
+                .addStatement("return this")
+                .build();
+
         MethodSpec.Builder buildMethod = MethodSpec
                 .methodBuilder("build")
+                .addJavadoc(CodeBlock
+                        .builder()
+                        .add("Builds a new loader instance using the configured backend.\n")
+                        .add("@return a non-null loader instance\n")
+                        .build())
                 .addModifiers(PUBLIC)
                 .returns(loaderName);
 
@@ -307,7 +355,8 @@ class ServiceDefinitionGenerator {
                 .addField(factoryField)
                 .addField(streamerField)
                 .addField(reloaderField)
-                .addMethod(backendMethod)
+                .addMethod(backendMethod1)
+                .addMethod(backendMethod2)
                 .addMethod(buildMethod.build())
                 .build();
     }
@@ -322,7 +371,7 @@ class ServiceDefinitionGenerator {
                 .add("<li>Fallback: $L</li>\n", toJavadocLink(definition.getFallback().orElse(null)))
                 .add("<li>Preprocessing: $L</li>\n", getPreprocessingJavadoc())
                 .add("<li>Name: $L</li>\n", definition.getLoaderName().isEmpty() ? "null" : definition.getLoaderName())
-                .add("<li>Batch type: $L</li>\n", definition.getBatchType().map(TypeMirror::toString).orElse("null"))
+                .add("<li>Batch type: $L</li>\n", definition.getBatch().map(b -> b.getType().toString()).orElse("null"))
                 .add("</ul>\n")
                 .build();
     }
@@ -348,7 +397,11 @@ class ServiceDefinitionGenerator {
     }
 
     private CodeBlock getIdPredicateCode(FieldSpec field) {
-        return CodeBlock.of("o -> $N.matcher(o.$L()).matches()", field, ids.get(0).getMethod().getSimpleName());
+        LoadId id = ids.get(0);
+        String idCall = id.getFormatMethodName().isEmpty()
+                ? "o.$L()"
+                : "o.$L()." + id.getFormatMethodName() + "()";
+        return CodeBlock.of("o -> $N.matcher(" + idCall + ").matches()", field, id.getMethod().getSimpleName());
     }
 
     private CodeBlock getFiltersCode(FieldSpec idPatternFieldOrNull) {
@@ -473,26 +526,6 @@ class ServiceDefinitionGenerator {
                 : emptyList();
     }
 
-    private FieldSpec getSourceField() {
-        return FieldSpec
-                .builder(TypeNames.typeOf(Iterable.class, definition.getServiceType()), "source")
-                .addModifiers(PRIVATE, FINAL)
-                .initializer("$L", getBackendInitCode(definition.getServiceType()))
-                .build();
-    }
-
-    private FieldSpec getBatchFieldOrNull() {
-        if (definition.getBatchType().isPresent()) {
-            ClassName batchTypeName = ClassName.bestGuess(definition.getBatchType().get().toString());
-            return FieldSpec
-                    .builder(TypeNames.typeOf(Iterable.class, batchTypeName), "batch")
-                    .addModifiers(PRIVATE, FINAL)
-                    .initializer("$L", getBackendInitCode(batchTypeName))
-                    .build();
-        }
-        return null;
-    }
-
     private FieldSpec getFilterFieldOrNull(FieldSpec idPatternFieldOrNull) {
         return !filters.isEmpty() || idPatternFieldOrNull != null
                 ? FieldSpec
@@ -513,21 +546,88 @@ class ServiceDefinitionGenerator {
                 : null;
     }
 
-    private CodeBlock getBackendInitCode(ClassName serviceType) {
-        return CodeBlock.of("$T.load($T.class)", ServiceLoader.class, serviceType);
-    }
-
     private CodeBlock getGetDescription() {
         switch (definition.getQuantifier()) {
             case OPTIONAL:
-                return CodeBlock.of("Gets an optional $L instance.\n", toJavadocLink(definition.getServiceType()));
+                return CodeBlock.of(
+                        "Gets an optional $L instance.\n" +
+                        "<p>Returns the first available provider after applying filters and sorters, or empty if none is found.\n" +
+                        "@return a non-null optional $L instance\n",
+                        toJavadocLink(definition.getServiceType()), toJavadocLink(definition.getServiceType()));
             case SINGLE:
-                return CodeBlock.of("Gets a $L instance.\n", toJavadocLink(definition.getServiceType()));
+                return definition.getFallback().isPresent()
+                        ? CodeBlock.of(
+                                "Gets a $L instance.\n" +
+                                "<p>Returns the first available provider after applying filters and sorters, or the fallback if none is found.\n" +
+                                "@return a non-null $L instance\n",
+                                toJavadocLink(definition.getServiceType()), toJavadocLink(definition.getServiceType()))
+                        : CodeBlock.of(
+                                "Gets a $L instance.\n" +
+                                "<p>Returns the first available provider after applying filters and sorters.\n" +
+                                "@return a non-null $L instance\n" +
+                                "@throws $T if no provider is available\n",
+                                toJavadocLink(definition.getServiceType()), toJavadocLink(definition.getServiceType()), IllegalStateException.class);
             case MULTIPLE:
-                return CodeBlock.of("Gets a list of $L instances.\n", toJavadocLink(definition.getServiceType()));
+                return CodeBlock.of(
+                        "Gets a list of $L instances.\n" +
+                        "<p>Returns all available providers after applying filters and sorters.\n" +
+                        "@return a non-null unmodifiable list of $L instances\n",
+                        toJavadocLink(definition.getServiceType()), toJavadocLink(definition.getServiceType()));
             default:
                 throw new Unreachable();
         }
+    }
+
+    private MethodSpec newGetByIdMethod(FieldSpec filterFieldOrNull) {
+        ClassName serviceType = definition.getServiceType();
+        LoadId id = ids.get(0);
+        String idMethodName = id.getMethodName();
+        String idExpression = id.getFormatMethodName().isEmpty()
+                ? "o." + idMethodName + "()"
+                : "o." + idMethodName + "()." + id.getFormatMethodName() + "()";
+
+        CodeBlock.Builder body = CodeBlock.builder();
+        body.add("return stream()");
+        if (filterFieldOrNull != null) body.add(NEW_LINE).add(".filter($L)", filterFieldOrNull.name);
+        body.add(NEW_LINE).add(".filter(o -> $L.equals(id))", idExpression);
+        body.add(NEW_LINE).add(".findFirst()");
+
+        return MethodSpec
+                .methodBuilder("getById")
+                .addJavadoc(CodeBlock
+                        .builder()
+                        .add("Gets an optional $L instance by ID.\n", toJavadocLink(serviceType))
+                        .add("<p>Returns the first available provider whose ID equals the given value, after applying filters.\n")
+                        .add("@param id the ID to look up, not null\n")
+                        .add("@return a non-null optional $L instance\n", toJavadocLink(serviceType))
+                        .build())
+                .addModifiers(PUBLIC)
+                .returns(TypeNames.typeOf(Optional.class, serviceType))
+                .addParameter(CharSequence.class, "id")
+                .addStatement(body.build())
+                .build();
+    }
+
+    private MethodSpec newLoadByIdMethod() {
+        ClassName serviceType = definition.getServiceType();
+        CodeBlock mainStatement = CodeBlock.of("builder().build().getById(id)");
+
+        return MethodSpec
+                .methodBuilder("loadById")
+                .addJavadoc(CodeBlock
+                        .builder()
+                        .add("Gets an optional $L instance by ID.\n", toJavadocLink(serviceType))
+                        .add("<p>Returns the first available provider whose ID equals the given value.\n")
+                        .add("<br>This is equivalent to the following code: <code>$L</code>\n", mainStatement)
+                        .add("<br>Therefore, the returned value might be different at each call.\n")
+                        .add("@param id the ID to look up, not null\n")
+                        .add("@return a non-null optional $L instance\n", toJavadocLink(serviceType))
+                        .build())
+                .addModifiers(PUBLIC, STATIC)
+                .returns(TypeNames.typeOf(Optional.class, serviceType))
+                .addParameter(CharSequence.class, "id")
+                .addStatement("return $L", mainStatement)
+                .build();
     }
 
     private MethodSpec newLoadMethod(TypeName quantifierType, MethodSpec getter) {
@@ -540,7 +640,6 @@ class ServiceDefinitionGenerator {
                         .add(getGetDescription())
                         .add("<br>This is equivalent to the following code: <code>$L</code>\n", mainStatement)
                         .add("<br>Therefore, the returned value might be different at each call.\n")
-                        .add("@return a non-null value\n")
                         .build())
                 .addModifiers(PUBLIC, STATIC)
                 .returns(quantifierType)
@@ -571,6 +670,24 @@ class ServiceDefinitionGenerator {
 
     private static Collector<HasMethod, ?, String> toMethodNames() {
         return Collectors.mapping(HasMethod::getMethodName, Collectors.joining("+", "[", "]"));
+    }
+
+    private static CodeBlock getBatchMapper(BatchDefinition batchDefinition) {
+        String methodName = batchDefinition.getMethodName().orElseThrow(Unreachable::new);
+        switch (batchDefinition.getMethodReturnKind().orElseThrow(Unreachable::new)) {
+            case STREAM:
+                return CodeBlock.of("o -> o.$L()", methodName);
+            case COLLECTION:
+                return CodeBlock.of("o -> o.$L().stream()", methodName);
+            case ITERABLE:
+                return CodeBlock.of("o -> $T.stream(o.$L().spliterator(), false)", StreamSupport.class, methodName);
+            case ITERATOR:
+                return CodeBlock.of("o -> $T.stream($T.spliteratorUnknownSize(o.$L(), 0), false)", StreamSupport.class, Spliterators.class, methodName);
+            case ARRAY:
+                return CodeBlock.of("o -> $T.stream(o.$L())", Arrays.class, methodName);
+            default:
+                throw new Unreachable();
+        }
     }
 
     private static final CodeBlock NEW_LINE = CodeBlock.of("\n");

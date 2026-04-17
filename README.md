@@ -37,24 +37,51 @@ Features:
 - supports multiple registration of one class
 - can infer the service if the provider implements/extends exactly one interface/class
 - checks coherence between classpath and modulepath if `module-info.java` is available
+- generates delegate providers from enums, fields, and methods
 
 Limitations:
 - detects modulepath `public static provider()` method but doesn't generate a [workaround for classpath](https://github.com/nbbrd/java-service-util/issues/12)
 
 ```java
-public interface FooSPI {}
+public interface Providers {
 
-public interface BarSPI {}
+  interface FooSPI { }
 
-// 💡 One provider, one service
-@ServiceProvider
-public class FooProvider implements FooSPI {}
+  interface BarSPI { }
 
-// 💡 One provider, multiple services
-@ServiceProvider ( FooSPI.class )
-@ServiceProvider ( BarSPI.class )
-public class FooBarProvider implements FooSPI, BarSPI {}
+  // 💡 One provider, one service
+  @ServiceProvider
+  class FooProvider implements FooSPI { }
+
+  // 💡 One provider, multiple services
+  @ServiceProvider(FooSPI.class)
+  @ServiceProvider(BarSPI.class)
+  class FooBarProvider implements FooSPI, BarSPI { }
+
+  // 💡 Provider using a static field
+  @ServiceProvider
+  FooSPI CONSTANT = new FooSPI() { };
+
+  // 💡 Provider using a static method
+  @ServiceProvider
+  static FooSPI getInstance() {
+    return new FooSPI() { };
+  }
+
+  // 💡 Provider using enum values
+  @ServiceProvider
+  enum CommonFoo implements FooSPI {
+    A, B, C
+  }
+
+  static void main(String[] args) {
+    // 💡 Get all providers for the services
+    ServiceLoader.load(FooSPI.class).forEach(System.out::println);
+    ServiceLoader.load(BarSPI.class).forEach(System.out::println);
+  }
+}
 ```
+_Source: [nbbrd/service/examples/Providers.java](java-service-examples/src/main/java/nbbrd/service/examples/Providers.java)_
 
 ### @ServiceDefinition
 The `@ServiceDefinition` annotation **defines a service usage and generates a specialized loader** that enforces that specific usage.  
@@ -66,6 +93,7 @@ Features:
 - allows [identification](#serviceid)
 - allows [filtering](#servicefilter) and [sorting](#servicesorter)
 - allows [batch loading](#batch-type-property) 
+- allows [custom backend](#backend)
 
 Limitations:
 - does not support [type inspection before instantiation](https://github.com/nbbrd/java-service-util/issues/13)
@@ -162,11 +190,12 @@ public interface FooSPI { }
 An empty value generates an automatic name.  
 A non-empty value is interpreted as a [Mustache template](https://mustache.github.io/) with the following tags:
 
-| Tag             | Description                           |
-|-----------------|---------------------------------------|
-| `packageName`   | The package name of the service class |
-| `simpleName`    | The service class name                |
-| `canonicalName` | The full service class name           |
+| Tag                  | Description                           |
+|----------------------|---------------------------------------|
+| `packageName`        | The package name of the service class |
+| `simpleName`         | The service class name                |
+| `canonicalName`      | The full service class name           |
+| `topLevelClassName`  | The simple name of the top-level class |
 
 ```java
 // 💡 Name with interpretation
@@ -193,7 +222,7 @@ but this warning can be disabled with the `@SupressWarning("SingleFallbackNotExp
 #### Batch type property
 
 The `#batchType` property allows to **bridge different services** and to **generate providers on the fly**.  
-Batch providers are used alongside regular providers.
+Batch providers are used alongside regular providers and can be automatically generated from enums.
 
 ```java
 @ServiceDefinition(quantifier = Quantifier.MULTIPLE, batchType = SwingColorScheme.Batch.class)
@@ -241,6 +270,32 @@ _Source: [nbbrd/service/examples/SwingColorScheme.java](java-service-examples/sr
 Constraints:
 1. Batch type must be an interface or an abstract class.
 2. Batch method must be unique.
+3. Batch method must return Stream, List, Array, Collection, Iterable, or Iterator of the service type.
+
+#### Backend
+
+The builder allows to use a **custom service loader** such as [NetBeans Lookup](https://bits.netbeans.org/dev/javadoc/org-openide-util-lookup/index.html) instead of JDK `ServiceLoader`.
+
+```java
+public interface NetBeansLookup {
+
+  static void main(String[] args) {
+    Optional<WinRegistry> optional = WinRegistryLoader
+          .builder()
+          // 💡 NetBeans Lookup backend
+          .backend(Lookup.getDefault()::lookupResult, Lookup.Result::allInstances)
+          .build()
+          .get();
+
+    optional.map(reg -> reg.readString(
+                  HKEY_LOCAL_MACHINE,
+                  "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion",
+                  "ProductName"))
+          .ifPresent(System.out::println);
+  }
+}
+```
+_Source: [nbbrd/service/examples/NetBeansLookup.java](java-service-examples/src/main/java/nbbrd/service/examples/NetBeansLookup.java)_
 
 ### @ServiceId
 
@@ -248,6 +303,7 @@ The `@ServiceId` annotation **specifies the method used to identify a service pr
 
 Properties:
 - `#pattern`: specifies the regex pattern that the ID is expected to match
+- `#formatMethodName`: specifies the method to convert non-String types to String
 
 ```java
 @ServiceDefinition(quantifier = Quantifier.MULTIPLE)
@@ -261,10 +317,7 @@ public interface HashAlgorithm {
 
   static void main(String[] args) {
     // 💡 Retrieve service by name
-    HashAlgorithmLoader.load()
-      .stream()
-      .filter(algo -> algo.getName().equals("SHA-256"))
-      .findFirst()
+    HashAlgorithmLoader.loadById("SHA-256")
       .map(algo -> algo.hashToHex("hello".getBytes(UTF_8)))
       .ifPresent(System.out::println);
   }
@@ -280,7 +333,7 @@ Constraints:
 1. It only applies to methods of a service.
 2. It does not apply to static methods.
 3. The annotated method must have no-args.
-4. The annotated method must return String.
+4. The annotated method must return String or a type representable as String.
 5. The annotated method must be unique.
 6. The annotated method must not throw checked exceptions.
 7. Its pattern must be valid.

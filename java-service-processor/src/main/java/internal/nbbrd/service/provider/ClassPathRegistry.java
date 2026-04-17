@@ -93,8 +93,12 @@ final class ClassPathRegistry implements ProviderRegistry {
         return refs
                 .stream()
                 .filter(ref -> ref.getService().equals(service))
-                .map(ref -> util.getBinaryName(ref.getProvider()))
-                .map(ProviderConfigurationFileLine::ofProviderBinaryName)
+                .map(ref -> {
+                    // Use generated class name if present, otherwise use binary name of provider
+                    String providerName = ref.getGeneratedProviderClassName()
+                            .orElse(util.getBinaryName(ref.getProvider()).toString());
+                    return ProviderConfigurationFileLine.ofProviderBinaryName(providerName);
+                })
                 .collect(Collectors.toList());
     }
 

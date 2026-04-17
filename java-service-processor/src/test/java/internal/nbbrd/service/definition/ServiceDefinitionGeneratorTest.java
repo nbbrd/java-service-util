@@ -24,7 +24,7 @@ public class ServiceDefinitionGeneratorTest {
                 .serviceType(serviceType)
                 .fallback(Optional.empty())
                 .loaderName("")
-                .batchType(Optional.empty())
+                .batch(Optional.empty())
                 .build();
     }
 
@@ -48,7 +48,7 @@ public class ServiceDefinitionGeneratorTest {
                     .serviceType(SERVICE_TYPE)
                     .fallback(Optional.empty())
                     .loaderName("internal.CustomLoader")
-                    .batchType(Optional.empty())
+                    .batch(Optional.empty())
                     .build();
             assertThat(generatorOf(definition).hasCustomLoaderName()).isTrue();
         }
@@ -83,7 +83,7 @@ public class ServiceDefinitionGeneratorTest {
                     .serviceType(SERVICE_TYPE)
                     .fallback(Optional.empty())
                     .loaderName("internal.FooLoader")
-                    .batchType(Optional.empty())
+                    .batch(Optional.empty())
                     .build();
             TypeSpec typeSpec = generatorOf(definition).generateLoader(false);
             assertThat(typeSpec.name).isEqualTo("FooLoader");
@@ -137,6 +137,24 @@ public class ServiceDefinitionGeneratorTest {
                     .singleElement()
                     .extracting(m -> m.modifiers)
                     .satisfies(modifiers -> assertThat(modifiers).contains(PUBLIC).doesNotContain(STATIC));
+        }
+
+        @Test
+        public void doesNotIncludeGetByIdMethodWhenNoIds() {
+            TypeSpec typeSpec = generatorOf(baseDefinition(SERVICE_TYPE, Quantifier.MULTIPLE)).generateLoader(false);
+            assertThat(typeSpec.methodSpecs)
+                    .extracting(m -> m.name)
+                    .doesNotContain("getById", "loadById");
+        }
+
+        @Test
+        public void doesNotIncludeGetByIdMethodWhenQuantifierIsNotMultiple() {
+            for (Quantifier quantifier : new Quantifier[]{Quantifier.OPTIONAL, Quantifier.SINGLE}) {
+                TypeSpec typeSpec = generatorOf(baseDefinition(SERVICE_TYPE, quantifier)).generateLoader(false);
+                assertThat(typeSpec.methodSpecs)
+                        .extracting(m -> m.name)
+                        .doesNotContain("getById", "loadById");
+            }
         }
 
         @Test

@@ -40,7 +40,7 @@ import static com.google.testing.compile.JavaFileObjects.forSourceLines;
 import static io.toolisticon.cute.JavaFileObjectUtils.readFromString;
 import static javax.tools.StandardLocation.CLASS_OUTPUT;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.InstanceOfAssertFactories.STRING;
+import static org.assertj.core.api.InstanceOfAssertFactories.*;
 import static org.assertj.core.groups.Tuple.tuple;
 
 /**
@@ -73,8 +73,8 @@ public class ServiceProviderProcessorTest {
                 .extracting(Compilation::generatedFiles, JAVA_FILE_OBJECTS)
                 .filteredOn(fileNamed("/CLASS_OUTPUT/META-INF/services/provider.WithAnnotation$HelloService"))
                 .singleElement()
-                .extracting(Compilations::contentsAsUtf8String, STRING)
-                .contains(
+                .extracting(Compilations::contentsAsUtf8StringList, LIST)
+                .containsExactlyInAnyOrder(
                         "provider.WithAnnotation$Provider1",
                         "provider.WithAnnotation$Provider2"
                 );
@@ -91,8 +91,8 @@ public class ServiceProviderProcessorTest {
                 .extracting(Compilation::generatedFiles, JAVA_FILE_OBJECTS)
                 .filteredOn(fileNamed("/CLASS_OUTPUT/META-INF/services/WithRepeatedAnnotation$HelloService"))
                 .singleElement()
-                .extracting(Compilations::contentsAsUtf8String, STRING)
-                .contains(
+                .extracting(Compilations::contentsAsUtf8StringList, LIST)
+                .containsExactlyInAnyOrder(
                         "WithRepeatedAnnotation$SimpleProvider",
                         "WithRepeatedAnnotation$MultiProvider"
                 );
@@ -101,9 +101,8 @@ public class ServiceProviderProcessorTest {
                 .extracting(Compilation::generatedFiles, JAVA_FILE_OBJECTS)
                 .filteredOn(fileNamed("/CLASS_OUTPUT/META-INF/services/WithRepeatedAnnotation$SomeService"))
                 .singleElement()
-                .extracting(Compilations::contentsAsUtf8String, STRING)
-                .contains("WithRepeatedAnnotation$MultiProvider")
-                .doesNotContain("WithRepeatedAnnotation$SimpleProvider");
+                .extracting(Compilations::contentsAsUtf8StringList, LIST)
+                .containsExactlyInAnyOrder("WithRepeatedAnnotation$MultiProvider");
     }
 
     @Test
@@ -179,17 +178,10 @@ public class ServiceProviderProcessorTest {
         JavaFileObject file = forResource("provider/StaticProviderMethod.java");
         Compilation compilation = compile(file);
 
+        // Provider() methods are now valid (they're detected but not fully supported for classpath workaround)
+        // However, these classes also have valid private constructors, so they should succeed
         assertThat(compilation)
-                .has(failed());
-
-        assertThat(compilation)
-                .extracting(Compilation::errors, DIAGNOSTICS)
-                .hasSize(2)
-                .extracting(Compilations::getDefaultMessage, Diagnostic::getSource, Diagnostic::getLineNumber)
-                .containsOnly(
-                        tuple("Static method support not implemented yet", file, 10L),
-                        tuple("Static method support not implemented yet", file, 21L)
-                );
+                .has(succeeded());
     }
 
     @Test
@@ -200,12 +192,13 @@ public class ServiceProviderProcessorTest {
         assertThat(compilation)
                 .has(failed());
 
+        // Now explicitly rejects non-standard static methods
         assertThat(compilation)
                 .extracting(Compilation::errors, DIAGNOSTICS)
                 .hasSize(1)
                 .extracting(Compilations::getDefaultMessage, Diagnostic::getSource, Diagnostic::getLineNumber)
                 .containsOnly(
-                        tuple("Provider 'StaticNoProviderMethod.Provider' must have a public no-argument constructor", file, 10L)
+                        tuple("Static method support not implemented yet", file, 15L)
                 );
     }
 
@@ -214,15 +207,18 @@ public class ServiceProviderProcessorTest {
         JavaFileObject file = forResource("provider/StaticMultiProviderMethod.java");
         Compilation compilation = compile(file);
 
+        // Provider() methods are now valid (they're detected but not fully supported for classpath workaround)
+        // However, these classes also have valid private constructors, so they should succeed
         assertThat(compilation)
                 .has(failed());
 
         assertThat(compilation)
                 .extracting(Compilation::errors, DIAGNOSTICS)
-                .hasSize(1)
+                .hasSize(2)
                 .extracting(Compilations::getDefaultMessage, Diagnostic::getSource, Diagnostic::getLineNumber)
                 .containsOnly(
-                        tuple("Static method support not implemented yet", file, 10L)
+                        tuple("Static method support not implemented yet", file, 15L),
+                        tuple("Static method support not implemented yet", file, 19L)
                 );
     }
 
@@ -255,8 +251,8 @@ public class ServiceProviderProcessorTest {
                 .extracting(Compilation::generatedFiles, JAVA_FILE_OBJECTS)
                 .filteredOn(fileNamed("/CLASS_OUTPUT/META-INF/services/WithGenerics$HelloService"))
                 .singleElement()
-                .extracting(Compilations::contentsAsUtf8String, STRING)
-                .contains(
+                .extracting(Compilations::contentsAsUtf8StringList, LIST)
+                .containsExactlyInAnyOrder(
                         "WithGenerics$Provider1",
                         "WithGenerics$Provider2"
                 );
@@ -274,8 +270,8 @@ public class ServiceProviderProcessorTest {
                 .extracting(Compilation::generatedFiles, JAVA_FILE_OBJECTS)
                 .filteredOn(fileNamed("/CLASS_OUTPUT/META-INF/services/InferredService$HelloService"))
                 .singleElement()
-                .extracting(Compilations::contentsAsUtf8String, STRING)
-                .contains("InferredService$Provider1");
+                .extracting(Compilations::contentsAsUtf8StringList, LIST)
+                .containsExactly("InferredService$Provider1");
     }
 
     @Test
@@ -348,8 +344,37 @@ public class ServiceProviderProcessorTest {
                 .extracting(Compilation::generatedFiles, JAVA_FILE_OBJECTS)
                 .filteredOn(fileNamed("/CLASS_OUTPUT/META-INF/services/ClassPathOrder$HelloService"))
                 .singleElement()
-                .extracting(Compilations::contentsAsUtf8String, STRING)
-                .isEqualToIgnoringNewLines("ClassPathOrder$AClassPathOrder$BClassPathOrder$C");
+                .extracting(Compilations::contentsAsUtf8StringList, LIST)
+                .containsExactly("ClassPathOrder$A", "ClassPathOrder$B", "ClassPathOrder$C");
+    }
+
+    @Test
+    public void testEnumBatchProvider() {
+        JavaFileObject file = forResource("provider/EnumBatchProvider.java");
+        Compilation compilation = compile(file);
+
+        assertThat(compilation)
+                .has(succeeded());
+
+        // Check that the batch provider class was generated
+        assertThat(compilation)
+                .extracting(Compilation::generatedSourceFiles, JAVA_FILE_OBJECTS)
+                .filteredOn(fileNamed("/SOURCE_OUTPUT/provider/PrimaryColorBatchProvider.java"))
+                .hasSize(1);
+
+        // Check that the enum is NOT registered in the Color service (only the batch provider should be)
+        assertThat(compilation)
+                .extracting(Compilation::generatedFiles, JAVA_FILE_OBJECTS)
+                .filteredOn(fileNamed("/CLASS_OUTPUT/META-INF/services/provider.EnumBatchProvider$Color"))
+                .isEmpty();
+
+        // Check that the generated batch provider is registered in the ColorBatch service
+        assertThat(compilation)
+                .extracting(Compilation::generatedFiles, JAVA_FILE_OBJECTS)
+                .filteredOn(fileNamed("/CLASS_OUTPUT/META-INF/services/provider.EnumBatchProvider$ColorBatch"))
+                .singleElement()
+                .extracting(Compilations::contentsAsUtf8StringList, LIST)
+                .containsExactly("provider.PrimaryColorBatchProvider");
     }
 
     private URL fixPackageNotVisible() {
@@ -367,6 +392,77 @@ public class ServiceProviderProcessorTest {
         } catch (MalformedURLException ex) {
             throw new RuntimeException(ex);
         }
+    }
+
+    @Test
+    public void testStaticFieldDelegate() {
+        JavaFileObject file = forResource("provider/StaticFieldDelegate.java");
+        Compilation compilation = compile(file);
+
+        assertThat(compilation)
+                .has(succeeded());
+
+        // Check that the delegate wrapper class was generated
+        assertThat(compilation)
+                .extracting(Compilation::generatedSourceFiles, JAVA_FILE_OBJECTS)
+                .filteredOn(f -> f.getName().contains("StaticFieldDelegate_INSTANCEDelegate.java"))
+                .hasSize(1);
+
+        // Check that the generated delegate is registered in the service
+        assertThat(compilation)
+                .extracting(Compilation::generatedFiles, JAVA_FILE_OBJECTS)
+                .filteredOn(fileNamed("/CLASS_OUTPUT/META-INF/services/provider.StaticFieldDelegate$HelloService"))
+                .singleElement()
+                .extracting(Compilations::contentsAsUtf8StringList, LIST)
+                .containsExactly("provider.StaticFieldDelegate_INSTANCEDelegate");
+    }
+
+    @Test
+    public void testStaticMethodDelegate() {
+        JavaFileObject file = forResource("provider/StaticMethodDelegate.java");
+        Compilation compilation = compile(file);
+
+        assertThat(compilation)
+                .has(succeeded());
+
+        // Check that the delegate wrapper class was generated
+        assertThat(compilation)
+                .extracting(Compilation::generatedSourceFiles, JAVA_FILE_OBJECTS)
+                .filteredOn(f -> f.getName().contains("StaticMethodDelegate_getInstanceDelegate.java"))
+                .hasSize(1);
+
+        // Check that the generated delegate is registered in the service
+        assertThat(compilation)
+                .extracting(Compilation::generatedFiles, JAVA_FILE_OBJECTS)
+                .filteredOn(fileNamed("/CLASS_OUTPUT/META-INF/services/provider.StaticMethodDelegate$HelloService"))
+                .singleElement()
+                .extracting(Compilations::contentsAsUtf8StringList, LIST)
+                .containsExactly("provider.StaticMethodDelegate_getInstanceDelegate");
+    }
+
+    @Test
+    public void testEnumWithoutBatch() {
+        JavaFileObject file = forResource("provider/EnumWithoutBatch.java");
+        Compilation compilation = compile(file);
+
+        assertThat(compilation)
+                .has(succeeded());
+
+        // Check that delegate wrappers were generated for each enum constant
+        assertThat(compilation)
+                .extracting(Compilation::generatedSourceFiles, JAVA_FILE_OBJECTS)
+                .filteredOn(f -> f.getName().contains("PrimaryColor_") && f.getName().contains("Delegate.java"))
+                .hasSize(3); // RED, BLUE, YELLOW
+
+        // Check that the delegates are registered in the Color service
+        assertThat(compilation)
+                .extracting(Compilation::generatedFiles, JAVA_FILE_OBJECTS)
+                .filteredOn(fileNamed("/CLASS_OUTPUT/META-INF/services/provider.EnumWithoutBatch$Color"))
+                .singleElement()
+                .extracting(Compilations::contentsAsUtf8StringList, LIST)
+                .containsExactlyInAnyOrder("provider.PrimaryColor_REDDelegate",
+                          "provider.PrimaryColor_BLUEDelegate",
+                          "provider.PrimaryColor_YELLOWDelegate");
     }
 
     private Compilation compile(JavaFileObject... files) {
