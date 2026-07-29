@@ -3,18 +3,19 @@
 [![Download](https://img.shields.io/github/release/nbbrd/java-service-util.svg)](https://github.com/nbbrd/java-service-util/releases/latest)
 [![Changes](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fnbbrd%2Fjava-service-util%2Fbadges%2Funreleased-changes.json)](https://github.com/nbbrd/java-service-util/blob/develop/CHANGELOG.md)
 
-This library provides some **utilities for Java SPI** ([Service Provider Interface](https://www.baeldung.com/java-spi)).
-
-The Java SPI is a mechanism that decouples a service from its implementation(s).
-It allows the creation of extensible or replaceable modules/plugins.
-It consists of four main components: a service, a service provider interface, some service providers and a service loader.
-If the service is a single interface then it is the same as a service provider interface.
+This library is a **compile-time toolkit for the Java SPI** — it removes boilerplate for registering providers (`@ServiceProvider`) and loading services (`@ServiceDefinition`), with correctness enforced by annotation processors.
 
 **Key points:**
 - lightweight library with no dependency
 - no dependency at runtime, all the work is done at compile-time
 - Java 8 minimum requirement
 - has an automatic module name that makes it compatible with [JPMS](https://www.baeldung.com/java-9-modularity) 
+
+> [!NOTE]
+> The [Java SPI](https://www.baeldung.com/java-spi) is a mechanism that decouples a service from its implementation(s).
+> It allows the creation of extensible or replaceable modules/plugins.
+> It consists of four main components: a service, a service provider interface, some service providers and a service loader.
+> If the service is a single interface then it is the same as a service provider interface.
 
 [ [Components](#components) | [Design](#design) | [Setup](#setup) | [Developing](#developing) | [Contributing](#contributing)  | [Licensing](#licensing) | [Related work](#related-work) | [Alternatives](#alternatives) ]
 
