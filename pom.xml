@@ -329,7 +329,7 @@
             </activation>
             <properties>
                 <lombok.version>1.18.48</lombok.version>
-                <netbeans.version>RELEASE280</netbeans.version>
+                <netbeans.version>RELEASE310</netbeans.version>
             </properties>
             <dependencyManagement>
                 <dependencies>
